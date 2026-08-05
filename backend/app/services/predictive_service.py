@@ -1,0 +1,198 @@
+from datetime import datetime, timedelta
+from typing import Any
+
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+from app.models.job import Job
+from app.models.user import User
+from app.models.invoice import JobPartUsed
+from app.models.inventory import InventoryItem
+
+try:
+    import pandas as pd
+    import numpy as np
+    from statsmodels.tsa.holtwinters import SimpleExpSmoothing
+    ML_AVAILABLE = True
+except ImportError:
+    ML_AVAILABLE = False
+
+
+def forecast_fault_trends(db: Session, months_back: int = 6) -> list[dict[str, Any]]:
+    """
+    Analyzes job fault categories over the last N months and forecasts
+    the expected percentage change for the next month.
+    """
+    cutoff_date = datetime.now() - timedelta(days=months_back * 30)
+    
+    jobs = (
+        db.query(
+            func.date_trunc('month', Job.received_date).label('month'),
+            Job.fault_category,
+            func.count(Job.id).label('count')
+        )
+        .filter(Job.received_date >= cutoff_date)
+        .group_by('month', Job.fault_category)
+        .order_by('month')
+        .all()
+    )
+
+    if not jobs or not ML_AVAILABLE:
+        return []
+
+    df = pd.DataFrame(jobs, columns=['month', 'fault_category', 'count'])
+    df['month'] = pd.to_datetime(df['month'])
+    
+    pivot = df.pivot(index='month', columns='fault_category', values='count').fillna(0)
+    
+    trends = []
+    for category in pivot.columns:
+        series = pivot[category]
+        if len(series) < 3:
+            continue
+            
+        try:
+            model = SimpleExpSmoothing(series, initialization_method="estimated").fit()
+            forecast = model.forecast(1).iloc[0]
+            current_avg = series.iloc[-2:].mean() if len(series) >= 2 else series.iloc[-1]
+            
+            if current_avg > 0:
+                percent_change = ((forecast - current_avg) / current_avg) * 100
+            else:
+                percent_change = 0
+                
+            trends.append({
+                "fault_category": category,
+                "current_avg": round(current_avg, 1),
+                "forecasted": round(forecast, 1),
+                "trend_percentage": round(percent_change, 1),
+                "status": "increasing" if percent_change > 5 else "decreasing" if percent_change < -5 else "stable"
+            })
+        except Exception:
+            pass
+            
+    return sorted(trends, key=lambda x: x['trend_percentage'], reverse=True)
+
+
+def calculate_technician_scores(db: Session) -> list[dict[str, Any]]:
+    """
+    Calculates a performance score for each technician.
+    """
+    completed_jobs = (
+        db.query(
+            Job.technician_id,
+            Job.fault_category,
+            Job.received_date,
+            Job.completed_date
+        )
+        .filter(Job.status.in_(["completed", "ready_for_pickup", "delivered"]))
+        .filter(Job.technician_id.isnot(None))
+        .filter(Job.completed_date.isnot(None))
+        .all()
+    )
+
+    if not completed_jobs or not ML_AVAILABLE:
+        return []
+
+    df = pd.DataFrame(completed_jobs, columns=['technician_id', 'fault_category', 'received', 'completed'])
+    df['duration_hours'] = (df['completed'] - df['received']).dt.total_seconds() / 3600.0
+    
+    df = df[df['duration_hours'] > 0]
+    if df.empty:
+        return []
+
+    category_baselines = df.groupby('fault_category')['duration_hours'].mean().to_dict()
+
+    scores = []
+    for tech_id, group in df.groupby('technician_id'):
+        total_jobs = len(group)
+        if total_jobs < 3:
+            continue
+            
+        efficiency_sum = 0
+        for _, row in group.iterrows():
+            baseline = category_baselines.get(row['fault_category'], 24.0)
+            efficiency = baseline / row['duration_hours'] if row['duration_hours'] > 0 else 1
+            efficiency = min(max(efficiency, 0.5), 1.5)
+            efficiency_sum += efficiency
+            
+        avg_efficiency = efficiency_sum / total_jobs
+        score = min(round((avg_efficiency / 1.0) * 80), 100)
+        
+        tech = db.query(User).filter(User.id == tech_id).first()
+        if tech:
+            scores.append({
+                "technician_id": str(tech_id),
+                "name": tech.name,
+                "total_jobs_completed": total_jobs,
+                "performance_score": score,
+                "rating": "Excellent" if score >= 90 else "Good" if score >= 75 else "Needs Improvement"
+            })
+            
+    return sorted(scores, key=lambda x: x['performance_score'], reverse=True)
+
+
+def forecast_inventory_demand(db: Session, weeks_back: int = 12) -> list[dict[str, Any]]:
+    """
+    Analyzes parts used over the last N weeks to forecast demand for the next week.
+    Only analyzes inventory parts (not donor parts).
+    """
+    cutoff_date = datetime.now() - timedelta(weeks=weeks_back)
+    
+    # Query parts used grouped by week and item name
+    parts_data = (
+        db.query(
+            func.date_trunc('week', JobPartUsed.created_at).label('week'),
+            InventoryItem.name.label('part_name'),
+            func.sum(JobPartUsed.quantity).label('total_qty')
+        )
+        .join(InventoryItem, JobPartUsed.inventory_item_id == InventoryItem.id)
+        .filter(JobPartUsed.part_source == "inventory")
+        .filter(JobPartUsed.created_at >= cutoff_date)
+        .group_by('week', InventoryItem.name)
+        .order_by('week')
+        .all()
+    )
+
+    if not parts_data or not ML_AVAILABLE:
+        return []
+
+    df = pd.DataFrame(parts_data, columns=['week', 'part_name', 'total_qty'])
+    df['week'] = pd.to_datetime(df['week'])
+    
+    pivot = df.pivot(index='week', columns='part_name', values='total_qty').fillna(0)
+    
+    forecasts = []
+    for part in pivot.columns:
+        series = pivot[part]
+        if len(series) < 3:
+            continue
+            
+        try:
+            model = SimpleExpSmoothing(series, initialization_method="estimated").fit()
+            forecast_val = model.forecast(1).iloc[0]
+            current_avg = series.iloc[-2:].mean() if len(series) >= 2 else series.iloc[-1]
+            
+            # Predict how many we will need next week, rounded up
+            predicted_demand = max(int(np.ceil(forecast_val)), 0)
+            
+            # Find current stock
+            item = db.query(InventoryItem).filter(InventoryItem.name == part).first()
+            current_stock = item.quantity if item else 0
+            
+            # Generate a Smart Alert if predicted demand > current stock
+            status = "critical" if predicted_demand > current_stock else "warning" if predicted_demand >= (current_stock * 0.8) else "ok"
+            
+            if predicted_demand > 0 or current_avg > 0:
+                forecasts.append({
+                    "part_name": part,
+                    "current_stock": current_stock,
+                    "avg_weekly_usage": round(current_avg, 1),
+                    "predicted_demand": predicted_demand,
+                    "status": status,
+                    "restock_recommended": max(predicted_demand - current_stock, 0)
+                })
+        except Exception:
+            pass
+            
+    # Sort by items that need restocking most urgently
+    return sorted(forecasts, key=lambda x: (x['status'] == 'ok', -x['restock_recommended'], -x['predicted_demand']))
