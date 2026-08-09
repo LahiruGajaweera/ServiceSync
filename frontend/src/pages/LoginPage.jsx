@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import ChatbotWidget from "../components/ChatbotWidget";
+import bgImage from "../repair-bg.png";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -57,12 +58,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat relative"
+      style={{ backgroundImage: `url(${bgImage})` }}
+    >
+      {/* Dark frosted overlay to make the image visible while ensuring white text pops */}
+      <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm z-0"></div>
+
+      <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-extrabold text-blue-600 tracking-tight">ServiceSync</h1>
-          <p className="text-gray-500 mt-2 text-sm">Smart Repair Shop Management System</p>
+          <h1 className="text-5xl font-extrabold text-white tracking-tight drop-shadow-lg">ServiceSync</h1>
+          <p className="text-gray-200 mt-3 text-base font-medium drop-shadow-md bg-black/30 border border-white/10 inline-block px-5 py-1.5 rounded-full backdrop-blur-sm">Smart Repair Shop Management System</p>
         </div>
 
         {/* Card */}
@@ -130,9 +137,9 @@ export default function LoginPage() {
         </div>
 
         <div className="text-center mt-6">
-          <p className="text-sm text-gray-700 font-medium bg-white/60 py-2 px-5 rounded-full inline-block shadow-sm border border-gray-200/50 backdrop-blur-sm">
+          <p className="text-sm text-gray-200 font-medium bg-black/40 py-2 px-6 rounded-full inline-block shadow-lg border border-white/10 backdrop-blur-md">
             Customer?{" "}
-            <a href="/track" className="text-blue-600 hover:text-blue-800 hover:underline font-bold ml-1">
+            <a href="/track" className="text-blue-300 hover:text-white hover:underline font-bold ml-1 transition-colors">
               Track your repair →
             </a>
           </p>
