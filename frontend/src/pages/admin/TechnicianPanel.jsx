@@ -51,6 +51,7 @@ export default function TechnicianPanel() {
   const [created, setCreated]         = useState(null); // { name, temporary_password, sms_sent }
   const [selectedTechnician, setSelectedTechnician] = useState(null);
   const [deleting, setDeleting]       = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: '', onConfirm: null });
 
   const fetchTechnicians = async () => {
     setLoading(true);
@@ -99,21 +100,27 @@ export default function TechnicianPanel() {
     setForm(EMPTY_FORM);
   };
 
-  const handleToggleStatus = async () => {
+  const handleToggleStatus = () => {
     if (!selectedTechnician) return;
     const action = selectedTechnician.is_active ? "deactivate" : "activate";
-    if (!window.confirm(`Are you sure you want to ${action} this technician?`)) return;
     
-    setDeleting(true);
-    try {
-      await api.patch(`/admin/technicians/${selectedTechnician.id}/toggle-status`);
-      setSelectedTechnician(null);
-      fetchTechnicians();
-    } catch (err) {
-      alert(`Failed to ${action} technician`);
-    } finally {
-      setDeleting(false);
-    }
+    setConfirmModal({
+      isOpen: true,
+      action: action,
+      onConfirm: async () => {
+        setConfirmModal({ isOpen: false, action: '', onConfirm: null });
+        setDeleting(true);
+        try {
+          await api.patch(`/admin/technicians/${selectedTechnician.id}/toggle-status`);
+          setSelectedTechnician(null);
+          fetchTechnicians();
+        } catch (err) {
+          alert(`Failed to ${action} technician`);
+        } finally {
+          setDeleting(false);
+        }
+      }
+    });
   };
 
   return (
@@ -318,6 +325,34 @@ export default function TechnicianPanel() {
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal 
+        open={confirmModal.isOpen} 
+        onClose={() => setConfirmModal({ isOpen: false, action: '', onConfirm: null })} 
+        title="Confirm Action"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600 text-sm">
+            Are you sure you want to {confirmModal.action} this technician?
+          </p>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button" 
+              onClick={() => setConfirmModal({ isOpen: false, action: '', onConfirm: null })}
+              className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button" 
+              onClick={confirmModal.onConfirm}
+              className={`flex-1 text-white py-2 rounded-lg text-sm font-semibold transition-colors ${confirmModal.action === 'deactivate' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+            >
+              Yes, {confirmModal.action}
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
