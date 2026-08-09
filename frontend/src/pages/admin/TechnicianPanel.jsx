@@ -99,16 +99,18 @@ export default function TechnicianPanel() {
     setForm(EMPTY_FORM);
   };
 
-  const handleDelete = async () => {
+  const handleToggleStatus = async () => {
     if (!selectedTechnician) return;
-    if (!window.confirm("Are you sure you want to delete this technician?")) return;
+    const action = selectedTechnician.is_active ? "deactivate" : "activate";
+    if (!window.confirm(`Are you sure you want to ${action} this technician?`)) return;
+    
     setDeleting(true);
     try {
-      await api.delete(`/admin/technicians/${selectedTechnician.id}`);
+      await api.patch(`/admin/technicians/${selectedTechnician.id}/toggle-status`);
       setSelectedTechnician(null);
       fetchTechnicians();
     } catch (err) {
-      alert("Failed to delete technician");
+      alert(`Failed to ${action} technician`);
     } finally {
       setDeleting(false);
     }
@@ -119,7 +121,7 @@ export default function TechnicianPanel() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Technician Panel</h2>
-          <p className="text-sm text-gray-500 mt-0.5">{technicians.length} active technicians</p>
+          <p className="text-sm text-gray-500 mt-0.5">{technicians.length} total technicians</p>
         </div>
         <button
           onClick={() => { setShowModal(true); setCreated(null); setFormError(""); setForm(EMPTY_FORM); }}
@@ -162,8 +164,8 @@ export default function TechnicianPanel() {
                 {t.specializations && (
                   <p className="text-xs text-gray-600 truncate mt-2">Skills: {t.specializations}</p>
                 )}
-                <span className="inline-block mt-2 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-wider rounded-full">
-                  Active
+                <span className={`inline-block mt-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full ${t.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  {t.is_active ? 'Active' : 'Inactive'}
                 </span>
               </div>
             </div>
@@ -303,11 +305,15 @@ export default function TechnicianPanel() {
               </button>
               <button
                 type="button" 
-                onClick={handleDelete}
+                onClick={handleToggleStatus}
                 disabled={deleting}
-                className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border border-red-100 py-2 rounded-lg text-sm font-semibold transition-colors"
+                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors border ${
+                  selectedTechnician.is_active 
+                    ? "bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border-red-100" 
+                    : "bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 border-green-100"
+                }`}
               >
-                {deleting ? "Deleting…" : "Delete"}
+                {deleting ? "Processing…" : (selectedTechnician.is_active ? "Deactivate" : "Activate")}
               </button>
             </div>
           </div>
