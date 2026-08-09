@@ -16,7 +16,7 @@ function Modal({ open, onClose, title, children }) {
   );
 }
 
-const EMPTY_FORM = { name: "", email: "", phone_number: "" };
+const EMPTY_FORM = { name: "", email: "", phone_number: "", specializations: "" };
 
 export default function TechnicianPanel() {
   const [technicians, setTechnicians] = useState([]);
@@ -101,6 +101,9 @@ export default function TechnicianPanel() {
               <div className="min-w-0">
                 <p className="font-semibold text-gray-800 truncate">{t.name}</p>
                 <p className="text-xs text-gray-500 truncate">{t.email}</p>
+                {t.specializations && (
+                  <p className="text-xs text-gray-600 truncate mt-1">Skills: {t.specializations}</p>
+                )}
                 <span className="inline-block mt-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
                   Active
                 </span>
@@ -163,6 +166,14 @@ export default function TechnicianPanel() {
               placeholder="07XXXXXXXX"
             />
             <p className="text-xs text-gray-400 mt-1">A temporary password will be sent here via SMS.</p>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Specializations / Skills</label>
+            <input
+              name="specializations" value={form.specializations} onChange={handleChange}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="e.g. iPhone, Samsung, Board level repair"
+            />
           </div>
           <div className="flex gap-3 pt-1">
             <button
