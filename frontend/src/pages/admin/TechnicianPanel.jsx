@@ -18,6 +18,29 @@ function Modal({ open, onClose, title, children }) {
 
 const EMPTY_FORM = { name: "", email: "", phone_number: "", specializations: "" };
 
+function getTechnicianPerformance(specializations) {
+  if (!specializations) return { score: 0, category: 'General' };
+  
+  const skills = specializations.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  let score = skills.length * 10; 
+  
+  let category = 'General';
+  if (skills.some(s => s.includes('board') || s.includes('chip') || s.includes('ic') || s.includes('micro'))) {
+    category = 'Board Level Expert';
+    score += 20; 
+  } else if (skills.some(s => s.includes('screen') || s.includes('display') || s.includes('glass') || s.includes('lcd'))) {
+    category = 'Screen Repair Specialist';
+  } else if (skills.some(s => s.includes('software') || s.includes('flash') || s.includes('unlock'))) {
+    category = 'Software Specialist';
+  } else if (skills.some(s => s.includes('apple') || s.includes('iphone') || s.includes('mac') || s.includes('ios'))) {
+    category = 'Apple Specialist';
+  } else if (skills.length > 0) {
+    category = skills[0].charAt(0).toUpperCase() + skills[0].slice(1) + ' Specialist';
+  }
+  
+  return { score: Math.min(score, 100), category };
+}
+
 export default function TechnicianPanel() {
   const [technicians, setTechnicians] = useState([]);
   const [loading, setLoading]         = useState(true);
@@ -31,7 +54,12 @@ export default function TechnicianPanel() {
     setLoading(true);
     try {
       const { data } = await api.get("/users/");
-      setTechnicians(data.filter((u) => u.role === "technician"));
+      const techs = data.filter((u) => u.role === "technician").map(t => {
+        const perf = getTechnicianPerformance(t.specializations);
+        return { ...t, performanceScore: perf.score, category: perf.category };
+      });
+      techs.sort((a, b) => b.performanceScore - a.performanceScore);
+      setTechnicians(techs);
     } finally {
       setLoading(false);
     }
@@ -101,10 +129,19 @@ export default function TechnicianPanel() {
               <div className="min-w-0">
                 <p className="font-semibold text-gray-800 truncate">{t.name}</p>
                 <p className="text-xs text-gray-500 truncate">{t.email}</p>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <span className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-md border border-blue-100">
+                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"></path></svg>
+                    Score: {t.performanceScore}
+                  </span>
+                  <span className="inline-block px-2 py-0.5 bg-purple-50 text-purple-700 text-[10px] font-semibold rounded-md border border-purple-100">
+                    {t.category}
+                  </span>
+                </div>
                 {t.specializations && (
-                  <p className="text-xs text-gray-600 truncate mt-1">Skills: {t.specializations}</p>
+                  <p className="text-xs text-gray-600 truncate mt-2">Skills: {t.specializations}</p>
                 )}
-                <span className="inline-block mt-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                <span className="inline-block mt-2 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-wider rounded-full">
                   Active
                 </span>
               </div>
