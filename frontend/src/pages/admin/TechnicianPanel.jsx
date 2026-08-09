@@ -49,6 +49,8 @@ export default function TechnicianPanel() {
   const [formError, setFormError]     = useState("");
   const [saving, setSaving]           = useState(false);
   const [created, setCreated]         = useState(null); // { name, temporary_password, sms_sent }
+  const [selectedTechnician, setSelectedTechnician] = useState(null);
+  const [deleting, setDeleting]       = useState(false);
 
   const fetchTechnicians = async () => {
     setLoading(true);
@@ -97,6 +99,21 @@ export default function TechnicianPanel() {
     setForm(EMPTY_FORM);
   };
 
+  const handleDelete = async () => {
+    if (!selectedTechnician) return;
+    if (!window.confirm("Are you sure you want to delete this technician?")) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/admin/technicians/${selectedTechnician.id}`);
+      setSelectedTechnician(null);
+      fetchTechnicians();
+    } catch (err) {
+      alert("Failed to delete technician");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
@@ -122,7 +139,11 @@ export default function TechnicianPanel() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {technicians.map((t) => (
-            <div key={t.id} className="bg-white rounded-xl shadow-sm p-5 flex items-start gap-4">
+            <div 
+              key={t.id} 
+              className="bg-white rounded-xl shadow-sm p-5 flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow border border-transparent hover:border-gray-200"
+              onClick={() => setSelectedTechnician(t)}
+            >
               <div className="w-11 h-11 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg shrink-0">
                 {t.name.charAt(0).toUpperCase()}
               </div>
@@ -227,6 +248,69 @@ export default function TechnicianPanel() {
             </button>
           </div>
         </form>
+        )}
+      </Modal>
+
+      <Modal open={!!selectedTechnician} onClose={() => setSelectedTechnician(null)} title="Technician Details">
+        {selectedTechnician && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-2xl shrink-0">
+                {selectedTechnician.name.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">{selectedTechnician.name}</h3>
+                <p className="text-sm text-gray-500">{selectedTechnician.email}</p>
+                {selectedTechnician.phone_number && (
+                  <p className="text-sm text-gray-500">{selectedTechnician.phone_number}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+              <div>
+                <span className="block text-xs font-semibold text-gray-500 mb-1">Performance Category</span>
+                <span className="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-md border border-purple-200">
+                  {selectedTechnician.category}
+                </span>
+              </div>
+              
+              <div>
+                <span className="block text-xs font-semibold text-gray-500 mb-1">Performance Score</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${selectedTechnician.performanceScore}%` }}></div>
+                  </div>
+                  <span className="text-sm font-bold text-gray-700">{selectedTechnician.performanceScore}</span>
+                </div>
+              </div>
+
+              {selectedTechnician.specializations && (
+                <div>
+                  <span className="block text-xs font-semibold text-gray-500 mb-1">Special Skills</span>
+                  <p className="text-sm text-gray-700">{selectedTechnician.specializations}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-4 border-t">
+              <button
+                type="button" 
+                onClick={() => setSelectedTechnician(null)}
+                className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                Close
+              </button>
+              <button
+                type="button" 
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border border-red-100 py-2 rounded-lg text-sm font-semibold transition-colors"
+              >
+                {deleting ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          </div>
         )}
       </Modal>
     </div>
