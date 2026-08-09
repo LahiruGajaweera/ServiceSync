@@ -129,12 +129,14 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-5">
-          Customer?{" "}
-          <a href="/track" className="text-blue-500 hover:underline font-medium">
-            Track your repair →
-          </a>
-        </p>
+        <div className="text-center mt-6">
+          <p className="text-sm text-gray-700 font-medium bg-white/60 py-2 px-5 rounded-full inline-block shadow-sm border border-gray-200/50 backdrop-blur-sm">
+            Customer?{" "}
+            <a href="/track" className="text-blue-600 hover:text-blue-800 hover:underline font-bold ml-1">
+              Track your repair →
+            </a>
+          </p>
+        </div>
       </div>
       <ChatbotWidget />
     </div>
