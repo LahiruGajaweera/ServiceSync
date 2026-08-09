@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../services/api";
+import bgImage from "../light_repair_bg.png";
 
 const STEPS = [
   { key: "pending",           label: "Registered" },
@@ -18,35 +19,32 @@ function ProgressBar({ status }) {
   const current = stepIndex(status);
   return (
     <div className="relative flex items-start justify-between mt-6 mb-2">
-      {/* Track line */}
-      <div className="absolute top-3.5 left-0 right-0 h-0.5 bg-gray-200 mx-3" />
-      <div
-        className="absolute top-3.5 left-0 h-0.5 bg-blue-500 mx-3 transition-all duration-500"
-        style={{ width: current > 0 ? `${(current / (STEPS.length - 1)) * 94}%` : "0%" }}
-      />
+      {/* Background line */}
+      <div className="absolute top-4 left-0 w-full h-1 bg-gray-200 z-0"></div>
+      
+      {/* Active line */}
+      <div 
+        className="absolute top-4 left-0 h-1 bg-blue-500 z-0 transition-all duration-500"
+        style={{ width: current > 0 ? `${(current / (STEPS.length - 1)) * 100}%` : '0%' }}
+      ></div>
 
-      {STEPS.map((step, i) => (
-        <div key={step.key} className="flex flex-col items-center relative z-10 flex-1">
-          <div
-            className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${
-              i < current
-                ? "bg-blue-500 border-blue-500 text-white"
-                : i === current
-                ? "bg-blue-500 border-blue-500 text-white ring-4 ring-blue-100"
-                : "bg-white border-gray-300 text-gray-400"
-            }`}
-          >
-            {i + 1}
+      {STEPS.map((step, idx) => {
+        const isPast = idx < current;
+        const isCurrent = idx === current;
+        return (
+          <div key={step.key} className="flex flex-col items-center z-10 w-20">
+            <div 
+              className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm transition-colors duration-300
+                ${isPast ? "bg-blue-600 text-white" : isCurrent ? "bg-blue-500 text-white ring-4 ring-blue-100" : "bg-white text-gray-400 border border-gray-300"}`}
+            >
+              {isPast ? "✓" : (idx + 1)}
+            </div>
+            <span className={`text-[10px] sm:text-xs mt-2 font-medium text-center ${isCurrent || isPast ? "text-gray-800" : "text-gray-400"}`}>
+              {step.label}
+            </span>
           </div>
-          <p
-            className={`text-xs mt-2 text-center leading-tight ${
-              i <= current ? "text-blue-600 font-medium" : "text-gray-400"
-            }`}
-          >
-            {step.label}
-          </p>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -60,7 +58,7 @@ export default function TrackingPage() {
   const [loading, setLoading] = useState(false);
 
   const handleSearch = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     const id = jobId.trim();
     if (!id) return;
     setError("");
@@ -83,10 +81,10 @@ export default function TrackingPage() {
 
   const statusBadge = (s) => {
     const map = {
-      pending:          "bg-gray-100 text-gray-600",
-      in_progress:      "bg-blue-100 text-blue-700",
-      completed:        "bg-purple-100 text-purple-700",
-      ready_for_pickup: "bg-amber-100 text-amber-700",
+      pending:          "bg-yellow-100 text-yellow-800",
+      in_progress:      "bg-blue-100 text-blue-800",
+      completed:        "bg-green-100 text-green-800",
+      ready_for_pickup: "bg-purple-100 text-purple-800",
       delivered:        "bg-green-100 text-green-700",
       unclaimed:        "bg-red-100 text-red-700",
     };
@@ -94,21 +92,27 @@ export default function TrackingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div 
+      className="min-h-screen flex flex-col bg-cover bg-center bg-no-repeat relative"
+      style={{ backgroundImage: `url(${bgImage})` }}
+    >
+      {/* Light frosted overlay */}
+      <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-0"></div>
+
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-white/95 backdrop-blur-md border-b border-gray-200 relative z-10 shadow-sm">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
             <span className="text-xl font-extrabold text-blue-600 tracking-tight">ServiceSync</span>
-            <span className="ml-2 text-xs text-gray-400">Repair Tracker</span>
+            <span className="ml-2 text-xs text-gray-500 font-medium bg-gray-100 px-2 py-0.5 rounded-full">Repair Tracker</span>
           </div>
-          <a href="/login" className="text-sm text-blue-500 hover:underline">
+          <a href="/login" className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">
             Staff Login →
           </a>
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 py-12">
+      <div className="max-w-2xl mx-auto px-4 py-12 relative z-10 w-full">
         {/* Search */}
         <div className="bg-white rounded-2xl shadow-md p-8 mb-6">
           <h2 className="text-xl font-bold text-gray-800 mb-1">Track Your Repair</h2>
