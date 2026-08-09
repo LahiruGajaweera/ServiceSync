@@ -344,6 +344,7 @@ def create_technician(data: TechnicianCreate, db: Session) -> dict:
         password_hash=hash_password(temp_password),
         role="technician",
         is_temporary_password=True,
+        specializations=data.specializations,
     )
     db.add(technician)
     db.commit()

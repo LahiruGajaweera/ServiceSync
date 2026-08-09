@@ -39,6 +39,7 @@ def _run_migrations() -> None:
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_number VARCHAR(20)",
         "ALTER TABLE users ALTER COLUMN email DROP NOT NULL",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(255)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS specializations VARCHAR(255)",
         "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_phone_number ON users (phone_number)",
         # Temporary-password / force-change-on-first-login (existing rows default to FALSE)
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_temporary_password BOOLEAN NOT NULL DEFAULT FALSE",

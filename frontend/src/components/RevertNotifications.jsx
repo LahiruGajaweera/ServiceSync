@@ -48,7 +48,7 @@ export default function RevertNotifications() {
     <div className="relative">
       <button 
         onClick={() => setShowDropdown(!showDropdown)}
-        className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
+        className="relative p-2 text-gray-500 hover:text-gray-800 transition-colors rounded-full hover:bg-gray-100"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -72,7 +72,7 @@ export default function RevertNotifications() {
             </div>
             <div className="max-h-80 overflow-y-auto">
               {(requests.length === 0 && pendingDonors.length === 0) ? (
-                <div className="p-6 text-center text-gray-400 text-sm">No new notifications</div>
+                <div className="p-6 text-center text-gray-500 text-sm">No new notifications</div>
               ) : (
                 <div className="divide-y divide-gray-50">
                   {pendingDonors.map(group => {
@@ -87,7 +87,7 @@ export default function RevertNotifications() {
                           <p className="font-bold text-sm text-gray-800">Donor Extraction</p>
                           <span className="text-[10px] uppercase font-bold tracking-wider text-blue-600">Review Req</span>
                         </div>
-                        <p className="text-xs text-gray-600 line-clamp-2">A technician submitted {group.length} parts for approval.</p>
+                        <p className="text-xs text-gray-700 line-clamp-2">A technician submitted {group.length} parts for approval.</p>
                       </div>
                     );
                   })}
@@ -110,11 +110,11 @@ export default function RevertNotifications() {
                           </span>
                         </div>
                         {isAlert ? (
-                          <p className="text-xs text-gray-600">{req.admin_alert}</p>
+                          <p className="text-xs text-gray-700">{req.admin_alert}</p>
                         ) : (
                           <>
-                            <p className="text-xs text-gray-600 line-clamp-2">Technician {req.technician_name || "Unknown"} requested revert to <b>{req.revert_requested_to}</b>.</p>
-                            {req.revert_reason && <p className="text-xs text-gray-500 italic mt-1">"{req.revert_reason}"</p>}
+                            <p className="text-xs text-gray-700 line-clamp-2">Technician {req.technician_name || "Unknown"} requested revert to <b>{req.revert_requested_to}</b>.</p>
+                            {req.revert_reason && <p className="text-xs text-gray-600 italic mt-1">"{req.revert_reason}"</p>}
                           </>
                         )}
                       </div>

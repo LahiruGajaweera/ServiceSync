@@ -18,6 +18,7 @@ class TechnicianCreate(BaseModel):
     name: str
     email: EmailStr
     phone_number: str
+    specializations: str | None = None
 
 
 class UserUpdate(BaseModel):
@@ -30,6 +31,7 @@ class UserResponse(BaseModel):
     name: str
     email: str | None = None
     avatar_url: str | None = None
+    specializations: str | None = None
     role: str
     is_active: bool
     created_at: datetime
