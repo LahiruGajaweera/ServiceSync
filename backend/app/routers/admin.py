@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import require_admin
 from app.models.user import User
-from app.schemas.user import TechnicianCreate, TechnicianCreateResponse
+from app.schemas.user import TechnicianCreate, TechnicianCreateResponse, UserResponse
 from app.services import auth_service
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -20,8 +20,8 @@ def create_technician(
     return auth_service.create_technician(data, db)
 
 
-@router.delete("/technicians/{technician_id}", status_code=204)
-def delete_technician(
+@router.patch("/technicians/{technician_id}/toggle-status", response_model=UserResponse)
+def toggle_technician_status(
     technician_id: str,
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
@@ -38,5 +38,7 @@ def delete_technician(
     if not technician:
         raise HTTPException(status_code=404, detail="Technician not found")
         
-    technician.is_active = False
+    technician.is_active = not technician.is_active
     db.commit()
+    db.refresh(technician)
+    return technician
