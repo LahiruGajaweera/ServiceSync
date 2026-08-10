@@ -71,6 +71,14 @@ def _run_migrations() -> None:
             conn.execute(text("ALTER TYPE donor_status ADD VALUE IF NOT EXISTS 'assessed'"))
         except Exception:
             pass
+        try:
+            conn.execute(text("ALTER TYPE job_status ADD VALUE IF NOT EXISTS 'failed'"))
+        except Exception:
+            pass
+        try:
+            conn.execute(text("ALTER TYPE job_status ADD VALUE IF NOT EXISTS 'rejected'"))
+        except Exception:
+            pass
 
     with engine.begin() as conn:
         for stmt in statements:

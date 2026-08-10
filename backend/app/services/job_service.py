@@ -177,7 +177,16 @@ def update_status(job_id: UUID, data: JobStatusUpdate, changed_by: User, db: Ses
     if not job:
         raise HTTPException(404, "Job not found")
 
-    STATUS_ORDER = {"pending": 0, "in_progress": 1, "completed": 2, "ready_for_pickup": 3, "delivered": 4, "unclaimed": 4}
+    STATUS_ORDER = {
+        "pending": 0, 
+        "in_progress": 1, 
+        "completed": 2, 
+        "failed": 2,
+        "rejected": 2,
+        "ready_for_pickup": 3, 
+        "delivered": 4, 
+        "unclaimed": 4
+    }
     current_order = STATUS_ORDER.get(job.status, 0)
     new_order = STATUS_ORDER.get(data.status, 0)
 
@@ -187,17 +196,17 @@ def update_status(job_id: UUID, data: JobStatusUpdate, changed_by: User, db: Ses
     if changed_by.role == "technician":
         if job.technician_id != changed_by.id:
             raise HTTPException(403, "You must claim this job before updating its status")
-        if data.status not in ["pending", "in_progress", "completed"]:
-            raise HTTPException(403, "Technicians can only update status up to 'completed'")
+        if data.status not in ["pending", "in_progress", "completed", "failed", "rejected"]:
+            raise HTTPException(403, "Technicians can only update status up to completed/failed/rejected")
     elif changed_by.role == "admin":
         if new_order in [1, 2] and current_order < 3:
-            raise HTTPException(403, "Admins cannot update job to 'in_progress' or 'completed'. This is the technician's role.")
+            raise HTTPException(403, "Admins cannot update job to 'in_progress', 'completed', 'failed', or 'rejected'. This is the technician's role.")
 
     job.status = data.status
-    if data.estimated_cost is not None and data.status == "completed":
+    if data.estimated_cost is not None and data.status in ["completed", "failed", "rejected"]:
         job.estimated_cost = data.estimated_cost
 
-    if data.status == "completed":
+    if data.status in ["completed", "failed", "rejected"]:
         job.completed_date = datetime.now(timezone.utc)
 
     history = JobStatusHistory(

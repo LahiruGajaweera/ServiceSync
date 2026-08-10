@@ -27,6 +27,7 @@ class Job(Base):
         Enum(
             "pending", "in_progress", "completed",
             "ready_for_pickup", "delivered", "unclaimed",
+            "failed", "rejected",
             name="job_status",
         ),
         nullable=False,

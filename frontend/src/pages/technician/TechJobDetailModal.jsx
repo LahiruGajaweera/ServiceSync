@@ -5,6 +5,8 @@ import JobStatusBadge from "../../components/JobStatusBadge";
 const STATUS_OPTIONS = [
   { value: "in_progress",      label: "Mark In Progress" },
   { value: "completed",        label: "Mark Completed" },
+  { value: "failed",           label: "Fail Job (Unidentified Fault)" },
+  { value: "rejected",         label: "Fail Job (Identified but Unrepairable)" },
 ];
 
 export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenPartLog, partRefreshTrigger }) {
@@ -45,7 +47,7 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
   // Reset form fields on load
   useEffect(() => {
     if (open && job) {
-      setLaborCost(job.labor_cost || "");
+      setLaborCost(job.labor_cost && parseFloat(job.labor_cost) !== 0 ? job.labor_cost : "");
       setSavedLaborCost(job.labor_cost || 0);
       setRevertMode(false);
       setRevertReason("");
@@ -92,7 +94,10 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
         });
       } else {
         // Automatically save labor cost if it has changed
-        if (parseFloat(laborCost) !== savedLaborCost && (parseFloat(laborCost) || 0) >= 0) {
+        if (newStatus === "failed") {
+          await api.patch(`/jobs/${job.id}/labor`, { labor_cost: 0 });
+          setSavedLaborCost(0);
+        } else if (parseFloat(laborCost) !== savedLaborCost && (parseFloat(laborCost) || 0) >= 0) {
           await api.patch(`/jobs/${job.id}/labor`, { labor_cost: parseFloat(laborCost) || 0 });
           setSavedLaborCost(parseFloat(laborCost) || 0);
         }
@@ -240,30 +245,40 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
                     <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
                       {STATUS_OPTIONS.map((s) => {
-                        const currentOrder = { pending: 0, in_progress: 1, completed: 2 }[job.status] || 0;
-                        const optionOrder = { in_progress: 1, completed: 2 }[s.value] || 0;
+                        let isDisabled = false;
+                        if (job.status === "pending") {
+                          isDisabled = s.value !== "in_progress";
+                        } else if (job.status === "in_progress") {
+                          isDisabled = s.value === "in_progress";
+                        } else {
+                          isDisabled = true;
+                        }
                         return (
-                          <option key={s.value} value={s.value} disabled={optionOrder <= currentOrder}>
+                          <option key={s.value} value={s.value} disabled={isDisabled}>
                             {s.label}
                           </option>
                         );
                       })}
                     </select>
                   </div>
+                  {newStatus !== "failed" && (
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Labor Cost (LKR)</label>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">
+                      Labor Cost (LKR)
+                    </label>
                     <div className="flex gap-2">
                       <input 
                         type="number" 
                         min="0" step="0.01" 
                         value={laborCost} 
                         onChange={(e) => setLaborCost(e.target.value)}
-                        disabled={job.status !== "in_progress" || newStatus !== "completed" || revertMode}
+                        disabled={(newStatus !== "completed" && newStatus !== "rejected") || revertMode}
                         className="w-full text-right border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
                         placeholder="0.00" 
                       />
                     </div>
                   </div>
+                  )}
                 </div>
                 {newStatus === "completed" && (
                   <div>

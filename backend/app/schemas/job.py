@@ -12,7 +12,8 @@ FAULT_CATEGORIES = Literal[
 
 JOB_STATUSES = Literal[
     "pending", "in_progress", "completed",
-    "ready_for_pickup", "delivered", "unclaimed"
+    "ready_for_pickup", "delivered", "unclaimed",
+    "failed", "rejected"
 ]
 
 

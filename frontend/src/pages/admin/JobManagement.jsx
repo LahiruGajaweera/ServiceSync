@@ -25,6 +25,8 @@ const STATUS_TABS = [
   { value: "pending",         label: "Pending" },
   { value: "in_progress",     label: "In Progress" },
   { value: "completed",       label: "Completed" },
+  { value: "failed",          label: "Failed" },
+  { value: "rejected",        label: "Rejected" },
   { value: "ready_for_pickup",label: "Ready" },
   { value: "delivered",       label: "Delivered" },
   { value: "unclaimed",       label: "Unclaimed" },
