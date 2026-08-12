@@ -50,7 +50,7 @@ def _job_dict(job: Job, customer_name=None, customer_phone=None, technician_name
     }
 
 
-def _query_jobs(db: Session, status: str | None = None, technician_id: UUID | None = None, include_unassigned: bool = False):
+def _query_jobs(db: Session, status: str | None = None, technician_id: UUID | None = None, include_unassigned: bool = False, has_alerts: bool = False):
     TechAlias = aliased(User)
 
     q = (
@@ -71,6 +71,9 @@ def _query_jobs(db: Session, status: str | None = None, technician_id: UUID | No
             q = q.filter((Job.technician_id == technician_id) | (Job.technician_id.is_(None)))
         else:
             q = q.filter(Job.technician_id == technician_id)
+
+    if has_alerts:
+        q = q.filter((Job.revert_requested_to.isnot(None)) | (Job.admin_alert.isnot(None)))
 
     return q.order_by(Job.created_at.desc()).all()
 
@@ -114,8 +117,8 @@ def create_job(data: JobCreate, created_by: User, db: Session, background_tasks:
     return _job_dict(job, customer.name if customer else None, customer.phone_number if customer else None)
 
 
-def list_jobs(db: Session, status: str | None = None, technician_id: UUID | None = None, include_unassigned: bool = False) -> list[dict]:
-    rows = _query_jobs(db, status=status, technician_id=technician_id, include_unassigned=include_unassigned)
+def list_jobs(db: Session, status: str | None = None, technician_id: UUID | None = None, include_unassigned: bool = False, has_alerts: bool = False) -> list[dict]:
+    rows = _query_jobs(db, status=status, technician_id=technician_id, include_unassigned=include_unassigned, has_alerts=has_alerts)
     return [_job_dict(job, cname, cphone, tname) for job, cname, cphone, tname in rows]
 
 
@@ -244,15 +247,15 @@ def get_job_history(job_id: UUID, db: Session) -> list[dict]:
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
         raise HTTPException(404, "Job not found")
-    history = (
-        db.query(JobStatusHistory)
+    rows = (
+        db.query(JobStatusHistory, User)
+        .outerjoin(User, JobStatusHistory.changed_by == User.id)
         .filter(JobStatusHistory.job_id == job_id)
         .order_by(JobStatusHistory.created_at.asc())
         .all()
     )
     result = []
-    for h in history:
-        tech = db.query(User).filter(User.id == h.changed_by).first()
+    for h, tech in rows:
         result.append({
             "id": h.id,
             "status": h.status,

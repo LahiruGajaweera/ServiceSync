@@ -12,7 +12,7 @@ class SalvageCreate(BaseModel):
     refurbish_cost_estimate: Decimal | None = None
     refurbish_value: Decimal | None = None
     salvage_value: Decimal | None = None
-    recommendation: Literal["refurbish", "salvage_for_parts"]
+    recommendation: Literal["refurbish", "salvage_for_parts"] | None = None
 
 
 class SalvageStatusUpdate(BaseModel):

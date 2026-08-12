@@ -1,5 +1,8 @@
 from datetime import datetime, timezone
 from uuid import UUID
+import os
+import json
+import google.generativeai as genai
 
 from fastapi import HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
@@ -12,6 +15,10 @@ from app.schemas.salvage import SalvageCreate, SalvageStatusUpdate
 
 from app.services import scraper_service
 
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+
 def _run_auto_assessment(assessment_id: UUID, brand: str, model: str, db: Session):
     try:
         scraped = scraper_service.scrape_market_price(brand, model)
@@ -20,27 +27,63 @@ def _run_auto_assessment(assessment_id: UUID, brand: str, model: str, db: Sessio
         a = db.query(SalvageAssessment).filter(SalvageAssessment.id == assessment_id).first()
         if not a: return
         
+        job = db.query(Job).filter(Job.id == a.job_id).first()
+        if not job: return
+        
         if market_price:
             a.scraped_market_price = market_price
+            success = False
             
-            # Simple ROI Calculation
-            refurbish_cost = float(a.refurbish_cost_estimate or 0)
-            if refurbish_cost == 0:
-                refurbish_cost = float(market_price) * 0.3 # Rough estimate
-                a.refurbish_cost_estimate = refurbish_cost
-                
-            a.refurbish_value = float(market_price) - refurbish_cost
+            if GEMINI_API_KEY:
+                try:
+                    prompt = (
+                        "You are an expert electronics refurbisher. Evaluate the following device for salvage or refurbish.\n"
+                        f"Device: {job.device_brand} {job.device_model}\n"
+                        f"Reported Fault: {job.fault_category} - {job.fault_description}\n"
+                        f"Estimated Repair Cost: {job.estimated_cost or 'Unknown'}\n"
+                        f"Market Price of working unit: {market_price}\n\n"
+                        "Return ONLY a valid JSON object with the following keys:\n"
+                        "- \"refurbish_cost_estimate\": (float) estimated cost to repair it based on the fault. If the tech provided an estimate, use that or adjust it.\n"
+                        "- \"salvage_value\": (float) estimated value of the working parts you can extract from it, considering the broken parts.\n"
+                        "- \"recommendation\": (string) either \"refurbish\" or \"salvage_for_parts\" based on profitability.\n"
+                    )
+                    genai_model = genai.GenerativeModel(model_name="gemini-3.5-flash")
+                    response = genai_model.generate_content(
+                        prompt, 
+                        generation_config={"response_mime_type": "application/json"}
+                    )
+                    
+                    result = json.loads(response.text)
+                    a.refurbish_cost_estimate = float(result.get("refurbish_cost_estimate", 0))
+                    a.salvage_value = float(result.get("salvage_value", 0))
+                    a.refurbish_value = float(market_price) - a.refurbish_cost_estimate
+                    
+                    rec = result.get("recommendation", "").lower()
+                    if rec in ["refurbish", "salvage_for_parts"]:
+                        a.recommendation = rec
+                    else:
+                        a.recommendation = "refurbish" if a.refurbish_value > a.salvage_value else "salvage_for_parts"
+                    
+                    success = True
+                except Exception as e:
+                    print(f"Gemini AI Salvage Assessment Failed: {e}")
             
-            # If we don't have parts value, just estimate it
-            salvage_val = float(a.salvage_value or (float(market_price) * 0.4))
-            a.salvage_value = salvage_val
-            
-            a.recommendation = "refurbish" if a.refurbish_value > salvage_val else "salvage_for_parts"
+            if not success:
+                # Fallback to simple ROI Calculation
+                refurbish_cost = float(a.refurbish_cost_estimate or 0)
+                if refurbish_cost == 0:
+                    refurbish_cost = float(market_price) * 0.3 # Rough estimate
+                    a.refurbish_cost_estimate = refurbish_cost
+                    
+                a.refurbish_value = float(market_price) - refurbish_cost
+                salvage_val = float(a.salvage_value or (float(market_price) * 0.4))
+                a.salvage_value = salvage_val
+                a.recommendation = "refurbish" if a.refurbish_value > salvage_val else "salvage_for_parts"
             
         a.status = "assessed"
         db.commit()
     except Exception as e:
-        pass
+        print(f"Salvage Assessment Task Error: {e}")
 
 
 def create_assessment(data: SalvageCreate, assessed_by_user: User, background_tasks: BackgroundTasks, db: Session) -> SalvageAssessment:
@@ -73,14 +116,14 @@ def create_assessment(data: SalvageCreate, assessed_by_user: User, background_ta
 
 
 def list_assessments(db: Session) -> list[dict]:
-    assessments = (
-        db.query(SalvageAssessment)
+    rows = (
+        db.query(SalvageAssessment, Job)
+        .outerjoin(Job, SalvageAssessment.job_id == Job.id)
         .order_by(SalvageAssessment.assessed_at.desc())
         .all()
     )
     result = []
-    for a in assessments:
-        job = db.query(Job).filter(Job.id == a.job_id).first()
+    for a, job in rows:
         result.append({
             "id": a.id,
             "job_id": a.job_id,

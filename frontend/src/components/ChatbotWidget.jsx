@@ -10,6 +10,7 @@ export default function ChatbotWidget() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -18,6 +19,12 @@ export default function ChatbotWidget() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isOpen]);
+
+  useEffect(() => {
+    if (!isLoading && isOpen && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isLoading, isOpen]);
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -29,8 +36,12 @@ export default function ChatbotWidget() {
     setIsLoading(true);
 
     try {
+      const historyToSend = messages.map(m => ({ role: m.isBot ? "model" : "user", text: m.text }));
       // Use the api instance which points to the backend
-      const response = await api.post('/chatbot/message', { message: userMessage });
+      const response = await api.post('/chatbot/message', { 
+        message: userMessage,
+        history: historyToSend
+      });
       setMessages(prev => [...prev, { 
         text: response.data.reply, 
         isBot: true, 
@@ -126,6 +137,7 @@ export default function ChatbotWidget() {
           <div className="p-3 bg-white border-t border-gray-100">
             <form onSubmit={handleSend} className="flex gap-2 items-center">
               <input
+                ref={inputRef}
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}

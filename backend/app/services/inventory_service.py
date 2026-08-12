@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import HTTPException
 from sqlalchemy import cast, func, or_
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.donor import DonorPart
 from app.models.inventory import InventoryBatch, InventoryItem, InventoryAdjustmentLog
@@ -301,6 +301,7 @@ def adjust_stock(item_id: UUID, data: StockAdjustRequest, user_id: UUID, db: Ses
 def list_adjustments(item_id: UUID, db: Session) -> list[dict]:
     logs = (
         db.query(InventoryAdjustmentLog)
+        .options(joinedload(InventoryAdjustmentLog.user), joinedload(InventoryAdjustmentLog.item), joinedload(InventoryAdjustmentLog.batch))
         .filter(InventoryAdjustmentLog.inventory_item_id == item_id)
         .order_by(InventoryAdjustmentLog.created_at.desc())
         .all()
@@ -310,6 +311,7 @@ def list_adjustments(item_id: UUID, db: Session) -> list[dict]:
 def list_all_adjustments(db: Session) -> list[dict]:
     logs = (
         db.query(InventoryAdjustmentLog)
+        .options(joinedload(InventoryAdjustmentLog.user), joinedload(InventoryAdjustmentLog.item), joinedload(InventoryAdjustmentLog.batch))
         .order_by(InventoryAdjustmentLog.created_at.desc())
         .all()
     )

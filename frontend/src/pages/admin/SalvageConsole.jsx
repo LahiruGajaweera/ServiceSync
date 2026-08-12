@@ -32,7 +32,7 @@ const EMPTY_FORM = {
   refurbish_cost_estimate: "",
   refurbish_value: "",
   salvage_value: "",
-  recommendation: "refurbish",
+  recommendation: "",
 };
 
 function ScraperPanel({ brand, model, onSelectPrice }) {
@@ -88,13 +88,15 @@ function ScraperPanel({ brand, model, onSelectPrice }) {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-xs font-semibold text-gray-800">LKR {Number(l.price).toLocaleString()}</span>
-                    <button
-                      type="button"
-                      onClick={() => onSelectPrice(l.price)}
-                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      Use
-                    </button>
+                    {result.listings?.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => onSelectPrice(l.price)}
+                        className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        Use
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -106,9 +108,9 @@ function ScraperPanel({ brand, model, onSelectPrice }) {
             <button
               type="button"
               onClick={() => onSelectPrice(result.avg_price)}
-              className="w-full text-xs bg-green-600 hover:bg-green-700 text-white py-1.5 rounded-lg font-semibold"
+              className="w-full text-xs bg-green-600 hover:bg-green-700 text-white py-1.5 rounded-lg font-semibold mt-2"
             >
-              Use Average Price (LKR {Number(result.avg_price).toLocaleString()})
+              Use {result.listings?.length > 1 ? "Average " : ""}Price (LKR {Number(result.avg_price).toLocaleString()})
             </button>
           )}
         </div>
@@ -133,17 +135,23 @@ export default function SalvageConsole() {
   const [jobResults, setJobResults] = useState([]);
   const [selectedJob, setJob]       = useState(null);
 
-  const fetchAssessments = async () => {
-    setLoading(true);
+  const fetchAssessments = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
     try {
       const { data } = await api.get("/salvage/");
       setAssessments(data);
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
-  useEffect(() => { fetchAssessments(); }, []);
+  useEffect(() => {
+    fetchAssessments();
+    const interval = setInterval(() => {
+      fetchAssessments(true);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const searchJobs = async (q) => {
     setJobSearch(q);
@@ -159,10 +167,29 @@ export default function SalvageConsole() {
     } catch { /* ignore */ }
   };
 
-  const selectJob = (job) => {
+  const selectJob = async (job) => {
     setJob(job);
     setJobSearch(`${job.job_id} — ${job.customer_name} (${job.device_brand} ${job.device_model})`);
     setJobResults([]);
+    
+    let cost = job.estimated_cost ? Number(job.estimated_cost) : 0;
+    try {
+      const { data } = await api.get(`/jobs/${job.id}/parts`);
+      let partsTotal = 0;
+      if (data.inventory_parts) partsTotal += data.inventory_parts.reduce((s, p) => s + (p.unit_price * p.quantity), 0);
+      if (data.donor_parts) partsTotal += data.donor_parts.reduce((s, p) => s + (p.unit_price * p.quantity), 0);
+      
+      const labor = job.labor_cost ? Number(job.labor_cost) : 0;
+      cost = partsTotal + labor;
+    } catch (e) {
+       console.error("Could not fetch parts", e);
+       cost = job.estimated_cost ? Number(job.estimated_cost) : 0; // Fallback only on network error
+    }
+    
+    setForm((f) => ({
+      ...f,
+      refurbish_cost_estimate: String(cost),
+    }));
   };
 
   const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -175,7 +202,7 @@ export default function SalvageConsole() {
     try {
       const payload = {
         job_id: selectedJob.id,
-        recommendation: form.recommendation,
+        recommendation: form.recommendation || null,
         scraped_market_price:    form.scraped_market_price    ? parseFloat(form.scraped_market_price)    : null,
         refurbish_cost_estimate: form.refurbish_cost_estimate ? parseFloat(form.refurbish_cost_estimate) : null,
         refurbish_value:         form.refurbish_value         ? parseFloat(form.refurbish_value)         : null,
@@ -186,7 +213,8 @@ export default function SalvageConsole() {
       setForm(EMPTY_FORM); setJob(null); setJobSearch("");
       fetchAssessments();
     } catch (err) {
-      setFormError(err.response?.data?.detail || "Failed to create assessment");
+      const detail = err.response?.data?.detail;
+      setFormError(Array.isArray(detail) ? detail[0].msg : (detail || "Failed to create assessment"));
     } finally {
       setSaving(false);
     }
@@ -258,7 +286,9 @@ export default function SalvageConsole() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    {a.status === "pending" && (
+                    {a.status === "pending" ? (
+                      <span className="text-xs text-gray-500 italic">Processing...</span>
+                    ) : a.status === "assessed" ? (
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleStatusUpdate(a.id, "approved")}
@@ -273,6 +303,8 @@ export default function SalvageConsole() {
                           Reject
                         </button>
                       </div>
+                    ) : (
+                      <span className="text-xs text-gray-500 italic">No actions</span>
                     )}
                   </td>
                 </tr>
@@ -328,8 +360,9 @@ export default function SalvageConsole() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Refurbish Cost (LKR)</label>
-              <input name="refurbish_cost_estimate" type="number" min="0" step="0.01" value={form.refurbish_cost_estimate} onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <input name="refurbish_cost_estimate" type="number" min="0" step="0.01" value={form.refurbish_cost_estimate} onChange={handleChange} disabled
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100 text-gray-500 cursor-not-allowed"
+                title="Automatically calculated based on parts and labor used so far"
                 placeholder="0.00" />
             </div>
             <div>
@@ -349,7 +382,8 @@ export default function SalvageConsole() {
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">Recommendation *</label>
             <select name="recommendation" value={form.recommendation} onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium">
+              <option value="" className="text-blue-600 font-bold">✨ Let Gemini AI Decide Automatically</option>
               <option value="refurbish">Refurbish — repair and resell</option>
               <option value="salvage_for_parts">Salvage for Parts — strip and stock</option>
             </select>

@@ -66,10 +66,11 @@ def create_job(
 def list_jobs(
     status: str | None = Query(default=None),
     technician_id: UUID | None = Query(default=None),
+    has_alerts: bool = Query(default=False),
     db: Session = Depends(get_db),
     _=Depends(require_any_staff),
 ):
-    return job_service.list_jobs(db, status=status, technician_id=technician_id)
+    return job_service.list_jobs(db, status=status, technician_id=technician_id, has_alerts=has_alerts)
 
 
 @router.get("/{job_id}", response_model=JobListItem)
