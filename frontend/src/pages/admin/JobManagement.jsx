@@ -428,7 +428,7 @@ function InvoiceReceipt({ job, onClose }) {
         <div class="center foot">
           Thank you for choosing ${SHOP.name}!<br/>Keep this receipt to collect your device.
           <br/><br/>
-          <strong style="color: #4b5563;">Policy:</strong> Devices not collected within 90 days of completion will be considered abandoned and dismantled for parts. The shop holds no responsibility thereafter.
+          <strong style="color: #4b5563;">Policy:</strong> Devices not collected within 90 days of completion will be considered abandoned and the shop holds no responsibility for loss or damage thereafter.
         </div>
       </div>
     </body></html>`);

@@ -15,10 +15,10 @@ export default function RevertNotifications() {
   const fetchRequests = async () => {
     try {
       const [jobsRes, donorsRes] = await Promise.all([
-        api.get("/jobs/"),
+        api.get("/jobs/?has_alerts=true"),
         user?.role === "admin" ? api.get("/donors/parts/pending").catch(() => ({ data: [] })) : Promise.resolve({ data: [] })
       ]);
-      const pending = jobsRes.data.filter(j => !!j.revert_requested_to || !!j.admin_alert);
+      const pending = jobsRes.data;
       setRequests(pending);
 
       const grouped = Object.values(

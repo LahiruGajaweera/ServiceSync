@@ -329,20 +329,13 @@ export default function DonorDeviceConsole() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filtered.map((d) => {
-                  const daysSinceAdded = (new Date() - new Date(d.added_date)) / (1000 * 60 * 60 * 24);
-                  const isCoolingOff = d.source === "unclaimed_job" && daysSinceAdded < 5;
-                  
                   return (
                   <tr 
                     key={d.id} 
-                    className={`transition-colors ${isCoolingOff ? 'bg-gray-50 opacity-75' : 'hover:bg-blue-50 cursor-pointer'}`}
+                    className="transition-colors hover:bg-blue-50 cursor-pointer"
                     onClick={(e) => {
                       if (e.target.tagName !== 'SELECT' && e.target.tagName !== 'OPTION') {
-                        if (isCoolingOff) {
-                          alert(`This device is locked. Available in ${Math.ceil(5 - daysSinceAdded)} days.`);
-                        } else {
                           openViewDevice(d);
-                        }
                       }
                     }}
                   >
@@ -365,11 +358,6 @@ export default function DonorDeviceConsole() {
                       <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${STATUS_BADGE[d.status] ?? ""}`}>
                         {d.status === "stripped" ? "assessed" : d.status}
                       </span>
-                      {isCoolingOff && (
-                        <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700">
-                          Cooling Off
-                        </span>
-                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-xs text-gray-500 font-medium">

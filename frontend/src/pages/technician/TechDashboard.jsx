@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import JobStatusBadge from "../../components/JobStatusBadge";
@@ -37,6 +37,7 @@ function Modal({ open, onClose, title, children }) {
 
 export default function TechDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [jobs, setJobs]             = useState([]);
   const [donors, setDonors]         = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -299,7 +300,8 @@ export default function TechDashboard() {
               {myDonors.map((d) => (
                 <tr 
                   key={d.id} 
-                  className="hover:bg-gray-50 transition-colors"
+                  onClick={() => navigate('/tech/donors')}
+                  className="hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   <td className="py-2.5 font-semibold text-gray-800">{d.brand} {d.model}</td>
                   <td className="py-2.5 text-gray-600 capitalize text-xs">{d.condition}</td>

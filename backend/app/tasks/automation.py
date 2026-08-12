@@ -15,15 +15,14 @@ def process_unclaimed_jobs():
             print("Auto-Unclaim skipped: No admin user found to attribute changes.")
             return
             
-        # Thresholds (using short limits for testing instead of 90 days / 83 days)
+        # Thresholds (using short limits for testing: 1min, 2min, 3min)
         warning_threshold = datetime.now(timezone.utc) - timedelta(minutes=1)
         unclaim_threshold = datetime.now(timezone.utc) - timedelta(minutes=2)
+        salvage_threshold = datetime.now(timezone.utc) - timedelta(minutes=3)
         
-        # Find jobs that are currently ready_for_pickup
-        jobs = db.query(Job).filter(Job.status == "ready_for_pickup").all()
-        
-        for job in jobs:
-            # Find the most recent 'ready_for_pickup' status entry
+        # --- STAGE 1: Process 'ready_for_pickup' jobs (Warning & Unclaim) ---
+        ready_jobs = db.query(Job).filter(Job.status == "ready_for_pickup").all()
+        for job in ready_jobs:
             history = (
                 db.query(JobStatusHistory)
                 .filter(JobStatusHistory.job_id == job.id, JobStatusHistory.status == "ready_for_pickup")
@@ -32,20 +31,54 @@ def process_unclaimed_jobs():
             )
             
             if history:
-                # Tier 2: Unclaim if passed unclaim_threshold
+                # Unclaim if passed unclaim_threshold (2 minutes)
                 if history.created_at < unclaim_threshold:
                     print(f"Auto-Unclaiming job {job.job_id}")
                     job.status = "unclaimed"
-                    job.admin_alert = "Auto-converted to Donor Device due to waiting period."
+                    job.admin_alert = "90-day period expired. Liability released."
                     
                     new_history = JobStatusHistory(
                         job_id=job.id,
                         status="unclaimed",
                         changed_by=system_admin.id,
-                        notes="Automated transition: Unclaimed after grace period in ready_for_pickup"
+                        notes="Automated transition: Unclaimed after 90 days in ready_for_pickup"
                     )
                     db.add(new_history)
+                    db.commit()
                     
+                    try:
+                        notify_unclaimed(job.id)
+                        notify_admin_unclaimed(job.id)
+                    except Exception as e:
+                        print(f"Failed to send unclaimed notifications for {job.job_id}: {e}")
+                
+                # Warning if passed warning_threshold (1 minute) and warning not sent
+                elif history.created_at < warning_threshold and not job.final_warning_sent:
+                    print(f"Sending Final Warning for job {job.job_id}")
+                    job.final_warning_sent = True
+                    db.commit()
+                    
+                    try:
+                        notify_final_warning(job.id)
+                    except Exception as e:
+                        print(f"Failed to send final warning for {job.job_id}: {e}")
+
+        # --- STAGE 2: Process 'unclaimed' jobs (Auto-Salvage) ---
+        unclaimed_jobs = db.query(Job).filter(Job.status == "unclaimed").all()
+        for job in unclaimed_jobs:
+            # Check if a DonorDevice already exists for this job
+            donor_exists = db.query(DonorDevice).filter(DonorDevice.source_job_id == job.id).first()
+            if not donor_exists:
+                # We measure the 365 days from when it was first ready_for_pickup
+                history = (
+                    db.query(JobStatusHistory)
+                    .filter(JobStatusHistory.job_id == job.id, JobStatusHistory.status == "ready_for_pickup")
+                    .order_by(JobStatusHistory.created_at.desc())
+                    .first()
+                )
+                
+                if history and history.created_at < salvage_threshold:
+                    print(f"Auto-Salvaging job {job.job_id} after 365 days")
                     donor = DonorDevice(
                         brand=job.device_brand,
                         model=job.device_model,
@@ -58,24 +91,7 @@ def process_unclaimed_jobs():
                     )
                     db.add(donor)
                     db.commit()
-                    
-                    # Send notifications
-                    try:
-                        notify_unclaimed(job.id)
-                        notify_admin_unclaimed(job.id)
-                    except Exception as e:
-                        print(f"Failed to send unclaimed notifications for {job.job_id}: {e}")
-                
-                # Tier 1: Warning if passed warning_threshold and warning not sent
-                elif history.created_at < warning_threshold and not job.final_warning_sent:
-                    print(f"Sending Final Warning for job {job.job_id}")
-                    job.final_warning_sent = True
-                    db.commit()
-                    
-                    try:
-                        notify_final_warning(job.id)
-                    except Exception as e:
-                        print(f"Failed to send final warning for {job.job_id}: {e}")
+
     except Exception as e:
         db.rollback()
         import traceback
