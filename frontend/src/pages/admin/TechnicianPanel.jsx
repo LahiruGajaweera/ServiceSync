@@ -44,6 +44,7 @@ function getTechnicianPerformance(specializations) {
 export default function TechnicianPanel() {
   const [technicians, setTechnicians] = useState([]);
   const [loading, setLoading]         = useState(true);
+  const [activeTab, setActiveTab]     = useState('active'); // 'active' or 'inactive'
   const [showModal, setShowModal]     = useState(false);
   const [form, setForm]               = useState(EMPTY_FORM);
   const [formError, setFormError]     = useState("");
@@ -132,16 +133,31 @@ export default function TechnicianPanel() {
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Technician Panel</h2>
           <p className="text-sm text-gray-500 mt-0.5">{technicians.length} total technicians</p>
         </div>
         <button
           onClick={() => { setShowModal(true); setCreated(null); setFormError(""); setForm(EMPTY_FORM); }}
-          className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+          className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
         >
           + Add Technician
+        </button>
+      </div>
+
+      <div className="flex border-b border-gray-200 mb-6">
+        <button
+          className={`pb-3 px-6 font-semibold text-sm transition-colors border-b-2 ${activeTab === 'active' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+          onClick={() => setActiveTab('active')}
+        >
+          Active Technicians ({technicians.filter(t => t.is_active).length})
+        </button>
+        <button
+          className={`pb-3 px-6 font-semibold text-sm transition-colors border-b-2 ${activeTab === 'inactive' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+          onClick={() => setActiveTab('inactive')}
+        >
+          Inactive Technicians ({technicians.filter(t => !t.is_active).length})
         </button>
       </div>
 
@@ -154,7 +170,7 @@ export default function TechnicianPanel() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {technicians.map((t) => (
+          {technicians.filter(t => activeTab === 'active' ? t.is_active : !t.is_active).map((t) => (
             <div 
               key={t.id} 
               className="bg-white rounded-xl shadow-sm p-5 flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow border border-transparent hover:border-gray-200"
