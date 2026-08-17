@@ -50,6 +50,7 @@ export default function TechnicianPanel() {
   const [saving, setSaving]           = useState(false);
   const [created, setCreated]         = useState(null); // { name, temporary_password, sms_sent }
   const [selectedTechnician, setSelectedTechnician] = useState(null);
+  const [showJobsList, setShowJobsList] = useState(false);
   const [deleting, setDeleting]       = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: '', onConfirm: null });
 
@@ -64,8 +65,8 @@ export default function TechnicianPanel() {
 
       const techs = usersRes.data.filter((u) => u.role === "technician").map(t => {
         const perf = getTechnicianPerformance(t.specializations);
-        const activeJobs = jobs.filter(j => j.technician_id === t.id && ['pending', 'in_progress'].includes(j.status)).length;
-        return { ...t, performanceScore: perf.score, category: perf.category, activeJobs };
+        const activeJobsList = jobs.filter(j => j.technician_id === t.id && ['pending', 'in_progress'].includes(j.status));
+        return { ...t, performanceScore: perf.score, category: perf.category, activeJobs: activeJobsList.length, activeJobsList };
       });
       techs.sort((a, b) => b.performanceScore - a.performanceScore);
       setTechnicians(techs);
@@ -157,7 +158,7 @@ export default function TechnicianPanel() {
             <div 
               key={t.id} 
               className="bg-white rounded-xl shadow-sm p-5 flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow border border-transparent hover:border-gray-200"
-              onClick={() => setSelectedTechnician(t)}
+              onClick={() => { setSelectedTechnician(t); setShowJobsList(false); }}
             >
               <div className="w-11 h-11 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg shrink-0">
                 {t.name.charAt(0).toUpperCase()}
@@ -270,7 +271,7 @@ export default function TechnicianPanel() {
         )}
       </Modal>
 
-      <Modal open={!!selectedTechnician} onClose={() => setSelectedTechnician(null)} title="Technician Details">
+      <Modal open={!!selectedTechnician} onClose={() => { setSelectedTechnician(null); setShowJobsList(false); }} title="Technician Details">
         {selectedTechnician && (
           <div className="space-y-4">
             <div className="flex items-center gap-4 mb-6">
@@ -296,10 +297,32 @@ export default function TechnicianPanel() {
 
               <div>
                 <span className="block text-xs font-semibold text-gray-500 mb-1">Current Workload</span>
-                <span className="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-md border border-orange-200">
+                <button 
+                  onClick={() => setShowJobsList(!showJobsList)}
+                  disabled={selectedTechnician.activeJobs === 0}
+                  className={`inline-flex items-center px-2 py-1 text-xs font-bold rounded-md border transition-colors ${
+                    selectedTechnician.activeJobs === 0 
+                      ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
+                      : showJobsList 
+                        ? 'bg-orange-600 text-white border-orange-700' 
+                        : 'bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-200'
+                  }`}
+                >
                   <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                  {selectedTechnician.activeJobs} Active Jobs
-                </span>
+                  {selectedTechnician.activeJobs} Active {selectedTechnician.activeJobs === 1 ? 'Job' : 'Jobs'} {selectedTechnician.activeJobs > 0 && (showJobsList ? '▼' : '▶')}
+                </button>
+                {showJobsList && selectedTechnician.activeJobsList?.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {selectedTechnician.activeJobsList.map(job => (
+                      <div key={job.id} className="text-xs bg-white border border-gray-200 rounded p-2 flex justify-between items-center shadow-sm">
+                        <span className="font-semibold text-gray-700">{job.job_id} - {job.device_brand} {job.device_model}</span>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${job.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                          {job.status.replace('_', ' ')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               
               <div>
@@ -323,7 +346,7 @@ export default function TechnicianPanel() {
             <div className="flex gap-3 pt-4 border-t">
               <button
                 type="button" 
-                onClick={() => setSelectedTechnician(null)}
+                onClick={() => { setSelectedTechnician(null); setShowJobsList(false); }}
                 className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
               >
                 Close
