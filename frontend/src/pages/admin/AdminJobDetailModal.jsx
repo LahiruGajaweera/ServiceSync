@@ -318,6 +318,30 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
             <p className="text-gray-500 text-xs">{job.investigated ? "Investigated" : "Not investigated"}</p>
           </div>
         </div>
+
+        {/* Physical Condition & Photos */}
+        {(job.physical_condition || (job.images && job.images.length > 0)) && (
+          <div className="mt-6 pt-4 border-t border-gray-100">
+            {job.physical_condition && (
+              <div className="mb-3">
+                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Physical Condition</p>
+                <p className="font-medium text-gray-800">{job.physical_condition}</p>
+              </div>
+            )}
+            {job.images && job.images.length > 0 && (
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Condition Photos</p>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {job.images.map((img) => (
+                    <a key={img.id} href={`${import.meta.env.VITE_API_URL || "http://localhost:8000"}${img.file_path}`} target="_blank" rel="noreferrer" className="shrink-0">
+                      <img src={`${import.meta.env.VITE_API_URL || "http://localhost:8000"}${img.file_path}`} className="w-20 h-20 object-cover rounded-lg border border-gray-200 hover:opacity-80 transition-opacity" alt="Condition" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -200,6 +200,49 @@ def notify_unclaimed(job_id: UUID) -> None:
         db.close()
 
 
+def notify_job_reminder(job_id: UUID, message: str) -> None:
+    db = SessionLocal()
+    try:
+        job = db.query(Job).filter(Job.id == job_id).first()
+        if not job:
+            return
+        customer = db.query(Customer).filter(Customer.id == job.customer_id).first()
+        if not customer:
+            return
+
+        subject = "ServiceSync Reminder"
+        # We append the job ID just in case
+        full_message = f"Dear {customer.name}, {message} Job ID: {job.job_id}"
+
+        if customer.email:
+            from app.services.otp_delivery import _send_email, _smtp_configured
+            sent_email = False
+            if _smtp_configured():
+                try:
+                    _send_email(customer.email, subject, full_message)
+                    sent_email = True
+                except Exception:
+                    pass
+            log_notification(job.id, customer.id, "email", full_message, db, status="sent" if sent_email else "dev_mode_mock")
+            if not sent_email:
+                 print(f"[Email Dev Mode] Reminder Sent to {customer.email}: {full_message}")
+
+        if customer.phone_number:
+            from app.services.otp_delivery import _send_sms, _sms_configured
+            sent_sms = False
+            if _sms_configured():
+                try:
+                    _send_sms(customer.phone_number, full_message)
+                    sent_sms = True
+                except Exception:
+                    pass
+            log_notification(job.id, customer.id, "sms", full_message, db, status="sent" if sent_sms else "dev_mode_mock")
+            if not sent_sms:
+                 print(f"[SMS Dev Mode] Reminder Sent to {customer.phone_number}: {full_message}")
+    finally:
+        db.close()
+
+
 def notify_in_progress(job_id: UUID) -> None:
     db = SessionLocal()
     try:

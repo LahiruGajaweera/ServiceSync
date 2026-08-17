@@ -62,6 +62,47 @@ def create_job(
     return job_service.create_job(data, current_user, db, background_tasks=background_tasks)
 
 
+from fastapi import UploadFile, File
+import os
+import uuid
+from app.models.job import JobImage
+
+@router.post("/{job_id}/images", status_code=201)
+async def upload_job_images(
+    job_id: UUID,
+    files: list[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    job = job_service.get_job(job_id, db)
+    if not job:
+        raise HTTPException(404, "Job not found")
+
+    os.makedirs("uploads/jobs", exist_ok=True)
+    uploaded_images = []
+    
+    for file in files:
+        ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        filepath = os.path.join("uploads", "jobs", filename)
+        
+        with open(filepath, "wb") as f:
+            f.write(await file.read())
+            
+        db_img = JobImage(job_id=job_id, file_path=f"/uploads/jobs/{filename}")
+        db.add(db_img)
+        db.flush()
+        
+        uploaded_images.append({
+            "id": str(db_img.id),
+            "file_path": db_img.file_path,
+            "created_at": db_img.created_at.isoformat() if db_img.created_at else None
+        })
+        
+    db.commit()
+    return {"uploaded": len(uploaded_images), "images": uploaded_images}
+
+
 @router.get("/", response_model=list[JobListItem])
 def list_jobs(
     status: str | None = Query(default=None),

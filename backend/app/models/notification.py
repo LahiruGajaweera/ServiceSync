@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, Enum, ForeignKey, Numeric, String, Text, DateTime, func
+from sqlalchemy import Column, Enum, ForeignKey, Numeric, String, Text, DateTime, func, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from app.core.database import Base
 
@@ -38,8 +38,20 @@ class SalvageAssessment(Base):
     )
     assessed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     status = Column(
-        Enum("pending", "approved", "rejected", name="assessment_status"),
+        Enum("pending", "assessed", "approved", "rejected", name="assessment_status"),
         nullable=False,
         default="pending",
     )
     assessed_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class AdminCallTask(Base):
+    __tablename__ = "admin_call_tasks"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=False)
+    message = Column(Text, nullable=False)
+    is_completed = Column(Boolean, default=False, nullable=False)
+    completed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

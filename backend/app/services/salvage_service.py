@@ -19,9 +19,11 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
-def _run_auto_assessment(assessment_id: UUID, brand: str, model: str, db: Session):
+async def _run_auto_assessment(assessment_id: UUID, brand: str, model: str):
+    from app.core.database import SessionLocal
+    db = SessionLocal()
     try:
-        scraped = scraper_service.scrape_market_price(brand, model)
+        scraped = await scraper_service.scrape_market_price(brand, model)
         market_price = scraped.get("avg_price")
         
         a = db.query(SalvageAssessment).filter(SalvageAssessment.id == assessment_id).first()
@@ -40,16 +42,30 @@ def _run_auto_assessment(assessment_id: UUID, brand: str, model: str, db: Sessio
                         "You are an expert electronics refurbisher. Evaluate the following device for salvage or refurbish.\n"
                         f"Device: {job.device_brand} {job.device_model}\n"
                         f"Reported Fault: {job.fault_category} - {job.fault_description}\n"
+                        f"Physical Condition: {job.physical_condition or 'Unknown'}\n"
                         f"Estimated Repair Cost: {job.estimated_cost or 'Unknown'}\n"
                         f"Market Price of working unit: {market_price}\n\n"
+                        "If images are provided, analyze them for physical damage (e.g. cracked screen, dents) to adjust your cost estimate.\n"
                         "Return ONLY a valid JSON object with the following keys:\n"
-                        "- \"refurbish_cost_estimate\": (float) estimated cost to repair it based on the fault. If the tech provided an estimate, use that or adjust it.\n"
+                        "- \"refurbish_cost_estimate\": (float) estimated cost to repair it based on the fault and physical condition. If the tech provided an estimate, use that or adjust it.\n"
                         "- \"salvage_value\": (float) estimated value of the working parts you can extract from it, considering the broken parts.\n"
                         "- \"recommendation\": (string) either \"refurbish\" or \"salvage_for_parts\" based on profitability.\n"
                     )
-                    genai_model = genai.GenerativeModel(model_name="gemini-3.5-flash")
+                    
+                    from app.models.job import JobImage
+                    job_images = db.query(JobImage).filter(JobImage.job_id == job.id).all()
+                    
+                    prompt_parts = [prompt]
+                    for img in job_images:
+                        local_path = img.file_path.lstrip('/')
+                        if os.path.exists(local_path):
+                            uploaded = genai.upload_file(path=local_path)
+                            prompt_parts.append(uploaded)
+
+                    # Using gemini-1.5-flash which supports vision
+                    genai_model = genai.GenerativeModel(model_name="gemini-1.5-flash")
                     response = genai_model.generate_content(
-                        prompt, 
+                        prompt_parts, 
                         generation_config={"response_mime_type": "application/json"}
                     )
                     
@@ -84,6 +100,8 @@ def _run_auto_assessment(assessment_id: UUID, brand: str, model: str, db: Sessio
         db.commit()
     except Exception as e:
         print(f"Salvage Assessment Task Error: {e}")
+    finally:
+        db.close()
 
 
 def create_assessment(data: SalvageCreate, assessed_by_user: User, background_tasks: BackgroundTasks, db: Session) -> SalvageAssessment:
@@ -110,7 +128,7 @@ def create_assessment(data: SalvageCreate, assessed_by_user: User, background_ta
     
     # If no manual recommendation, run auto-assessment
     if not data.recommendation:
-        background_tasks.add_task(_run_auto_assessment, assessment.id, job.device_brand, job.device_model, db)
+        background_tasks.add_task(_run_auto_assessment, assessment.id, job.device_brand, job.device_model)
         
     return assessment
 
@@ -153,7 +171,94 @@ def update_status(assessment_id: UUID, data: SalvageStatusUpdate, db: Session) -
     a = db.query(SalvageAssessment).filter(SalvageAssessment.id == assessment_id).first()
     if not a:
         raise HTTPException(404, "Assessment not found")
+        
+    if data.status == "approved" and a.status != "approved":
+        job = db.query(Job).filter(Job.id == a.job_id).first()
+        if a.recommendation == "salvage_for_parts" and job:
+            from app.models.donor import DonorDevice
+            # Ensure it doesn't already exist
+            donor_exists = db.query(DonorDevice).filter(DonorDevice.source_job_id == job.id).first()
+            if not donor_exists:
+                new_donor = DonorDevice(
+                    brand=job.device_brand,
+                    model=job.device_model,
+                    imei=job.device_imei,
+                    condition="poor",
+                    source="unclaimed_job",
+                    source_job_id=job.id,
+                    status="available"
+                )
+                db.add(new_donor)
+                
     a.status = data.status
     db.commit()
     db.refresh(a)
     return a
+
+
+def get_pending_unclaimed_jobs(db: Session) -> list[dict]:
+    from datetime import datetime, timedelta, timezone
+    from app.models.job import JobStatusHistory
+    salvage_threshold = datetime.now(timezone.utc) - timedelta(minutes=3)
+    
+    unclaimed_jobs = db.query(Job).filter(Job.status == "unclaimed").all()
+    result = []
+    
+    for job in unclaimed_jobs:
+        if job.salvage_delayed_until and job.salvage_delayed_until > datetime.now(timezone.utc):
+            continue
+            
+        # Check if assessment already exists
+        assessment_exists = db.query(SalvageAssessment).filter(SalvageAssessment.job_id == job.id).first()
+        if assessment_exists:
+            continue
+            
+        history = (
+            db.query(JobStatusHistory)
+            .filter(JobStatusHistory.job_id == job.id, JobStatusHistory.status == "ready_for_pickup")
+            .order_by(JobStatusHistory.created_at.desc())
+            .first()
+        )
+        
+        if history and history.created_at < salvage_threshold:
+            result.append({
+                "job_id": job.id,
+                "job_public_id": job.job_id,
+                "device": f"{job.device_brand} {job.device_model}",
+                "unclaimed_since": history.created_at
+            })
+            
+    return result
+
+
+def delay_salvage(job_id: UUID, days: int, db: Session):
+    from datetime import datetime, timezone, timedelta
+    from fastapi import HTTPException
+    from app.models.job import JobStatusHistory
+    
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(404, "Job not found")
+        
+    # Revert to ready_for_pickup
+    job.status = "ready_for_pickup"
+    
+    # DO NOT reset notification flags so the customer doesn't get spammed again!
+    
+    # Set the exact delay date based on admin's request
+    job.salvage_delayed_until = datetime.now(timezone.utc) + timedelta(days=days)
+    
+    # Add new history entry
+    history = JobStatusHistory(
+        job_id=job.id,
+        status="ready_for_pickup",
+        changed_by=job.customer_id, # Placeholder
+        notes=f"Time extended by admin for {days} days. Reverted from unclaimed."
+    )
+    db.add(history)
+    
+    # Remove pending salvage assessment if exists
+    db.query(SalvageAssessment).filter(SalvageAssessment.job_id == job.id, SalvageAssessment.status == "pending").delete()
+    
+    db.commit()
+    return {"status": "reverted_to_ready_for_pickup"}
