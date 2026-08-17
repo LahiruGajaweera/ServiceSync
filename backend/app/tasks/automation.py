@@ -2,27 +2,57 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from app.core.database import SessionLocal
 from app.models.job import Job, JobStatusHistory
-from app.models.donor import DonorDevice
+from app.models.notification import AdminCallTask, SalvageAssessment
 from app.models.user import User
-from app.services.notification_service import notify_unclaimed, notify_admin_unclaimed, notify_final_warning
+from app.services.notification_service import notify_unclaimed, notify_final_warning
+# We will use a generic helper for reminders
+from app.services.notification_service import notify_job_reminder
+
+def _create_admin_call_task(db, job_id, message):
+    task = AdminCallTask(job_id=job_id, message=message)
+    db.add(task)
+    db.commit()
 
 def process_unclaimed_jobs():
     db = SessionLocal()
     try:
-        # Get an admin user to attribute the automated change to
         system_admin = db.query(User).filter(User.role == "admin").first()
         if not system_admin:
-            print("Auto-Unclaim skipped: No admin user found to attribute changes.")
             return
             
-        # Thresholds (using short limits for testing: 1min, 2min, 3min)
-        warning_threshold = datetime.now(timezone.utc) - timedelta(minutes=1)
-        unclaim_threshold = datetime.now(timezone.utc) - timedelta(minutes=2)
-        salvage_threshold = datetime.now(timezone.utc) - timedelta(minutes=3)
+        now = datetime.now(timezone.utc)
+        t_83 = now - timedelta(minutes=1)
+        t_90 = now - timedelta(minutes=2)
+        t_425 = now - timedelta(minutes=3)
+        t_455 = now - timedelta(minutes=4)
+        t_460 = now - timedelta(minutes=5)
         
-        # --- STAGE 1: Process 'ready_for_pickup' jobs (Warning & Unclaim) ---
         ready_jobs = db.query(Job).filter(Job.status == "ready_for_pickup").all()
         for job in ready_jobs:
+            if job.salvage_delayed_until:
+                if job.salvage_delayed_until > now:
+                    continue
+                else:
+                    print(f"Auto-Unclaiming delayed job {job.job_id}")
+                    job.status = "unclaimed"
+                    job.admin_alert = f"Extended time expired on {job.salvage_delayed_until.strftime('%Y-%m-%d')}. Transferred to Salvage."
+                    
+                    new_history = JobStatusHistory(
+                        job_id=job.id,
+                        status="unclaimed",
+                        changed_by=system_admin.id,
+                        notes="Automated transition: Extended time expired"
+                    )
+                    db.add(new_history)
+                    
+                    salvage = SalvageAssessment(
+                        job_id=job.id,
+                        status="pending"
+                    )
+                    db.add(salvage)
+                    db.commit()
+                    continue
+
             history = (
                 db.query(JobStatusHistory)
                 .filter(JobStatusHistory.job_id == job.id, JobStatusHistory.status == "ready_for_pickup")
@@ -30,67 +60,60 @@ def process_unclaimed_jobs():
                 .first()
             )
             
-            if history:
-                # Unclaim if passed unclaim_threshold (2 minutes)
-                if history.created_at < unclaim_threshold:
-                    print(f"Auto-Unclaiming job {job.job_id}")
-                    job.status = "unclaimed"
-                    job.admin_alert = "90-day period expired. Liability released."
-                    
-                    new_history = JobStatusHistory(
-                        job_id=job.id,
-                        status="unclaimed",
-                        changed_by=system_admin.id,
-                        notes="Automated transition: Unclaimed after 90 days in ready_for_pickup"
-                    )
-                    db.add(new_history)
-                    db.commit()
-                    
-                    try:
-                        notify_unclaimed(job.id)
-                        notify_admin_unclaimed(job.id)
-                    except Exception as e:
-                        print(f"Failed to send unclaimed notifications for {job.job_id}: {e}")
+            if not history:
+                continue
                 
-                # Warning if passed warning_threshold (1 minute) and warning not sent
-                elif history.created_at < warning_threshold and not job.final_warning_sent:
-                    print(f"Sending Final Warning for job {job.job_id}")
-                    job.final_warning_sent = True
-                    db.commit()
-                    
-                    try:
-                        notify_final_warning(job.id)
-                    except Exception as e:
-                        print(f"Failed to send final warning for {job.job_id}: {e}")
+            ready_at = history.created_at
 
-        # --- STAGE 2: Process 'unclaimed' jobs (Auto-Salvage) ---
-        unclaimed_jobs = db.query(Job).filter(Job.status == "unclaimed").all()
-        for job in unclaimed_jobs:
-            # Check if a DonorDevice already exists for this job
-            donor_exists = db.query(DonorDevice).filter(DonorDevice.source_job_id == job.id).first()
-            if not donor_exists:
-                # We measure the 365 days from when it was first ready_for_pickup
-                history = (
-                    db.query(JobStatusHistory)
-                    .filter(JobStatusHistory.job_id == job.id, JobStatusHistory.status == "ready_for_pickup")
-                    .order_by(JobStatusHistory.created_at.desc())
-                    .first()
-                )
+            if ready_at < t_460:
+                print(f"Auto-Unclaiming job {job.job_id}")
+                job.status = "unclaimed"
+                job.admin_alert = "15 month period expired. Automatically transferred to Salvage."
                 
-                if history and history.created_at < salvage_threshold:
-                    print(f"Auto-Salvaging job {job.job_id} after 365 days")
-                    donor = DonorDevice(
-                        brand=job.device_brand,
-                        model=job.device_model,
-                        imei=job.device_imei,
-                        condition="fair",
-                        source="unclaimed_job",
-                        source_job_id=job.id,
-                        status="available",
-                        assigned_technician_id=job.technician_id
-                    )
-                    db.add(donor)
-                    db.commit()
+                new_history = JobStatusHistory(
+                    job_id=job.id,
+                    status="unclaimed",
+                    changed_by=system_admin.id,
+                    notes="Automated transition: Unclaimed after 15 months in ready_for_pickup"
+                )
+                db.add(new_history)
+                
+                # Auto-create Salvage Assessment
+                salvage = SalvageAssessment(
+                    job_id=job.id,
+                    status="pending"
+                )
+                db.add(salvage)
+                db.commit()
+                continue
+                
+            if ready_at < t_455 and not job.final_warning_sent:
+                job.final_warning_sent = True
+                db.commit()
+                notify_final_warning(job.id)
+                _create_admin_call_task(db, job.id, "Final Warning (Month 15): Call customer immediately")
+                continue
+
+            if ready_at < t_425 and not job.reminder_425_sent:
+                job.reminder_425_sent = True
+                db.commit()
+                notify_job_reminder(job.id, "Month 14 Reminder: Your device has been awaiting pickup for 14 months.")
+                _create_admin_call_task(db, job.id, "Month 14 Reminder: Call customer to remind about pickup.")
+                continue
+
+            if ready_at < t_90 and not job.reminder_90_sent:
+                job.reminder_90_sent = True
+                db.commit()
+                notify_job_reminder(job.id, "3 Month Warning: Your device has been awaiting pickup for 3 months. Liability is now released per the bill terms.")
+                _create_admin_call_task(db, job.id, "3 Month Warning: Call customer to notify liability release.")
+                continue
+
+            if ready_at < t_83 and not job.reminder_83_sent:
+                job.reminder_83_sent = True
+                db.commit()
+                notify_job_reminder(job.id, "Reminder: Your device has been awaiting pickup for nearly 3 months.")
+                _create_admin_call_task(db, job.id, "Day 83 Reminder: Call customer before 3 month liability release.")
+                continue
 
     except Exception as e:
         db.rollback()
@@ -103,4 +126,5 @@ async def background_task_runner():
     """Loops indefinitely, running automated tasks every 60 seconds."""
     while True:
         process_unclaimed_jobs()
-        await asyncio.sleep(60) # Sleep for 1 minute for testing
+        await asyncio.sleep(60)
+

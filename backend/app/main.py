@@ -54,8 +54,13 @@ def _run_migrations() -> None:
         # Optional estimated repair cost quoted at job intake (may be absent)
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS estimated_cost NUMERIC(10, 2)",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS final_warning_sent BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS reminder_83_sent BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS reminder_90_sent BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS reminder_425_sent BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS investigated BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS admin_alert TEXT",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS physical_condition VARCHAR(255)",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS salvage_delayed_until TIMESTAMP WITH TIME ZONE",
         "ALTER TABLE inventory_adjustment_logs ADD COLUMN IF NOT EXISTS batch_id UUID REFERENCES inventory_batches(id)",
         "ALTER TABLE donor_devices ADD COLUMN IF NOT EXISTS source_description VARCHAR(255)",
         "ALTER TABLE donor_devices ADD COLUMN IF NOT EXISTS assigned_technician_id UUID REFERENCES users(id)",
@@ -249,7 +254,7 @@ app.add_middleware(
 )
 
 from app.routers import analytics, auth, customers, donors, inventory, invoices, jobs, notifications, salvage, scraper, users, chatbot  # noqa: E402
-from app.routers import admin, brands, models, part_specs, suppliers  # noqa: E402
+from app.routers import admin, brands, models, part_specs, suppliers, admin_tasks  # noqa: E402
 
 app.include_router(auth.router)
 app.include_router(admin.router)
@@ -268,6 +273,7 @@ app.include_router(brands.router)
 app.include_router(models.router)
 app.include_router(part_specs.router)
 app.include_router(chatbot.router)
+app.include_router(admin_tasks.router)
 
 
 @app.get("/health", tags=["System"])

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import QRCode from "qrcode";
 import api from "../../services/api";
@@ -53,8 +53,111 @@ const getEmptyForm = () => ({
   customer_id: "", technician_id: "",
   device_brand: "", device_model: "", device_imei: "",
   fault_category: "screen", fault_description: "",
-  estimated_completion_date: getTodayDateString(), estimated_cost: "", investigated: false, notes: "",
+  estimated_completion_date: getTodayDateString(), estimated_cost: "", investigated: false, notes: "", physical_condition: "",
 });
+
+function ConditionPhotoUploader({ photos, setPhotos }) {
+  const [mode, setMode] = useState("upload");
+  const videoRef = useRef(null);
+  const [stream, setStream] = useState(null);
+
+  const startCamera = async () => {
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      setStream(s);
+      setMode("camera");
+    } catch (err) {
+      alert("Camera not available: " + err.message);
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      setStream(null);
+    }
+    setMode("upload");
+  };
+
+  useEffect(() => {
+    if (mode === "camera" && videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [mode, stream]);
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0);
+    canvas.toBlob((blob) => {
+      const file = new File([blob], `capture_${Date.now()}.jpg`, { type: "image/jpeg" });
+      const preview = URL.createObjectURL(file);
+      setPhotos(p => [...p, { file, preview, type: "camera" }]);
+    }, "image/jpeg", 0.8);
+  };
+
+  const handleFileUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const newPhotos = files.map(file => ({
+      file, preview: URL.createObjectURL(file), type: "upload"
+    }));
+    setPhotos(p => [...p, ...newPhotos]);
+  };
+
+  const removePhoto = (index) => {
+    setPhotos(p => {
+      const copy = [...p];
+      URL.revokeObjectURL(copy[index].preview);
+      copy.splice(index, 1);
+      return copy;
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+    };
+  }, [stream]);
+
+  return (
+    <div className="space-y-3">
+      {mode === "camera" ? (
+        <div className="relative rounded-lg overflow-hidden bg-black flex flex-col items-center">
+          <video ref={videoRef} autoPlay playsInline className="max-h-64 object-contain w-full" />
+          <div className="absolute bottom-2 flex gap-2">
+            <button type="button" onClick={capturePhoto} className="bg-white text-black px-4 py-1.5 rounded-full font-bold shadow-lg">Snap Photo</button>
+            <button type="button" onClick={stopCamera} className="bg-red-600 text-white px-4 py-1.5 rounded-full font-bold shadow-lg">Close</button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <button type="button" onClick={startCamera} className="bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-blue-200">
+            📷 Open Camera
+          </button>
+          <label className="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-gray-200 cursor-pointer">
+            📁 Upload Files
+            <input type="file" multiple accept="image/*" onChange={handleFileUpload} className="hidden" />
+          </label>
+        </div>
+      )}
+      
+      {photos.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto py-2">
+          {photos.map((p, i) => (
+            <div key={i} className="relative w-16 h-16 shrink-0 rounded-lg overflow-hidden border border-gray-300">
+              <img src={p.preview} className="w-full h-full object-cover" alt="" />
+              <button type="button" onClick={() => removePhoto(i)} className="absolute top-0 right-0 bg-red-500 text-white w-5 h-5 flex items-center justify-center text-xs m-0.5 rounded-full leading-none">&times;</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Modal wrapper ────────────────────────────────────────────────────────────
 
@@ -505,6 +608,7 @@ export default function JobManagement() {
   const [showQuote, setShowQuote] = useState(false);
   const [form, setForm]             = useState(getEmptyForm);
   const [formError, setFormError]   = useState("");
+  const [photos, setPhotos]         = useState([]);
   const [saving, setSaving]         = useState(false);
   const [invoiceJob, setInvoiceJob] = useState(null);
   const [revertJob, setRevertJob]   = useState(null);
@@ -627,15 +731,33 @@ export default function JobManagement() {
         estimated_cost: form.estimated_cost === "" ? null : Number(form.estimated_cost),
         investigated: form.investigated,
         notes: form.notes || null,
+        physical_condition: form.physical_condition || null,
       };
       const { data } = await api.post("/jobs/", payload);
+      
+      if (photos.length > 0) {
+        const formData = new FormData();
+        photos.forEach(p => formData.append("files", p.file));
+        await api.post(`/jobs/${data.id}/images`, formData, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+      }
+
       setShowCreate(false);
       setForm(getEmptyForm());
+      setPhotos([]);
       setCustSearch("");
       fetchJobs(statusFilter);
       setInvoiceJob(data);
     } catch (err) {
-      setFormError(err.response?.data?.detail || "Failed to register job");
+      let msg = "Failed to register job";
+      const detail = err.response?.data?.detail;
+      if (typeof detail === "string") {
+        msg = detail;
+      } else if (Array.isArray(detail)) {
+        msg = detail.map(d => `${d.loc.slice(-1)[0]}: ${d.msg}`).join(' | ');
+      }
+      setFormError(msg);
     } finally {
       setSaving(false);
     }
@@ -657,7 +779,7 @@ export default function JobManagement() {
             Quick Quote
           </button>
           <button
-            onClick={() => { setShowCreate(true); setFormError(""); setForm(getEmptyForm()); setCustSearch(""); setCustResults([]); setShowNewCust(false); }}
+            onClick={() => { setShowCreate(true); setFormError(""); setForm(getEmptyForm()); setPhotos([]); setCustSearch(""); setCustResults([]); setShowNewCust(false); }}
             className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
           >
             + Register Job
@@ -901,6 +1023,16 @@ export default function JobManagement() {
                 <textarea name="fault_description" value={form.fault_description} onChange={handleChange} rows={2}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   placeholder="Describe the issue in more detail…" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Physical Condition</label>
+                <textarea name="physical_condition" value={form.physical_condition} onChange={handleChange} rows={2}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  placeholder="e.g. Screen cracked, deep scratch on back glass…" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Condition Photos</label>
+                <ConditionPhotoUploader photos={photos} setPhotos={setPhotos} />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Est. Completion Date</label>

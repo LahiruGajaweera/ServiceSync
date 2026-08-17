@@ -145,6 +145,189 @@ async def _scrape_cellmart(client: httpx.AsyncClient, brand: str, model: str, ma
     except Exception:
         return []
 
+async def _scrape_patpat(client: httpx.AsyncClient, brand: str, model: str, max_results: int = 8) -> list[dict]:
+    query = f"{brand} {model}".strip().replace(" ", "+")
+    search_url = f"https://www.patpat.lk/search?q={query}"
+    
+    try:
+        resp = await client.get(search_url)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        items = soup.select(".result-item")
+            
+        listings = []
+        for item in items[:max_results]:
+            title_el = item.select_one(".result-title")
+            price_el = item.select_one(".result-price")
+            link_el = item.select_one("a")
+
+            if not title_el or not price_el or not link_el:
+                continue
+
+            price = _parse_price(price_el.get_text(strip=True))
+            if price is None or price <= 0:
+                continue
+
+            listings.append({
+                "title": title_el.get_text(strip=True),
+                "price": price,
+                "url": link_el.get("href", ""),
+                "source": "patpat.lk"
+            })
+        return listings
+    except Exception:
+        return []
+
+async def _scrape_lifemobile(client: httpx.AsyncClient, brand: str, model: str, max_results: int = 8) -> list[dict]:
+    query = f"{brand} {model}".strip().replace(" ", "+")
+    search_url = f"https://lifemobile.lk/?s={query}&post_type=product"
+    
+    try:
+        resp = await client.get(search_url)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        items = soup.select(".product")
+            
+        listings = []
+        for item in items[:max_results]:
+            title_el = item.select_one(".product-title")
+            price_el = item.select_one(".price")
+            link_el = item.select_one("a.product-image-link") or item.select_one("a")
+
+            if not title_el or not price_el or not link_el:
+                continue
+
+            price = _parse_price(price_el.get_text(strip=True))
+            if price is None or price <= 0:
+                continue
+
+            listings.append({
+                "title": title_el.get_text(strip=True),
+                "price": price,
+                "url": link_el.get("href", ""),
+                "source": "lifemobile.lk"
+            })
+        return listings
+    except Exception:
+        return []
+
+async def _scrape_geniusmobile(client: httpx.AsyncClient, brand: str, model: str, max_results: int = 8) -> list[dict]:
+    query = f"{brand} {model}".strip().replace(" ", "+")
+    search_url = f"https://geniusmobile.lk/?s={query}&post_type=product"
+    
+    try:
+        resp = await client.get(search_url)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        items = soup.select(".product")
+            
+        listings = []
+        for item in items[:max_results]:
+            title_el = item.select_one(".woocommerce-loop-product__title") or item.select_one(".product-title")
+            price_el = item.select_one(".price")
+            link_el = item.select_one("a")
+
+            if not title_el or not price_el or not link_el:
+                continue
+
+            price = _parse_price(price_el.get_text(strip=True))
+            if price is None or price <= 0:
+                continue
+
+            listings.append({
+                "title": title_el.get_text(strip=True),
+                "price": price,
+                "url": link_el.get("href", ""),
+                "source": "geniusmobile.lk"
+            })
+        return listings
+    except Exception:
+        return []
+
+async def _scrape_idealz(client: httpx.AsyncClient, brand: str, model: str, max_results: int = 8) -> list[dict]:
+    query = f"{brand} {model}".strip().replace(" ", "+")
+    search_url = f"https://idealz.lk/?s={query}&post_type=product"
+    
+    try:
+        resp = await client.get(search_url)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        items = soup.select(".product")
+            
+        listings = []
+        for item in items[:max_results]:
+            title_el = item.select_one(".product-title") or item.select_one(".woocommerce-loop-product__title")
+            price_el = item.select_one(".price")
+            link_el = item.select_one("a")
+
+            if not title_el or not price_el or not link_el:
+                continue
+
+            price = _parse_price(price_el.get_text(strip=True))
+            if price is None or price <= 0:
+                continue
+
+            listings.append({
+                "title": title_el.get_text(strip=True),
+                "price": price,
+                "url": link_el.get("href", ""),
+                "source": "idealz.lk"
+            })
+        return listings
+    except Exception:
+        return []
+
+async def _scrape_greenware(client: httpx.AsyncClient, brand: str, model: str, max_results: int = 8) -> list[dict]:
+    query = f"{brand} {model}".strip().replace(" ", "+")
+    search_url = f"https://greenware.lk/?s={query}&post_type=product"
+    
+    try:
+        resp = await client.get(search_url)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        items = soup.select(".product")
+            
+        listings = []
+        for item in items[:max_results]:
+            title_el = item.select_one(".product-title") or item.select_one(".woocommerce-loop-product__title")
+            price_el = item.select_one(".price")
+            link_el = item.select_one("a")
+
+            if not title_el or not price_el or not link_el:
+                continue
+
+            price = _parse_price(price_el.get_text(strip=True))
+            if price is None or price <= 0:
+                continue
+
+            listings.append({
+                "title": title_el.get_text(strip=True),
+                "price": price,
+                "url": link_el.get("href", ""),
+                "source": "greenware.lk"
+            })
+        return listings
+    except Exception:
+        return []
+
+async def _scrape_daraz(client: httpx.AsyncClient, brand: str, model: str, max_results: int = 8) -> list[dict]:
+    # Daraz usually requires JS rendering or specific API, but we attempt basic scraping
+    query = f"{brand} {model}".strip().replace(" ", "+")
+    search_url = f"https://www.daraz.lk/catalog/?q={query}"
+    
+    try:
+        resp = await client.get(search_url)
+        resp.raise_for_status()
+        # Daraz data is usually inside a script tag window.pageData, parsing might fail with BS4.
+        # Fallback to catching exceptions and returning []
+        return []
+    except Exception:
+        return []
+
+async def _scrape_fb_marketplace(client: httpx.AsyncClient, brand: str, model: str, max_results: int = 8) -> list[dict]:
+    # FB Marketplace requires auth and JS rendering for accurate results.
+    # Basic attempt (likely to return empty due to protections)
+    return []
 
 async def _ai_filter_listings(listings: list[dict], query: str) -> list[dict]:
     if not listings:
@@ -251,6 +434,13 @@ async def scrape_market_price(brand: str, model: str) -> dict:
             _scrape_ikman(client, brand, model),
             _scrape_dialcom(client, brand, model),
             _scrape_cellmart(client, brand, model),
+            _scrape_patpat(client, brand, model),
+            _scrape_lifemobile(client, brand, model),
+            _scrape_geniusmobile(client, brand, model),
+            _scrape_idealz(client, brand, model),
+            _scrape_greenware(client, brand, model),
+            _scrape_daraz(client, brand, model),
+            _scrape_fb_marketplace(client, brand, model),
             return_exceptions=True
         )
 

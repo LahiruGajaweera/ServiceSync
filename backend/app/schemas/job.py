@@ -29,6 +29,15 @@ class JobCreate(BaseModel):
     estimated_cost: Decimal | None = None
     investigated: bool = False
     notes: str | None = None
+    physical_condition: str | None = None
+
+
+class JobImageResponse(BaseModel):
+    id: UUID
+    file_path: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 class JobStatusUpdate(BaseModel):
@@ -75,6 +84,8 @@ class JobListItem(BaseModel):
     revert_reason: str | None = None
     admin_alert: str | None = None
     labor_cost: Decimal | None = None
+    physical_condition: str | None = None
+    images: list[JobImageResponse] = []
     created_at: datetime | None = None
 
 

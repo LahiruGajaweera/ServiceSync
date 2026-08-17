@@ -1,6 +1,7 @@
 import uuid
 from sqlalchemy import Boolean, Column, Date, Enum, ForeignKey, Numeric, String, Text, DateTime, func
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 
@@ -40,13 +41,20 @@ class Job(Base):
     completed_date = Column(DateTime(timezone=True), nullable=True)
     pickup_date = Column(DateTime(timezone=True), nullable=True)
     notes = Column(Text, nullable=True)
+    physical_condition = Column(String(255), nullable=True)
     revert_requested_to = Column(String(30), nullable=True)
     revert_reason = Column(Text, nullable=True)
     admin_alert = Column(Text, nullable=True)
+    reminder_83_sent = Column(Boolean, nullable=False, default=False)
+    reminder_90_sent = Column(Boolean, nullable=False, default=False)
+    reminder_425_sent = Column(Boolean, nullable=False, default=False)
     final_warning_sent = Column(Boolean, nullable=False, default=False)
+    salvage_delayed_until = Column(DateTime(timezone=True), nullable=True)
     labor_cost = Column(Numeric(10, 2), nullable=True, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    images = relationship("JobImage", backref="job", cascade="all, delete-orphan", lazy="joined")
 
 
 class JobStatusHistory(Base):
@@ -57,4 +65,13 @@ class JobStatusHistory(Base):
     status = Column(String(30), nullable=False)
     changed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     notes = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class JobImage(Base):
+    __tablename__ = "job_images"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=False)
+    file_path = Column(String(500), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

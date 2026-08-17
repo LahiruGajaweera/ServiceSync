@@ -30,6 +30,24 @@ def list_assessments(
     return salvage_service.list_assessments(db)
 
 
+@router.get("/pending-unclaimed")
+def list_pending_unclaimed(
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    return salvage_service.get_pending_unclaimed_jobs(db)
+
+
+@router.post("/delay/{job_id}")
+def delay_salvage(
+    job_id: UUID,
+    days: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    return salvage_service.delay_salvage(job_id, days, db)
+
+
 @router.get("/{assessment_id}", response_model=SalvageResponse)
 def get_assessment(
     assessment_id: UUID,

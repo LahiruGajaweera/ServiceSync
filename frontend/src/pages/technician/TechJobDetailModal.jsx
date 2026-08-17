@@ -144,6 +144,29 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
             </div>
           </div>
 
+          {(job.physical_condition || (job.images && job.images.length > 0)) && (
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+              {job.physical_condition && (
+                <div className="mb-3">
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1">Physical Condition</p>
+                  <p className="text-sm text-gray-700">{job.physical_condition}</p>
+                </div>
+              )}
+              {job.images && job.images.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-2">Condition Photos</p>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {job.images.map((img) => (
+                      <a key={img.id} href={`${import.meta.env.VITE_API_URL || "http://localhost:8000"}${img.file_path}`} target="_blank" rel="noreferrer" className="shrink-0">
+                        <img src={`${import.meta.env.VITE_API_URL || "http://localhost:8000"}${img.file_path}`} className="w-16 h-16 object-cover rounded-lg border border-gray-200 hover:opacity-80 transition-opacity" alt="Condition" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="border-t border-gray-100"></div>
 
           {/* Parts Section */}

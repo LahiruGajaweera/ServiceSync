@@ -43,6 +43,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({ activeJobs: "…", pendingPickup: "…", lowStock: "…", revenue: "…" });
   const [recentJobs, setRecentJobs] = useState([]);
   const [lowStockItems, setLowStockItems] = useState([]);
+  const [adminTasks, setAdminTasks] = useState([]);
   const [currentLowStockIdx, setCurrentLowStockIdx] = useState(0);
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [now, setNow] = useState(new Date());
@@ -63,12 +64,13 @@ export default function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      const [activeRes, pickupRes, lowStockRes, recentRes, analyticsRes] = await Promise.allSettled([
+      const [activeRes, pickupRes, lowStockRes, recentRes, analyticsRes, tasksRes] = await Promise.allSettled([
         api.get("/jobs/", { params: { status: "in_progress" } }),
         api.get("/jobs/", { params: { status: "ready_for_pickup" } }),
         api.get("/inventory/low-stock"),
         api.get("/jobs/"),
         api.get("/analytics/summary"),
+        api.get("/admin-tasks/")
       ]);
 
       let lsCount = "—";
@@ -88,12 +90,25 @@ export default function AdminDashboard() {
       if (recentRes.status === "fulfilled") {
         setRecentJobs(recentRes.value.data.slice(0, 6));
       }
+      
+      if (tasksRes.status === "fulfilled") {
+          setAdminTasks(tasksRes.value.data);
+      }
     } finally {
       setLoadingJobs(false);
     }
   };
 
   useEffect(() => { fetchStats(); }, []);
+  
+  const handleCompleteTask = async (taskId) => {
+      try {
+          await api.patch(`/admin-tasks/${taskId}/complete`);
+          fetchStats(); // Refresh the list
+      } catch (err) {
+          alert("Failed to complete task");
+      }
+  };
 
   const statusBadge = (s) => {
     const map = {
@@ -113,6 +128,33 @@ export default function AdminDashboard() {
         <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
         <p className="text-sm text-gray-500 mt-1">Overview of system operations and statistics</p>
       </div>
+      
+      {/* Admin Pending Call Tasks Alert */}
+      {adminTasks.length > 0 && (
+          <div className="mb-8 bg-red-50 border border-red-200 rounded-xl p-6">
+              <h3 className="font-bold text-red-800 mb-4 text-lg flex items-center">
+                  <span className="mr-2">🚨</span> Urgent Action Required: Pending Customer Calls
+              </h3>
+              <div className="space-y-3">
+                  {adminTasks.map(task => (
+                      <div key={task.id} className="bg-white p-4 rounded-lg shadow-sm border border-red-100 flex items-center justify-between">
+                          <div>
+                              <p className="font-mono text-xs font-bold text-red-600 mb-1">{task.job_public_id}</p>
+                              <p className="text-gray-800 font-medium text-sm">{task.message}</p>
+                              <p className="text-xs text-gray-500 mt-1">Device: {task.device}</p>
+                          </div>
+                          <button 
+                            onClick={() => handleCompleteTask(task.id)}
+                            className="bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                          >
+                              Mark as Called ✓
+                          </button>
+                      </div>
+                  ))}
+              </div>
+          </div>
+      )}
+      
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
         <StatCard label="Active Jobs"       value={stats.activeJobs}    sub="Currently under repair"        color="text-blue-600" />
         <StatCard label="Pending Pickup"    value={stats.pendingPickup} sub="Repairs ready to collect"      color="text-amber-600" />

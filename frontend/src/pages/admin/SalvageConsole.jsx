@@ -124,6 +124,11 @@ function ScraperPanel({ brand, model, onSelectPrice }) {
 
 export default function SalvageConsole() {
   const [assessments, setAssessments] = useState([]);
+  const [pendingUnclaimed, setPendingUnclaimed] = useState([]);
+  const [snoozeJob, setSnoozeJob]     = useState(null);
+  const [snoozeDays, setSnoozeDays]   = useState("30");
+  const [snoozeError, setSnoozeError] = useState("");
+
   const [loading, setLoading]         = useState(true);
   const [showCreate, setShowCreate]   = useState(false);
   const [formError, setFormError]     = useState("");
@@ -138,8 +143,12 @@ export default function SalvageConsole() {
   const fetchAssessments = async (isBackground = false) => {
     if (!isBackground) setLoading(true);
     try {
-      const { data } = await api.get("/salvage/");
-      setAssessments(data);
+      const [assRes, pendingRes] = await Promise.all([
+        api.get("/salvage/"),
+        api.get("/salvage/pending-unclaimed")
+      ]);
+      setAssessments(assRes.data);
+      setPendingUnclaimed(pendingRes.data);
     } finally {
       if (!isBackground) setLoading(false);
     }
@@ -229,6 +238,51 @@ export default function SalvageConsole() {
     }
   };
 
+  const handleAssessPending = async (p) => {
+    const [brand, ...modelArr] = p.device.split(" ");
+    const fakeJob = {
+      id: p.job_id,
+      job_id: p.job_public_id,
+      customer_name: "Unclaimed",
+      device_brand: brand,
+      device_model: modelArr.join(" "),
+      estimated_cost: 0,
+      labor_cost: 0
+    };
+    setShowCreate(true);
+    setFormError("");
+    setForm(EMPTY_FORM);
+    await selectJob(fakeJob);
+  };
+
+  const handleSnoozeClick = (p) => {
+    setSnoozeJob(p);
+    setSnoozeDays("30");
+    setSnoozeError("");
+  };
+
+  const submitSnooze = async (e) => {
+    e.preventDefault();
+    if (!snoozeJob) return;
+    const days = parseInt(snoozeDays, 10);
+    if (isNaN(days) || days <= 0) {
+      setSnoozeError("Please enter a valid number of days.");
+      return;
+    }
+    
+    setSaving(true);
+    setSnoozeError("");
+    try {
+      await api.post(`/salvage/delay/${snoozeJob.job_id}?days=${days}`);
+      setSnoozeJob(null);
+      fetchAssessments();
+    } catch (err) {
+      setSnoozeError(err.response?.data?.detail || "Extend failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
@@ -244,7 +298,44 @@ export default function SalvageConsole() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      {pendingUnclaimed.length > 0 && (
+        <div className="mb-8 bg-amber-50 rounded-xl border border-amber-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-amber-100 bg-amber-100/50 flex justify-between items-center">
+            <h3 className="font-semibold text-amber-900">Pending Salvage (Unclaimed &gt; 1 Year)</h3>
+            <span className="text-xs font-bold bg-amber-200 text-amber-800 px-2 py-1 rounded-full">{pendingUnclaimed.length}</span>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-amber-50 border-b border-amber-100">
+              <tr>
+                <th className="text-left px-5 py-2 text-xs font-semibold text-amber-800">Job ID</th>
+                <th className="text-left px-5 py-2 text-xs font-semibold text-amber-800">Device</th>
+                <th className="text-left px-5 py-2 text-xs font-semibold text-amber-800">Unclaimed Since</th>
+                <th className="text-right px-5 py-2 text-xs font-semibold text-amber-800">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-amber-100">
+              {pendingUnclaimed.map((p) => (
+                <tr key={p.job_id} className="hover:bg-amber-100/30 transition-colors">
+                  <td className="px-5 py-3 font-mono font-semibold text-blue-700 text-xs">{p.job_public_id}</td>
+                  <td className="px-5 py-3 text-amber-900 font-medium">{p.device}</td>
+                  <td className="px-5 py-3 text-amber-700 text-xs">{new Date(p.unclaimed_since).toLocaleDateString()}</td>
+                  <td className="px-5 py-3 text-right">
+                    <button onClick={() => handleSnoozeClick(p)} className="text-xs font-bold text-amber-700 bg-amber-200 hover:bg-amber-300 px-3 py-1.5 rounded-lg shadow-sm transition-all mr-2">
+                      Extend Time
+                    </button>
+                    <button onClick={() => handleAssessPending(p)} className="text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 px-3 py-1.5 rounded-lg shadow-sm transition-all">
+                      Assess
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Existing Assessments Table */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="py-20 text-center text-gray-400 text-sm">Loading…</div>
         ) : assessments.length === 0 ? (
@@ -397,6 +488,49 @@ export default function SalvageConsole() {
             <button type="submit" disabled={saving}
               className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-2 rounded-lg text-sm font-semibold">
               {saving ? "Saving…" : "Create Assessment"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Snooze Modal */}
+      <Modal open={!!snoozeJob} onClose={() => setSnoozeJob(null)} title="Extend Time">
+        <form onSubmit={submitSnooze} className="space-y-4">
+          <p className="text-sm text-gray-600">
+            How many days do you want to extend the pickup time for <strong>{snoozeJob?.device}</strong>?
+            This will revert its status back to <strong>Ready for Pickup</strong> for the specified duration.
+          </p>
+          
+          {snoozeError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg">{snoozeError}</div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Days to delay</label>
+            <input
+              type="number"
+              min="1"
+              max="365"
+              value={snoozeDays}
+              onChange={(e) => setSnoozeDays(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setSnoozeJob(null)}
+              className="flex-1 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-2.5 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-bold py-2.5 rounded-lg transition-colors"
+            >
+              {saving ? "Saving..." : "Extend Time"}
             </button>
           </div>
         </form>

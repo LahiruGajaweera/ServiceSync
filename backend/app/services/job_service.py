@@ -6,7 +6,7 @@ from fastapi import HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session, aliased
 
 from app.models.customer import Customer
-from app.models.job import Job, JobStatusHistory
+from app.models.job import Job, JobStatusHistory, JobImage
 from app.models.user import User
 from app.schemas.job import AssignTechnicianRequest, JobCreate, JobStatusUpdate
 
@@ -21,7 +21,7 @@ def _generate_job_id(db: Session) -> str:
     raise RuntimeError("Could not generate a unique Job ID — retry the request")
 
 
-def _job_dict(job: Job, customer_name=None, customer_phone=None, technician_name=None) -> dict:
+def _job_dict(job: Job, customer_name=None, customer_phone=None, technician_name=None, images=None) -> dict:
     return {
         "id": job.id,
         "job_id": job.job_id,
@@ -46,6 +46,8 @@ def _job_dict(job: Job, customer_name=None, customer_phone=None, technician_name
         "revert_reason": job.revert_reason,
         "admin_alert": job.admin_alert,
         "labor_cost": job.labor_cost,
+        "physical_condition": job.physical_condition,
+        "images": images or [],
         "created_at": job.created_at,
     }
 
@@ -94,6 +96,7 @@ def create_job(data: JobCreate, created_by: User, db: Session, background_tasks:
         estimated_cost=data.estimated_cost,
         investigated=data.investigated,
         notes=data.notes,
+        physical_condition=data.physical_condition,
         status="pending",
     )
     db.add(job)
@@ -119,7 +122,20 @@ def create_job(data: JobCreate, created_by: User, db: Session, background_tasks:
 
 def list_jobs(db: Session, status: str | None = None, technician_id: UUID | None = None, include_unassigned: bool = False, has_alerts: bool = False) -> list[dict]:
     rows = _query_jobs(db, status=status, technician_id=technician_id, include_unassigned=include_unassigned, has_alerts=has_alerts)
-    return [_job_dict(job, cname, cphone, tname) for job, cname, cphone, tname in rows]
+    if not rows:
+        return []
+        
+    job_ids = [job.id for job, _, _, _ in rows]
+    all_images = db.query(JobImage).filter(JobImage.job_id.in_(job_ids)).all()
+    images_by_job = {}
+    for img in all_images:
+        images_by_job.setdefault(img.job_id, []).append({
+            "id": img.id,
+            "file_path": img.file_path,
+            "created_at": img.created_at
+        })
+        
+    return [_job_dict(job, cname, cphone, tname, images_by_job.get(job.id, [])) for job, cname, cphone, tname in rows]
 
 
 def get_job(job_id: UUID, db: Session) -> dict:
@@ -139,7 +155,11 @@ def get_job(job_id: UUID, db: Session) -> dict:
     if not row:
         raise HTTPException(404, "Job not found")
     job, cname, cphone, tname = row
-    return _job_dict(job, cname, cphone, tname)
+    
+    images = db.query(JobImage).filter(JobImage.job_id == job_id).all()
+    images_list = [{"id": img.id, "file_path": img.file_path, "created_at": img.created_at} for img in images]
+    
+    return _job_dict(job, cname, cphone, tname, images_list)
 
 def clear_admin_alert(job_id: UUID, db: Session) -> dict:
     job = db.query(Job).filter(Job.id == job_id).first()

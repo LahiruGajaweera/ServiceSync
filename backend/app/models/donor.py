@@ -22,7 +22,7 @@ class DonorDevice(Base):
     source_description = Column(String(255), nullable=True)
     assigned_technician_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     status = Column(
-        Enum("available", "stripped", "disposed", name="donor_status"),
+        Enum("available", "assessed", "stripped", "disposed", name="donor_status"),
         nullable=False,
         default="available",
     )
