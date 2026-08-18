@@ -44,22 +44,30 @@ function getTechnicianPerformance(specializations) {
 export default function TechnicianPanel() {
   const [technicians, setTechnicians] = useState([]);
   const [loading, setLoading]         = useState(true);
+  const [activeTab, setActiveTab]     = useState('active'); // 'active' or 'inactive'
   const [showModal, setShowModal]     = useState(false);
   const [form, setForm]               = useState(EMPTY_FORM);
   const [formError, setFormError]     = useState("");
   const [saving, setSaving]           = useState(false);
   const [created, setCreated]         = useState(null); // { name, temporary_password, sms_sent }
   const [selectedTechnician, setSelectedTechnician] = useState(null);
+  const [showJobsList, setShowJobsList] = useState(false);
   const [deleting, setDeleting]       = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: '', onConfirm: null });
 
   const fetchTechnicians = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get("/users/");
-      const techs = data.filter((u) => u.role === "technician").map(t => {
+      const [usersRes, jobsRes] = await Promise.all([
+        api.get("/users/"),
+        api.get("/jobs/")
+      ]);
+      const jobs = jobsRes.data;
+
+      const techs = usersRes.data.filter((u) => u.role === "technician").map(t => {
         const perf = getTechnicianPerformance(t.specializations);
-        return { ...t, performanceScore: perf.score, category: perf.category };
+        const activeJobsList = jobs.filter(j => j.technician_id === t.id && ['pending', 'in_progress'].includes(j.status));
+        return { ...t, performanceScore: perf.score, category: perf.category, activeJobs: activeJobsList.length, activeJobsList };
       });
       techs.sort((a, b) => b.performanceScore - a.performanceScore);
       setTechnicians(techs);
@@ -125,16 +133,31 @@ export default function TechnicianPanel() {
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Technician Panel</h2>
           <p className="text-sm text-gray-500 mt-0.5">{technicians.length} total technicians</p>
         </div>
         <button
           onClick={() => { setShowModal(true); setCreated(null); setFormError(""); setForm(EMPTY_FORM); }}
-          className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+          className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
         >
           + Add Technician
+        </button>
+      </div>
+
+      <div className="flex border-b border-gray-200 mb-6">
+        <button
+          className={`pb-3 px-6 font-semibold text-sm transition-colors border-b-2 ${activeTab === 'active' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+          onClick={() => setActiveTab('active')}
+        >
+          Active Technicians ({technicians.filter(t => t.is_active).length})
+        </button>
+        <button
+          className={`pb-3 px-6 font-semibold text-sm transition-colors border-b-2 ${activeTab === 'inactive' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+          onClick={() => setActiveTab('inactive')}
+        >
+          Inactive Technicians ({technicians.filter(t => !t.is_active).length})
         </button>
       </div>
 
@@ -147,11 +170,11 @@ export default function TechnicianPanel() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {technicians.map((t) => (
+          {technicians.filter(t => activeTab === 'active' ? t.is_active : !t.is_active).map((t) => (
             <div 
               key={t.id} 
               className="bg-white rounded-xl shadow-sm p-5 flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow border border-transparent hover:border-gray-200"
-              onClick={() => setSelectedTechnician(t)}
+              onClick={() => { setSelectedTechnician(t); setShowJobsList(false); }}
             >
               <div className="w-11 h-11 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg shrink-0">
                 {t.name.charAt(0).toUpperCase()}
@@ -166,6 +189,10 @@ export default function TechnicianPanel() {
                   </span>
                   <span className="inline-block px-2 py-0.5 bg-purple-50 text-purple-700 text-[10px] font-semibold rounded-md border border-purple-100">
                     {t.category}
+                  </span>
+                  <span className="inline-flex items-center px-2 py-0.5 bg-orange-50 text-orange-700 text-[10px] font-bold rounded-md border border-orange-100">
+                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    {t.activeJobs} Active Jobs
                   </span>
                 </div>
                 {t.specializations && (
@@ -260,7 +287,7 @@ export default function TechnicianPanel() {
         )}
       </Modal>
 
-      <Modal open={!!selectedTechnician} onClose={() => setSelectedTechnician(null)} title="Technician Details">
+      <Modal open={!!selectedTechnician} onClose={() => { setSelectedTechnician(null); setShowJobsList(false); }} title="Technician Details">
         {selectedTechnician && (
           <div className="space-y-4">
             <div className="flex items-center gap-4 mb-6">
@@ -282,6 +309,36 @@ export default function TechnicianPanel() {
                 <span className="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-md border border-purple-200">
                   {selectedTechnician.category}
                 </span>
+              </div>
+
+              <div>
+                <span className="block text-xs font-semibold text-gray-500 mb-1">Current Workload</span>
+                <button 
+                  onClick={() => setShowJobsList(!showJobsList)}
+                  disabled={selectedTechnician.activeJobs === 0}
+                  className={`inline-flex items-center px-2 py-1 text-xs font-bold rounded-md border transition-colors ${
+                    selectedTechnician.activeJobs === 0 
+                      ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
+                      : showJobsList 
+                        ? 'bg-orange-600 text-white border-orange-700' 
+                        : 'bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-200'
+                  }`}
+                >
+                  <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                  {selectedTechnician.activeJobs} Active {selectedTechnician.activeJobs === 1 ? 'Job' : 'Jobs'} {selectedTechnician.activeJobs > 0 && (showJobsList ? '▼' : '▶')}
+                </button>
+                {showJobsList && selectedTechnician.activeJobsList?.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {selectedTechnician.activeJobsList.map(job => (
+                      <div key={job.id} className="text-xs bg-white border border-gray-200 rounded p-2 flex justify-between items-center shadow-sm">
+                        <span className="font-semibold text-gray-700">{job.job_id} - {job.device_brand} {job.device_model}</span>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${job.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                          {job.status.replace('_', ' ')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               
               <div>
@@ -305,7 +362,7 @@ export default function TechnicianPanel() {
             <div className="flex gap-3 pt-4 border-t">
               <button
                 type="button" 
-                onClick={() => setSelectedTechnician(null)}
+                onClick={() => { setSelectedTechnician(null); setShowJobsList(false); }}
                 className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
               >
                 Close
