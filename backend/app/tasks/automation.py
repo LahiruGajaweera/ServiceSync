@@ -5,8 +5,8 @@ from app.models.job import Job, JobStatusHistory
 from app.models.notification import AdminCallTask, SalvageAssessment
 from app.models.user import User
 from app.services.notification_service import notify_unclaimed, notify_final_warning
-# We will use a generic helper for reminders
 from app.services.notification_service import notify_job_reminder
+from app.services.salvage_service import _run_auto_assessment
 
 def _create_admin_call_task(db, job_id, message):
     task = AdminCallTask(job_id=job_id, message=message)
@@ -45,12 +45,6 @@ def process_unclaimed_jobs():
                     )
                     db.add(new_history)
                     
-                    salvage = SalvageAssessment(
-                        job_id=job.id,
-                        status="pending"
-                    )
-                    db.add(salvage)
-                    db.commit()
                     continue
 
             history = (
@@ -78,13 +72,6 @@ def process_unclaimed_jobs():
                 )
                 db.add(new_history)
                 
-                # Auto-create Salvage Assessment
-                salvage = SalvageAssessment(
-                    job_id=job.id,
-                    status="pending"
-                )
-                db.add(salvage)
-                db.commit()
                 continue
                 
             if ready_at < t_455 and not job.final_warning_sent:

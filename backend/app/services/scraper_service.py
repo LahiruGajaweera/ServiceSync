@@ -361,6 +361,11 @@ async def _ai_filter_listings(listings: list[dict], query: str) -> list[dict]:
             return listings
             
         filtered = [listings[i] for i in valid_ids if 0 <= i < len(listings)]
+        
+        # If AI incorrectly filtered out everything, fallback to all listings
+        if not filtered:
+            return listings
+            
         return filtered
     except Exception as e:
         print(f"AI Listing Filter failed: {e}")
@@ -410,8 +415,9 @@ def _filter_listings(listings: list[dict], query: str) -> list[dict]:
     
     # If IQR is 0 (many duplicate prices), we might just keep them.
     # We add a small buffer to avoid filtering identical prices when IQR=0
-    lower_bound = q1 - (1.5 * iqr) if iqr > 0 else q1 * 0.5
-    upper_bound = q3 + (1.5 * iqr) if iqr > 0 else q3 * 1.5
+    # Relaxed outlier rejection limits to allow for wider variance in flagship phones
+    lower_bound = q1 - (2.5 * iqr) if iqr > 0 else q1 * 0.5
+    upper_bound = q3 + (2.5 * iqr) if iqr > 0 else q3 * 2.0
     
     filtered_3 = [l for l in filtered_2 if lower_bound <= l["price"] <= upper_bound]
     
@@ -432,15 +438,16 @@ async def scrape_market_price(brand: str, model: str) -> dict:
     async with httpx.AsyncClient(headers=_HEADERS, timeout=15, follow_redirects=True) as client:
         results = await asyncio.gather(
             _scrape_ikman(client, brand, model),
-            _scrape_dialcom(client, brand, model),
-            _scrape_cellmart(client, brand, model),
             _scrape_patpat(client, brand, model),
-            _scrape_lifemobile(client, brand, model),
-            _scrape_geniusmobile(client, brand, model),
-            _scrape_idealz(client, brand, model),
-            _scrape_greenware(client, brand, model),
-            _scrape_daraz(client, brand, model),
             _scrape_fb_marketplace(client, brand, model),
+            # Brand new retail sites commented out to ensure secondhand pricing
+            # _scrape_dialcom(client, brand, model),
+            # _scrape_cellmart(client, brand, model),
+            # _scrape_lifemobile(client, brand, model),
+            # _scrape_geniusmobile(client, brand, model),
+            # _scrape_idealz(client, brand, model),
+            # _scrape_greenware(client, brand, model),
+            # _scrape_daraz(client, brand, model),
             return_exceptions=True
         )
 
@@ -476,10 +483,15 @@ async def scrape_market_price(brand: str, model: str) -> dict:
                 )
                 response = await genai_model.generate_content_async(prompt)
                 
-                # Strip out any formatting Gemini might have returned
+                # Use a robust regex to find the first large number block
                 import re
-                digits = re.sub(r"[^\d.]", "", response.text)
-                estimated_price = float(digits) if digits else 0
+                matches = re.findall(r'[\d,]+\.?\d*', response.text)
+                if matches:
+                    # Clean commas and convert
+                    digits = matches[0].replace(',', '')
+                    estimated_price = float(digits)
+                else:
+                    estimated_price = 0
                 
                 if estimated_price > 0:
                     listings.append({
