@@ -1,5 +1,5 @@
 const STATUS_STYLES = {
-  pending:          "bg-gray-100 text-gray-600",
+  pending:          "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300",
   in_progress:      "bg-blue-100 text-blue-700",
   completed:        "bg-purple-100 text-purple-700",
   failed:           "bg-red-100 text-red-700",
@@ -21,7 +21,7 @@ const STATUS_LABELS = {
 };
 
 export default function JobStatusBadge({ status }) {
-  const style = STATUS_STYLES[status] ?? "bg-gray-100 text-gray-500";
+  const style = STATUS_STYLES[status] ?? "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400";
   const label = STATUS_LABELS[status] ?? status;
   return (
     <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${style}`}>

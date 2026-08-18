@@ -115,13 +115,13 @@ export default function BrandSelect({
         onKeyDown={handleKeyDown}
         autoComplete="off"
         placeholder={placeholder}
-        className="w-full border border-gray-300 rounded-lg pl-3 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg pl-3 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <button
         type="button"
         tabIndex={-1}
         onClick={() => setOpen(!open)}
-        className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 focus:outline-none"
+        className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 dark:text-gray-300 focus:outline-none"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -146,13 +146,13 @@ export default function BrandSelect({
           ))}
 
           {canAddNew && (
-            <li className="border-t border-gray-100">
+            <li className="border-t border-gray-100 dark:border-gray-800">
               <button
                 type="button"
                 disabled={saving}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={handleAddNew}
-                className="w-full text-left px-3 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors font-medium disabled:text-blue-300 dark:disabled:text-gray-500"
+                className="w-full text-left px-3 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors font-medium disabled:text-blue-300 dark:disabled:text-gray-500 dark:text-gray-400"
               >
                 {saving ? "Saving…" : `+ Add "${q}" as a new brand`}
               </button>

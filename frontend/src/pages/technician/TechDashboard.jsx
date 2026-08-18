@@ -16,8 +16,8 @@ const STATUS_OPTIONS = [
 
 function StatCard({ label, value, color }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <p className="text-sm text-gray-500">{label}</p>
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+      <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
       <p className={`text-3xl font-bold mt-1 ${color}`}>{value}</p>
     </div>
   );
@@ -27,10 +27,10 @@ function Modal({ open, onClose, title, children }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h3 className="text-base font-bold text-gray-800">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+          <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 text-xl leading-none">&times;</button>
         </div>
         <div className="p-6">{children}</div>
       </div>
@@ -179,7 +179,7 @@ export default function TechDashboard() {
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">My Dashboard</h2>
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">My Dashboard</h2>
         <button
           onClick={() => { setShowPartsLookup(true); setLookupBrand(""); setLookupModel(""); }}
           className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
@@ -210,10 +210,10 @@ export default function TechDashboard() {
               <button
                 key={job.id}
                 onClick={() => setSelectedJob(job)}
-                className="text-left bg-white border border-amber-100 hover:border-amber-300 hover:shadow-sm rounded-lg px-3 py-2.5 transition-all"
+                className="text-left bg-white dark:bg-gray-800 border border-amber-100 hover:border-amber-300 hover:shadow-sm rounded-lg px-3 py-2.5 transition-all"
               >
                 <p className="font-mono text-xs font-semibold text-blue-600 truncate">{job.job_id}</p>
-                <p className="text-sm font-medium text-gray-800 truncate mt-0.5">{job.device_brand} {job.device_model}</p>
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate mt-0.5">{job.device_brand} {job.device_model}</p>
                 <p className="text-xs text-gray-400 capitalize truncate">{job.fault_category?.replace(/_/g, " ")}</p>
               </button>
             ))}
@@ -236,10 +236,10 @@ export default function TechDashboard() {
               <button
                 key={d.id}
                 onClick={() => setSelectedDonor(d)}
-                className="text-left bg-white border border-green-100 hover:border-green-300 hover:shadow-sm rounded-lg px-3 py-2.5 transition-all"
+                className="text-left bg-white dark:bg-gray-800 border border-green-100 hover:border-green-300 hover:shadow-sm rounded-lg px-3 py-2.5 transition-all"
               >
                 <p className="font-mono text-xs font-semibold text-green-600 truncate">{d.brand} {d.model}</p>
-                <p className="text-sm font-medium text-gray-800 truncate mt-0.5">Condition: {d.condition}</p>
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate mt-0.5">Condition: {d.condition}</p>
                 <p className="text-xs text-gray-400 capitalize truncate">{d.source?.replace(/_/g, " ")}</p>
               </button>
             ))}
@@ -247,38 +247,38 @@ export default function TechDashboard() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-700">My Job Queue</h3>
+          <h3 className="font-semibold text-gray-700 dark:text-gray-200">My Job Queue</h3>
           <Link to="/tech/jobs" className="text-xs text-blue-600 hover:underline">View all →</Link>
         </div>
 
         {loading ? (
           <div className="py-12 text-center text-gray-400 text-sm">Loading…</div>
         ) : myJobs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-gray-400 border-2 border-dashed border-gray-100 rounded-xl">
-            <p className="font-medium text-gray-500">No jobs claimed yet</p>
+          <div className="flex flex-col items-center justify-center py-16 text-gray-400 border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl">
+            <p className="font-medium text-gray-500 dark:text-gray-400">No jobs claimed yet</p>
             <p className="text-sm mt-1">Claim an available job above to get started</p>
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="border-b border-gray-100">
+            <thead className="border-b border-gray-100 dark:border-gray-800">
               <tr>
                 {["Job ID", "Device", "Fault", "Status", "Est. Ready"].map((h, i) => (
                   <th key={i} className="text-left pb-2.5 text-xs font-semibold text-gray-400 uppercase">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
               {myJobs.slice(0, 8).map((job) => (
                 <tr 
                   key={job.id} 
-                  className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 cursor-pointer transition-colors"
                   onClick={() => setDetailJob(job)}
                 >
                   <td className="py-2.5 font-mono text-xs text-blue-600 font-semibold">{job.job_id}</td>
-                  <td className="py-2.5 text-gray-700">{job.device_brand} {job.device_model}</td>
-                  <td className="py-2.5 text-gray-500 capitalize text-xs">{job.fault_category?.replace(/_/g, " ")}</td>
+                  <td className="py-2.5 text-gray-700 dark:text-gray-200">{job.device_brand} {job.device_model}</td>
+                  <td className="py-2.5 text-gray-500 dark:text-gray-400 capitalize text-xs">{job.fault_category?.replace(/_/g, " ")}</td>
                   <td className="py-2.5"><JobStatusBadge status={job.status} /></td>
                   <td className="py-2.5 text-gray-400 text-xs">
                     {job.estimated_completion_date
@@ -293,37 +293,37 @@ export default function TechDashboard() {
       </div>
 
       {/* My Donor Devices Queue */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-700">My Claimed Donor Devices</h3>
+          <h3 className="font-semibold text-gray-700 dark:text-gray-200">My Claimed Donor Devices</h3>
         </div>
 
         {loading ? (
           <div className="py-12 text-center text-gray-400 text-sm">Loading…</div>
         ) : myDonors.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-gray-400 border-2 border-dashed border-gray-100 rounded-xl">
-            <p className="font-medium text-gray-500">No donor devices claimed yet</p>
+          <div className="flex flex-col items-center justify-center py-16 text-gray-400 border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl">
+            <p className="font-medium text-gray-500 dark:text-gray-400">No donor devices claimed yet</p>
             <p className="text-sm mt-1">Claim an available donor device above to strip parts</p>
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="border-b border-gray-100">
+            <thead className="border-b border-gray-100 dark:border-gray-800">
               <tr>
                 {["Device", "Condition", "Source", "Status", "Registered"].map((h, i) => (
                   <th key={i} className="text-left pb-2.5 text-xs font-semibold text-gray-400 uppercase">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
               {myDonors.map((d) => (
                 <tr 
                   key={d.id} 
                   onClick={() => navigate('/tech/donors')}
-                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 transition-colors cursor-pointer"
                 >
-                  <td className="py-2.5 font-semibold text-gray-800">{d.brand} {d.model}</td>
-                  <td className="py-2.5 text-gray-600 capitalize text-xs">{d.condition}</td>
-                  <td className="py-2.5 text-gray-500 capitalize text-xs">{d.source?.replace(/_/g, " ")}</td>
+                  <td className="py-2.5 font-semibold text-gray-800 dark:text-gray-100">{d.brand} {d.model}</td>
+                  <td className="py-2.5 text-gray-600 dark:text-gray-300 capitalize text-xs">{d.condition}</td>
+                  <td className="py-2.5 text-gray-500 dark:text-gray-400 capitalize text-xs">{d.source?.replace(/_/g, " ")}</td>
                   <td className="py-2.5"><span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px] font-semibold uppercase">{d.status}</span></td>
                   <td className="py-2.5 text-gray-400 text-xs">
                     {d.added_date ? new Date(d.added_date).toLocaleDateString("en-LK") : "—"}
@@ -349,19 +349,19 @@ export default function TechDashboard() {
             <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
               <div>
                 <p className="text-xs text-gray-400">Device</p>
-                <p className="font-medium text-gray-800">{selectedJob.device_brand} {selectedJob.device_model}</p>
+                <p className="font-medium text-gray-800 dark:text-gray-100">{selectedJob.device_brand} {selectedJob.device_model}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400">Fault</p>
-                <p className="font-medium text-gray-800 capitalize">{selectedJob.fault_category?.replace(/_/g, " ")}</p>
+                <p className="font-medium text-gray-800 dark:text-gray-100 capitalize">{selectedJob.fault_category?.replace(/_/g, " ")}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400">Customer</p>
-                <p className="font-medium text-gray-800">{selectedJob.customer_name || "—"}</p>
+                <p className="font-medium text-gray-800 dark:text-gray-100">{selectedJob.customer_name || "—"}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400">Est. Ready</p>
-                <p className="font-medium text-gray-800">
+                <p className="font-medium text-gray-800 dark:text-gray-100">
                   {selectedJob.estimated_completion_date
                     ? new Date(selectedJob.estimated_completion_date).toLocaleDateString("en-LK")
                     : "—"}
@@ -372,7 +372,7 @@ export default function TechDashboard() {
             {selectedJob.fault_description && (
               <div>
                 <p className="text-xs text-gray-400">Description</p>
-                <p className="text-sm text-gray-700">{selectedJob.fault_description}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-200">{selectedJob.fault_description}</p>
               </div>
             )}
 
@@ -380,7 +380,7 @@ export default function TechDashboard() {
               <button
                 type="button"
                 onClick={() => setSelectedJob(null)}
-                className="flex-1 border border-gray-300 text-gray-600 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50"
+                className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900"
               >
                 Close
               </button>
@@ -410,15 +410,15 @@ export default function TechDashboard() {
             <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
               <div>
                 <p className="text-xs text-gray-400">Device</p>
-                <p className="font-medium text-gray-800">{selectedDonor.brand} {selectedDonor.model}</p>
+                <p className="font-medium text-gray-800 dark:text-gray-100">{selectedDonor.brand} {selectedDonor.model}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400">Condition</p>
-                <p className="font-medium text-gray-800 capitalize">{selectedDonor.condition}</p>
+                <p className="font-medium text-gray-800 dark:text-gray-100 capitalize">{selectedDonor.condition}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400">Source</p>
-                <p className="font-medium text-gray-800 capitalize">{selectedDonor.source?.replace(/_/g, " ")}</p>
+                <p className="font-medium text-gray-800 dark:text-gray-100 capitalize">{selectedDonor.source?.replace(/_/g, " ")}</p>
               </div>
             </div>
 
@@ -426,7 +426,7 @@ export default function TechDashboard() {
               <button
                 type="button"
                 onClick={() => setSelectedDonor(null)}
-                className="flex-1 border border-gray-300 text-gray-600 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50"
+                className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900"
               >
                 Close
               </button>
@@ -463,39 +463,39 @@ export default function TechDashboard() {
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Scan part label</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Scan part label</label>
             <ScanField onCode={handleScan} placeholder="Scan QR / SKU / batch code" />
           </div>
 
           <div className="relative">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100" /></div>
-            <div className="relative flex justify-center"><span className="bg-white px-2 text-xs text-gray-400">or pick manually</span></div>
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100 dark:border-gray-800" /></div>
+            <div className="relative flex justify-center"><span className="bg-white dark:bg-gray-800 px-2 text-xs text-gray-400">or pick manually</span></div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Inventory Part *</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Inventory Part *</label>
             <select required value={partItemId} onChange={(e) => { setPartItemId(e.target.value); setPartBatch(null); setPartInfo(""); }}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="">— Select inventory item —</option>
               {invItems.map((i) => (
                 <option key={i.id} value={i.id}>{i.sku ? `${i.sku} · ` : ""}{i.name} (Stock: {i.quantity})</option>
               ))}
             </select>
             {partBatch && (
-              <p className="text-xs text-gray-500 mt-1">Will deduct from batch <span className="font-mono">{partBatch.code}</span></p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Will deduct from batch <span className="font-mono">{partBatch.code}</span></p>
             )}
             <p className="text-xs text-gray-400 mt-1">Cost is recorded automatically from the batch (FIFO).</p>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Quantity *</label>
             <input type="number" min="1" required value={partQty} onChange={(e) => setPartQty(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
 
           <div className="flex gap-3">
             <button type="button" onClick={() => setPartJob(null)}
-              className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
+              className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">
               Cancel
             </button>
             <button type="submit" disabled={savingPart}
@@ -509,16 +509,16 @@ export default function TechDashboard() {
       {/* Quick Parts Lookup Modal */}
       <Modal open={showPartsLookup} onClose={() => setShowPartsLookup(false)} title="Quick Parts Lookup">
         <div className="space-y-4">
-          <p className="text-xs text-gray-500 mb-2">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
             Check compatibility and stock levels for inventory and donor parts.
           </p>
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Device Brand</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Device Brand</label>
               <BrandSelect value={lookupBrand} onChange={(v) => { setLookupBrand(v); setLookupModel(""); }} placeholder="Samsung" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Device Model</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Device Model</label>
               <ModelSelect brand={lookupBrand} value={lookupModel} onChange={setLookupModel} placeholder="Galaxy A54" />
             </div>
           </div>
@@ -531,7 +531,7 @@ export default function TechDashboard() {
             <button
               type="button"
               onClick={() => setShowPartsLookup(false)}
-              className="w-full border border-gray-300 text-gray-600 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50"
+              className="w-full border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900"
             >
               Close
             </button>

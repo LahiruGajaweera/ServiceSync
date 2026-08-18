@@ -35,11 +35,11 @@ function ProgressBar({ status }) {
           <div key={step.key} className="flex flex-col items-center z-10 w-20">
             <div 
               className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm transition-colors duration-300
-                ${isPast ? "bg-blue-600 text-white" : isCurrent ? "bg-blue-500 text-white ring-4 ring-blue-100" : "bg-white text-gray-400 border border-gray-300"}`}
+                ${isPast ? "bg-blue-600 text-white" : isCurrent ? "bg-blue-500 text-white ring-4 ring-blue-100" : "bg-white dark:bg-gray-800 text-gray-400 border border-gray-300 dark:border-gray-600"}`}
             >
               {isPast ? "✓" : (idx + 1)}
             </div>
-            <span className={`text-[10px] sm:text-xs mt-2 font-medium text-center ${isCurrent || isPast ? "text-gray-800" : "text-gray-400"}`}>
+            <span className={`text-[10px] sm:text-xs mt-2 font-medium text-center ${isCurrent || isPast ? "text-gray-800 dark:text-gray-100" : "text-gray-400"}`}>
               {step.label}
             </span>
           </div>
@@ -88,7 +88,7 @@ export default function TrackingPage() {
       delivered:        "bg-green-100 text-green-700",
       unclaimed:        "bg-red-100 text-red-700",
     };
-    return map[s] ?? "bg-gray-100 text-gray-600";
+    return map[s] ?? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300";
   };
 
   return (
@@ -97,14 +97,14 @@ export default function TrackingPage() {
       style={{ backgroundImage: `url(${bgImage})` }}
     >
       {/* Light frosted overlay */}
-      <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-0"></div>
+      <div className="absolute inset-0 bg-white dark:bg-gray-800/40 backdrop-blur-[2px] z-0"></div>
 
       {/* Header */}
-      <header className="bg-white/95 backdrop-blur-md border-b border-gray-200 relative z-10 shadow-sm">
+      <header className="bg-white dark:bg-gray-800/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 relative z-10 shadow-sm">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
             <span className="text-xl font-extrabold text-blue-600 tracking-tight">ServiceSync</span>
-            <span className="ml-2 text-xs text-gray-500 font-medium bg-gray-100 px-2 py-0.5 rounded-full">Repair Tracker</span>
+            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 font-medium bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">Repair Tracker</span>
           </div>
           <a href="/login" className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">
             Staff Login →
@@ -114,9 +114,9 @@ export default function TrackingPage() {
 
       <div className="max-w-2xl mx-auto px-4 py-12 relative z-10 w-full">
         {/* Search */}
-        <div className="bg-white rounded-2xl shadow-md p-8 mb-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-1">Track Your Repair</h2>
-          <p className="text-sm text-gray-500 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8 mb-6">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-1">Track Your Repair</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
             Enter the Job ID printed on your repair receipt
           </p>
 
@@ -126,7 +126,7 @@ export default function TrackingPage() {
               value={jobId}
               onChange={(e) => setJobId(e.target.value)}
               placeholder="e.g. SS-A3F9C2E1"
-              className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm
+              className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm
                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             <button
@@ -148,12 +148,12 @@ export default function TrackingPage() {
 
         {/* Result card */}
         {job && (
-          <div className="bg-white rounded-2xl shadow-md p-8">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8">
             {/* Job header */}
             <div className="flex items-start justify-between mb-5">
               <div>
                 <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Job ID</p>
-                <p className="text-xl font-bold text-gray-800">{job.job_id}</p>
+                <p className="text-xl font-bold text-gray-800 dark:text-gray-100">{job.job_id}</p>
               </div>
               <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusBadge(job.status)}`}>
                 {job.status.replace(/_/g, " ").toUpperCase()}
@@ -164,24 +164,24 @@ export default function TrackingPage() {
             <div className="grid grid-cols-2 gap-4 text-sm mb-6">
               <div>
                 <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Device</p>
-                <p className="font-medium text-gray-700">{job.device_brand} {job.device_model}</p>
+                <p className="font-medium text-gray-700 dark:text-gray-200">{job.device_brand} {job.device_model}</p>
               </div>
               <div>
                 <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Issue</p>
-                <p className="font-medium text-gray-700 capitalize">
+                <p className="font-medium text-gray-700 dark:text-gray-200 capitalize">
                   {job.fault_category?.replace(/_/g, " ")}
                 </p>
               </div>
               <div>
                 <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Received</p>
-                <p className="font-medium text-gray-700">
+                <p className="font-medium text-gray-700 dark:text-gray-200">
                   {new Date(job.received_date).toLocaleDateString("en-LK")}
                 </p>
               </div>
               {job.estimated_completion_date && (
                 <div>
                   <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Est. Ready By</p>
-                  <p className="font-medium text-gray-700">
+                  <p className="font-medium text-gray-700 dark:text-gray-200">
                     {new Date(job.estimated_completion_date).toLocaleDateString("en-LK")}
                   </p>
                 </div>
@@ -189,7 +189,7 @@ export default function TrackingPage() {
               {job.estimated_cost != null && (
                 <div>
                   <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Estimated Cost</p>
-                  <p className="font-medium text-gray-700">
+                  <p className="font-medium text-gray-700 dark:text-gray-200">
                     LKR {Number(job.estimated_cost).toLocaleString()}
                   </p>
                 </div>
@@ -197,7 +197,7 @@ export default function TrackingPage() {
             </div>
 
             {/* Progress bar */}
-            <div className="border-t border-gray-100 pt-5">
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-5">
               <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Repair Progress</p>
               <ProgressBar status={job.status} />
             </div>

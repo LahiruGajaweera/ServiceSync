@@ -90,7 +90,7 @@ export default function SupplierSelect({ value, onChange }) {
         value={search}
         onChange={(e) => handleSearch(e.target.value)}
         onFocus={() => { if (search.trim().length >= 2) setShowDropdown(true); }}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         placeholder="Type name or phone..."
         autoComplete="off"
       />
@@ -98,7 +98,7 @@ export default function SupplierSelect({ value, onChange }) {
       {showDropdown && (
         <div className="absolute z-[60] w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
           {searching ? (
-            <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
+            <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Searching...</div>
           ) : results.length > 0 ? (
             <ul>
               {results.map((s) => (
@@ -106,19 +106,19 @@ export default function SupplierSelect({ value, onChange }) {
                   <button
                     type="button"
                     onClick={() => selectSupplier(s)}
-                    className="w-full text-left px-4 py-2 hover:bg-blue-50 focus:bg-blue-50 dark:hover:bg-gray-700 dark:focus:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0"
+                    className="w-full text-left px-4 py-2 hover:bg-blue-50 focus:bg-blue-50 dark:hover:bg-gray-700 dark:focus:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-800 dark:border-gray-700 last:border-0"
                   >
-                    <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{s.name}</p>
+                    <p className="font-semibold text-gray-800 dark:text-gray-100 dark:text-gray-200 text-sm">{s.name}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{s.phone_number}</p>
                   </button>
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="px-4 py-3 text-sm text-gray-500 text-center">No suppliers found</div>
+            <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">No suppliers found</div>
           )}
           {!searching && search.trim() && (
-            <div className="p-2 border-t border-gray-100 bg-gray-50 sticky bottom-0">
+            <div className="p-2 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 sticky bottom-0">
               <button
                 type="button"
                 onClick={openNewSupplier}
@@ -146,40 +146,40 @@ export default function SupplierSelect({ value, onChange }) {
 
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div>
-              <label className="block text-[11px] font-semibold text-gray-600 mb-1">Name *</label>
+              <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">Name *</label>
               <input
                 type="text"
                 value={newForm.name}
                 onChange={(e) => setNewForm((f) => ({ ...f, name: e.target.value }))}
-                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-1.5 text-sm"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-gray-600 mb-1">Phone *</label>
+              <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">Phone *</label>
               <input
                 type="text"
                 value={newForm.phone_number}
                 onChange={(e) => setNewForm((f) => ({ ...f, phone_number: e.target.value }))}
-                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-1.5 text-sm"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-gray-600 mb-1">Email</label>
+              <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">Email</label>
               <input
                 type="email"
                 value={newForm.email}
                 onChange={(e) => setNewForm((f) => ({ ...f, email: e.target.value }))}
-                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-1.5 text-sm"
                 placeholder="optional"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-gray-600 mb-1">Address</label>
+              <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">Address</label>
               <input
                 type="text"
                 value={newForm.address}
                 onChange={(e) => setNewForm((f) => ({ ...f, address: e.target.value }))}
-                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-1.5 text-sm"
                 placeholder="optional"
               />
             </div>

@@ -146,6 +146,16 @@ class UpdatePasswordRequest(BaseModel):
     """Force-change a temporary password for the authenticated user."""
 
     new_password: str
+    otp_id: str
+    code: str
+
+    @field_validator("code")
+    @classmethod
+    def _code(cls, v: str) -> str:
+        v = v.strip()
+        if not v.isdigit() or len(v) != 6:
+            raise ValueError("Enter the 6-digit verification code")
+        return v
 
     @field_validator("new_password")
     @classmethod

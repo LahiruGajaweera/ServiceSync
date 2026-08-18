@@ -61,10 +61,8 @@ export function AuthProvider({ children }) {
       code,
       new_password: newPassword,
     });
-    localStorage.setItem("ss_token", data.access_token);
-    localStorage.setItem("ss_user", JSON.stringify(data.user));
-    api.defaults.headers.common["Authorization"] = `Bearer ${data.access_token}`;
-    setUser(data.user);
+    // Do not log the user in automatically after a password reset.
+    // They should be redirected to the login page to authenticate manually.
     return data.user;
   }, []);
 

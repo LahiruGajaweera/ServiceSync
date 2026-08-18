@@ -15,10 +15,10 @@ function Modal({ open, onClose, title, children }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h3 className="text-base font-bold text-gray-800">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+          <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 text-xl">&times;</button>
         </div>
         <div className="p-6">{children}</div>
       </div>
@@ -122,17 +122,17 @@ export default function JobQueue() {
   return (
     <div className="p-8">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">My Job Queue</h2>
-        <p className="text-sm text-gray-500 mt-0.5">{jobs.length} job{jobs.length !== 1 ? "s" : ""} assigned to me or unassigned</p>
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">My Job Queue</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{jobs.length} job{jobs.length !== 1 ? "s" : ""} assigned to me or unassigned</p>
       </div>
 
-      <div className="flex gap-1 mb-5 bg-gray-100 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 mb-5 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl w-fit">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.value}
             onClick={() => handleTabChange(tab.value)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              statusFilter === tab.value ? "bg-white text-gray-800 shadow-sm" : "text-gray-500 hover:text-gray-700"
+              statusFilter === tab.value ? "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200"
             }`}
           >
             {tab.label}
@@ -140,27 +140,27 @@ export default function JobQueue() {
         ))}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="py-20 text-center text-gray-400 text-sm">Loading…</div>
         ) : jobs.length === 0 ? (
-          <div className="py-20 text-center border-2 border-dashed border-gray-100 rounded-xl mx-4 my-4">
-            <p className="font-medium text-gray-500">No jobs here</p>
+          <div className="py-20 text-center border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl mx-4 my-4">
+            <p className="font-medium text-gray-500 dark:text-gray-400">No jobs here</p>
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
               <tr>
                 {["Job ID", "Customer", "Device", "Fault", "Status", "Est. Ready"].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {jobs.map((job) => (
                 <tr 
                   key={job.id} 
-                  className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 cursor-pointer transition-colors"
                   onClick={() => job.technician_id ? setUpdateJob(job) : setSelectedJob(job)}
                 >
                   <td className="px-4 py-3 font-mono text-xs text-blue-600 font-semibold">
@@ -172,11 +172,11 @@ export default function JobQueue() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-medium text-gray-800">{job.customer_name}</p>
+                    <p className="font-medium text-gray-800 dark:text-gray-100">{job.customer_name}</p>
                     <p className="text-xs text-gray-400">{job.customer_phone}</p>
                   </td>
-                  <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{job.device_brand} {job.device_model}</td>
-                  <td className="px-4 py-3 text-gray-500 capitalize">{job.fault_category?.replace(/_/g, " ")}</td>
+                  <td className="px-4 py-3 text-gray-700 dark:text-gray-200 whitespace-nowrap">{job.device_brand} {job.device_model}</td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400 capitalize">{job.fault_category?.replace(/_/g, " ")}</td>
                   <td className="px-4 py-3"><JobStatusBadge status={job.status} /></td>
                   <td className="px-4 py-3 text-gray-400 text-xs">
                     {job.estimated_completion_date
@@ -213,19 +213,19 @@ export default function JobQueue() {
             <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
               <div>
                 <p className="text-xs text-gray-400">Device</p>
-                <p className="font-medium text-gray-800">{selectedJob.device_brand} {selectedJob.device_model}</p>
+                <p className="font-medium text-gray-800 dark:text-gray-100">{selectedJob.device_brand} {selectedJob.device_model}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400">Fault</p>
-                <p className="font-medium text-gray-800 capitalize">{selectedJob.fault_category?.replace(/_/g, " ")}</p>
+                <p className="font-medium text-gray-800 dark:text-gray-100 capitalize">{selectedJob.fault_category?.replace(/_/g, " ")}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400">Customer</p>
-                <p className="font-medium text-gray-800">{selectedJob.customer_name || "—"}</p>
+                <p className="font-medium text-gray-800 dark:text-gray-100">{selectedJob.customer_name || "—"}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400">Est. Ready</p>
-                <p className="font-medium text-gray-800">
+                <p className="font-medium text-gray-800 dark:text-gray-100">
                   {selectedJob.estimated_completion_date
                     ? new Date(selectedJob.estimated_completion_date).toLocaleDateString("en-LK")
                     : "—"}
@@ -236,7 +236,7 @@ export default function JobQueue() {
             {selectedJob.fault_description && (
               <div>
                 <p className="text-xs text-gray-400">Description</p>
-                <p className="text-sm text-gray-700">{selectedJob.fault_description}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-200">{selectedJob.fault_description}</p>
               </div>
             )}
 
@@ -244,7 +244,7 @@ export default function JobQueue() {
               <button
                 type="button"
                 onClick={() => setSelectedJob(null)}
-                className="flex-1 border border-gray-300 text-gray-600 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50"
+                className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900"
               >
                 Close
               </button>
@@ -272,39 +272,39 @@ export default function JobQueue() {
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Scan part label</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Scan part label</label>
             <ScanField onCode={handleScan} placeholder="Scan QR / SKU / batch code" />
           </div>
 
           <div className="relative">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100" /></div>
-            <div className="relative flex justify-center"><span className="bg-white px-2 text-xs text-gray-400">or pick manually</span></div>
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100 dark:border-gray-800" /></div>
+            <div className="relative flex justify-center"><span className="bg-white dark:bg-gray-800 px-2 text-xs text-gray-400">or pick manually</span></div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Inventory Part *</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Inventory Part *</label>
             <select required value={partItemId} onChange={(e) => { setPartItemId(e.target.value); setPartBatch(null); setPartInfo(""); }}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="">— Select inventory item —</option>
               {invItems.map((i) => (
                 <option key={i.id} value={i.id}>{i.sku ? `${i.sku} · ` : ""}{i.name} (Stock: {i.quantity})</option>
               ))}
             </select>
             {partBatch && (
-              <p className="text-xs text-gray-500 mt-1">Will deduct from batch <span className="font-mono">{partBatch.code}</span></p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Will deduct from batch <span className="font-mono">{partBatch.code}</span></p>
             )}
             <p className="text-xs text-gray-400 mt-1">Cost is recorded automatically from the batch (FIFO).</p>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Quantity *</label>
             <input type="number" min="1" required value={partQty} onChange={(e) => setPartQty(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
 
           <div className="flex gap-3">
             <button type="button" onClick={() => setPartJob(null)}
-              className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
+              className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">
               Cancel
             </button>
             <button type="submit" disabled={savingPart}

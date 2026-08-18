@@ -34,13 +34,13 @@ export default function AdminLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-800 overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-60 shrink-0 bg-white border-r border-gray-200 flex flex-col">
+      <aside className="w-60 shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
         {/* Brand */}
-        <div className="px-5 py-5 border-b border-gray-200">
+        <div className="px-5 py-5 border-b border-gray-200 dark:border-gray-700">
           <p className="text-lg font-extrabold text-blue-600 tracking-tight">ServiceSync</p>
-          <p className="text-xs text-gray-500 mt-0.5">Admin Panel</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Admin Panel</p>
         </div>
 
         {/* Navigation */}
@@ -52,7 +52,7 @@ export default function AdminLayout() {
               className={`flex items-center px-5 py-2.5 text-sm transition-colors border-l-2 ${
                 isActive(item)
                   ? "border-blue-500 bg-blue-50 text-blue-700 font-medium"
-                  : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  : "border-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 hover:text-gray-900 dark:text-white"
               }`}
             >
               {item.label}
@@ -61,12 +61,12 @@ export default function AdminLayout() {
         </nav>
 
         {/* User footer */}
-        <div className="px-5 py-4 border-t border-gray-200">
-          <p className="text-xs font-medium text-gray-800 truncate">{user?.name}</p>
-          <p className="text-xs text-gray-500 truncate mt-0.5">{user?.email}</p>
+        <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-700">
+          <p className="text-xs font-medium text-gray-800 dark:text-gray-100 truncate">{user?.name}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{user?.email}</p>
           <button
             onClick={handleLogout}
-            className="mt-3 w-full text-xs bg-gray-100 hover:bg-red-50 text-gray-700 hover:text-red-600 border border-gray-200 py-1.5 rounded transition-colors"
+            className="mt-3 w-full text-xs bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 py-1.5 rounded transition-colors font-medium"
           >
             Sign Out
           </button>
@@ -76,12 +76,12 @@ export default function AdminLayout() {
       {/* Page content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0">
+        <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6 shrink-0">
           <DateTimeDisplay />
           <div className="flex items-center gap-2">
             <Link
               to="profile"
-              className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
+              className="relative p-2 text-gray-400 hover:text-gray-600 dark:text-gray-300 transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-800"
               aria-label="My Profile"
               title="My Profile"
             >

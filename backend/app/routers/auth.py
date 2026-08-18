@@ -57,14 +57,22 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
     return auth_service.reset_password(request.otp_id, request.code, request.new_password, db)
 
 
+@router.post("/update-password/request-otp", response_model=OtpRequestResponse, status_code=201)
+def request_update_password_otp(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return auth_service.request_update_password_otp(current_user, db)
+
+
 @router.post("/update-password", response_model=TokenResponse)
 def update_password(
     request: UpdatePasswordRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Authenticated user replaces their (temporary) password."""
-    return auth_service.update_password(current_user, request.new_password, db)
+    """Authenticated user replaces their (temporary) password with OTP verification."""
+    return auth_service.update_password(current_user, request.new_password, request.otp_id, request.code, db)
 
 
 @router.get("/me", response_model=UserResponse)

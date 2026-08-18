@@ -59,13 +59,13 @@ export default function PredictiveAnalytics() {
   return (
     <div className="p-6 space-y-8">
       <div className="flex flex-col mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">AI Predictions & Smart Alerts</h2>
-        <p className="text-sm text-gray-500">Time-Series Forecasting using Scikit-Learn and ARIMA models</p>
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">AI Predictions & Smart Alerts</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Time-Series Forecasting using Scikit-Learn and ARIMA models</p>
       </div>
 
       {/* Smart Alerts Section */}
       <section>
-        <h3 className="font-semibold text-gray-700 mb-4 text-sm uppercase tracking-wide">Smart Alerts: Inventory Demand</h3>
+        <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-4 text-sm uppercase tracking-wide">Smart Alerts: Inventory Demand</h3>
         {criticalInventory.length === 0 ? (
           <div className="p-4 bg-green-50 text-green-700 rounded-xl border border-green-200">
             ✅ No critical stock shortages predicted for the upcoming week based on historical usage.
@@ -87,12 +87,12 @@ export default function PredictiveAnalytics() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Fault Trends */}
-        <section className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="font-semibold text-gray-700 mb-4 text-sm uppercase tracking-wide">Trending Faults (Next Month)</h3>
+        <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+          <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-4 text-sm uppercase tracking-wide">Trending Faults (Next Month)</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead>
-                <tr className="text-gray-500 border-b">
+                <tr className="text-gray-500 dark:text-gray-400 border-b">
                   <th className="pb-2">Fault Category</th>
                   <th className="pb-2">Current Avg/Mo</th>
                   <th className="pb-2">Predicted</th>
@@ -112,7 +112,7 @@ export default function PredictiveAnalytics() {
                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${
                           f.status === "increasing" ? "bg-red-100 text-red-700" :
                           f.status === "decreasing" ? "bg-green-100 text-green-700" :
-                          "bg-gray-100 text-gray-700"
+                          "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200"
                         }`}>
                           {f.trend_percentage > 0 ? "+" : ""}{f.trend_percentage}% {f.status}
                         </span>
@@ -126,12 +126,12 @@ export default function PredictiveAnalytics() {
         </section>
 
         {/* Technician Score */}
-        <section className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="font-semibold text-gray-700 mb-4 text-sm uppercase tracking-wide">Technician Performance Leaderboard</h3>
+        <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+          <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-4 text-sm uppercase tracking-wide">Technician Performance Leaderboard</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead>
-                <tr className="text-gray-500 border-b">
+                <tr className="text-gray-500 dark:text-gray-400 border-b">
                   <th className="pb-2">Technician</th>
                   <th className="pb-2">Jobs Completed</th>
                   <th className="pb-2">Score</th>
@@ -144,7 +144,7 @@ export default function PredictiveAnalytics() {
                 ) : (
                   techScores.map((t, idx) => (
                     <tr key={idx} className="border-b last:border-0">
-                      <td className="py-3 font-medium text-gray-800 flex items-center gap-2">
+                      <td className="py-3 font-medium text-gray-800 dark:text-gray-100 flex items-center gap-2">
                         {idx === 0 && <span title="Top Performer">🥇</span>}
                         {idx === 1 && <span title="Runner Up">🥈</span>}
                         {t.name}

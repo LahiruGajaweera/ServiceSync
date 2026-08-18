@@ -5,10 +5,10 @@ function Modal({ open, onClose, title, children }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h3 className="text-base font-bold text-gray-800">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+          <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 text-xl leading-none">&times;</button>
         </div>
         <div className="p-6">{children}</div>
       </div>
@@ -135,8 +135,8 @@ export default function TechnicianPanel() {
     <div className="p-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Technician Panel</h2>
-          <p className="text-sm text-gray-500 mt-0.5">{technicians.length} total technicians</p>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Technician Panel</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{technicians.length} total technicians</p>
         </div>
         <button
           onClick={() => { setShowModal(true); setCreated(null); setFormError(""); setForm(EMPTY_FORM); }}
@@ -146,15 +146,15 @@ export default function TechnicianPanel() {
         </button>
       </div>
 
-      <div className="flex border-b border-gray-200 mb-6">
+      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
         <button
-          className={`pb-3 px-6 font-semibold text-sm transition-colors border-b-2 ${activeTab === 'active' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+          className={`pb-3 px-6 font-semibold text-sm transition-colors border-b-2 ${activeTab === 'active' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200 hover:border-gray-300 dark:border-gray-600'}`}
           onClick={() => setActiveTab('active')}
         >
           Active Technicians ({technicians.filter(t => t.is_active).length})
         </button>
         <button
-          className={`pb-3 px-6 font-semibold text-sm transition-colors border-b-2 ${activeTab === 'inactive' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+          className={`pb-3 px-6 font-semibold text-sm transition-colors border-b-2 ${activeTab === 'inactive' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200 hover:border-gray-300 dark:border-gray-600'}`}
           onClick={() => setActiveTab('inactive')}
         >
           Inactive Technicians ({technicians.filter(t => !t.is_active).length})
@@ -164,8 +164,8 @@ export default function TechnicianPanel() {
       {loading ? (
         <div className="py-20 text-center text-gray-400 text-sm">Loading…</div>
       ) : technicians.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm py-20 text-center border-2 border-dashed border-gray-200">
-          <p className="font-medium text-gray-500">No technicians yet</p>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm py-20 text-center border-2 border-dashed border-gray-200 dark:border-gray-700">
+          <p className="font-medium text-gray-500 dark:text-gray-400">No technicians yet</p>
           <p className="text-sm text-gray-400 mt-1">Add your first technician using the button above</p>
         </div>
       ) : (
@@ -173,15 +173,15 @@ export default function TechnicianPanel() {
           {technicians.filter(t => activeTab === 'active' ? t.is_active : !t.is_active).map((t) => (
             <div 
               key={t.id} 
-              className="bg-white rounded-xl shadow-sm p-5 flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow border border-transparent hover:border-gray-200"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow border border-transparent hover:border-gray-200 dark:border-gray-700"
               onClick={() => { setSelectedTechnician(t); setShowJobsList(false); }}
             >
               <div className="w-11 h-11 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg shrink-0">
                 {t.name.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
-                <p className="font-semibold text-gray-800 truncate">{t.name}</p>
-                <p className="text-xs text-gray-500 truncate">{t.email}</p>
+                <p className="font-semibold text-gray-800 dark:text-gray-100 truncate">{t.name}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{t.email}</p>
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   <span className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-md border border-blue-100">
                     <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"></path></svg>
@@ -196,7 +196,7 @@ export default function TechnicianPanel() {
                   </span>
                 </div>
                 {t.specializations && (
-                  <p className="text-xs text-gray-600 truncate mt-2">Skills: {t.specializations}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 truncate mt-2">Skills: {t.specializations}</p>
                 )}
                 <span className={`inline-block mt-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full ${t.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                   {t.is_active ? 'Active' : 'Inactive'}
@@ -237,42 +237,42 @@ export default function TechnicianPanel() {
             </div>
           )}
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Full Name *</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Full Name *</label>
             <input
               name="name" required value={form.name} onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="John Doe"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Email *</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Email *</label>
             <input
               name="email" type="email" required value={form.email} onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="tech@servicesync.lk"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Phone Number *</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Phone Number *</label>
             <input
               name="phone_number" type="tel" required value={form.phone_number} onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="07XXXXXXXX"
             />
             <p className="text-xs text-gray-400 mt-1">A temporary password will be sent here via SMS.</p>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Specializations / Skills</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Specializations / Skills</label>
             <input
               name="specializations" value={form.specializations} onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="e.g. iPhone, Samsung, Board level repair"
             />
           </div>
           <div className="flex gap-3 pt-1">
             <button
               type="button" onClick={closeModal}
-              className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50"
+              className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900"
             >
               Cancel
             </button>
@@ -295,30 +295,30 @@ export default function TechnicianPanel() {
                 {selectedTechnician.name.charAt(0).toUpperCase()}
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-800">{selectedTechnician.name}</h3>
-                <p className="text-sm text-gray-500">{selectedTechnician.email}</p>
+                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{selectedTechnician.name}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{selectedTechnician.email}</p>
                 {selectedTechnician.phone_number && (
-                  <p className="text-sm text-gray-500">{selectedTechnician.phone_number}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{selectedTechnician.phone_number}</p>
                 )}
               </div>
             </div>
 
-            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg space-y-3">
               <div>
-                <span className="block text-xs font-semibold text-gray-500 mb-1">Performance Category</span>
+                <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Performance Category</span>
                 <span className="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-md border border-purple-200">
                   {selectedTechnician.category}
                 </span>
               </div>
 
               <div>
-                <span className="block text-xs font-semibold text-gray-500 mb-1">Current Workload</span>
+                <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Current Workload</span>
                 <button 
                   onClick={() => setShowJobsList(!showJobsList)}
                   disabled={selectedTechnician.activeJobs === 0}
                   className={`inline-flex items-center px-2 py-1 text-xs font-bold rounded-md border transition-colors ${
                     selectedTechnician.activeJobs === 0 
-                      ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
+                      ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed'
                       : showJobsList 
                         ? 'bg-orange-600 text-white border-orange-700' 
                         : 'bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-200'
@@ -330,8 +330,8 @@ export default function TechnicianPanel() {
                 {showJobsList && selectedTechnician.activeJobsList?.length > 0 && (
                   <div className="mt-3 space-y-2">
                     {selectedTechnician.activeJobsList.map(job => (
-                      <div key={job.id} className="text-xs bg-white border border-gray-200 rounded p-2 flex justify-between items-center shadow-sm">
-                        <span className="font-semibold text-gray-700">{job.job_id} - {job.device_brand} {job.device_model}</span>
+                      <div key={job.id} className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2 flex justify-between items-center shadow-sm">
+                        <span className="font-semibold text-gray-700 dark:text-gray-200">{job.job_id} - {job.device_brand} {job.device_model}</span>
                         <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${job.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
                           {job.status.replace('_', ' ')}
                         </span>
@@ -342,19 +342,19 @@ export default function TechnicianPanel() {
               </div>
               
               <div>
-                <span className="block text-xs font-semibold text-gray-500 mb-1">Performance Score</span>
+                <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Performance Score</span>
                 <div className="flex items-center gap-2">
                   <div className="w-full bg-gray-200 rounded-full h-2.5">
                     <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${selectedTechnician.performanceScore}%` }}></div>
                   </div>
-                  <span className="text-sm font-bold text-gray-700">{selectedTechnician.performanceScore}</span>
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{selectedTechnician.performanceScore}</span>
                 </div>
               </div>
 
               {selectedTechnician.specializations && (
                 <div>
-                  <span className="block text-xs font-semibold text-gray-500 mb-1">Special Skills</span>
-                  <p className="text-sm text-gray-700">{selectedTechnician.specializations}</p>
+                  <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Special Skills</span>
+                  <p className="text-sm text-gray-700 dark:text-gray-200">{selectedTechnician.specializations}</p>
                 </div>
               )}
             </div>
@@ -363,7 +363,7 @@ export default function TechnicianPanel() {
               <button
                 type="button" 
                 onClick={() => { setSelectedTechnician(null); setShowJobsList(false); }}
-                className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 transition-colors"
               >
                 Close
               </button>
@@ -390,14 +390,14 @@ export default function TechnicianPanel() {
         title="Confirm Action"
       >
         <div className="space-y-4">
-          <p className="text-gray-600 text-sm">
+          <p className="text-gray-600 dark:text-gray-300 text-sm">
             Are you sure you want to {confirmModal.action} this technician?
           </p>
           <div className="flex gap-3 pt-2">
             <button
               type="button" 
               onClick={() => setConfirmModal({ isOpen: false, action: '', onConfirm: null })}
-              className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+              className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 transition-colors"
             >
               Cancel
             </button>

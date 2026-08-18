@@ -48,7 +48,7 @@ export default function RevertNotifications() {
     <div className="relative">
       <button 
         onClick={() => setShowDropdown(!showDropdown)}
-        className="relative p-2 text-gray-500 hover:text-gray-800 transition-colors rounded-full hover:bg-gray-100"
+        className="relative p-2 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:text-gray-100 transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-800"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -63,31 +63,46 @@ export default function RevertNotifications() {
       {showDropdown && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setShowDropdown(false)}></div>
-          <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-              <h3 className="font-semibold text-gray-800 text-sm">Notifications</h3>
-              {(requests.length + pendingDonors.length) > 0 && (
-                <span className="bg-red-100 text-red-700 text-xs font-semibold px-2 py-0.5 rounded-full">{requests.length + pendingDonors.length} new</span>
-              )}
+          <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-800 z-50 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex justify-between items-center">
+              <h3 className="font-semibold text-gray-800 dark:text-gray-100 text-sm">Notifications</h3>
+              <div className="flex items-center gap-3">
+                {requests.some(r => !!r.admin_alert) && (
+                  <button 
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const alerts = requests.filter(r => !!r.admin_alert);
+                      await Promise.all(alerts.map(req => api.patch(`/jobs/${req.id}/clear_alert`).catch(() => {})));
+                      fetchRequests();
+                    }}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                  >
+                    Mark all as read
+                  </button>
+                )}
+                {(requests.length + pendingDonors.length) > 0 && (
+                  <span className="bg-red-100 text-red-700 text-xs font-semibold px-2 py-0.5 rounded-full">{requests.length + pendingDonors.length} new</span>
+                )}
+              </div>
             </div>
             <div className="max-h-80 overflow-y-auto">
               {(requests.length === 0 && pendingDonors.length === 0) ? (
-                <div className="p-6 text-center text-gray-500 text-sm">No new notifications</div>
+                <div className="p-6 text-center text-gray-500 dark:text-gray-400 text-sm">No new notifications</div>
               ) : (
-                <div className="divide-y divide-gray-50">
+                <div className="divide-y divide-gray-50 dark:divide-gray-800">
                   {pendingDonors.map(group => {
                     const devId = group[0].donor_device_id;
                     return (
                       <div 
                         key={devId} 
-                        className="p-4 hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0 cursor-pointer"
+                        className="p-4 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-50 dark:border-gray-700 last:border-0 cursor-pointer"
                         onClick={() => { setShowDropdown(false); navigate('/admin/donors'); }}
                       >
                         <div className="flex justify-between items-start mb-1">
-                          <p className="font-bold text-sm text-gray-800">Donor Extraction</p>
+                          <p className="font-bold text-sm text-gray-800 dark:text-gray-100">Donor Extraction</p>
                           <span className="text-[10px] uppercase font-bold tracking-wider text-blue-600">Review Req</span>
                         </div>
-                        <p className="text-xs text-gray-700 line-clamp-2">A technician submitted {group.length} parts for approval.</p>
+                        <p className="text-xs text-gray-700 dark:text-gray-200 line-clamp-2">A technician submitted {group.length} parts for approval.</p>
                       </div>
                     );
                   })}
@@ -97,24 +112,24 @@ export default function RevertNotifications() {
                     return (
                     <div 
                       key={req.id} 
-                      className="p-4 hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0"
+                      className="p-4 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-50 dark:border-gray-700 last:border-0"
                     >
                       <div 
                         className="cursor-pointer"
                         onClick={() => { setSelectedJobId(req.id); setShowDropdown(false); }}
                       >
                         <div className="flex justify-between items-start mb-1">
-                          <p className="font-bold text-sm text-gray-800">{req.job_id}</p>
+                          <p className="font-bold text-sm text-gray-800 dark:text-gray-100">{req.job_id}</p>
                           <span className={`text-[10px] uppercase font-bold tracking-wider ${isAlert ? 'text-red-600' : 'text-amber-600'}`}>
                             {isAlert ? 'System Alert' : 'Revert Req'}
                           </span>
                         </div>
                         {isAlert ? (
-                          <p className="text-xs text-gray-700">{req.admin_alert}</p>
+                          <p className="text-xs text-gray-700 dark:text-gray-200">{req.admin_alert}</p>
                         ) : (
                           <>
-                            <p className="text-xs text-gray-700 line-clamp-2">Technician {req.technician_name || "Unknown"} requested revert to <b>{req.revert_requested_to}</b>.</p>
-                            {req.revert_reason && <p className="text-xs text-gray-600 italic mt-1">"{req.revert_reason}"</p>}
+                            <p className="text-xs text-gray-700 dark:text-gray-200 line-clamp-2">Technician {req.technician_name || "Unknown"} requested revert to <b>{req.revert_requested_to}</b>.</p>
+                            {req.revert_reason && <p className="text-xs text-gray-600 dark:text-gray-300 italic mt-1">"{req.revert_reason}"</p>}
                           </>
                         )}
                       </div>
@@ -122,17 +137,12 @@ export default function RevertNotifications() {
                       {isAlert && (
                         <div className="mt-2 text-right">
                           <button 
-                            onClick={() => {
-                              setShowDropdown(false);
-                              if (req.admin_alert && req.admin_alert.includes("Donor Device")) {
-                                api.patch(`/jobs/${req.id}/clear_alert`).catch(() => {});
-                                navigate('/admin/donors');
-                              } else {
-                                api.patch(`/jobs/${req.id}/clear_alert`).catch(() => {});
-                                fetchRequests();
-                              }
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await api.patch(`/jobs/${req.id}/clear_alert`).catch(() => {});
+                              fetchRequests();
                             }}
-                            className="text-[10px] bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded font-semibold"
+                            className="text-[10px] bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-2 py-1 rounded font-semibold"
                           >
                             Dismiss
                           </button>

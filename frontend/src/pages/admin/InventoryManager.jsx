@@ -11,10 +11,10 @@ function Modal({ open, onClose, title, children }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white">
-          <h3 className="text-base font-bold text-gray-800">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white dark:bg-gray-800">
+          <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 text-xl leading-none">&times;</button>
         </div>
         <div className="p-6">{children}</div>
       </div>
@@ -86,10 +86,10 @@ function CatalogFormFields({ form, handleChange, setForm, showInitialStock, cate
   return (
     <div className="grid grid-cols-2 gap-3">
       <div className="col-span-2">
-        <label className="block text-xs font-semibold text-gray-600 mb-1">Part Name (auto-generated)</label>
-        <div className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm min-h-[38px] flex items-center">
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Part Name (auto-generated)</label>
+        <div className="w-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2 text-sm min-h-[38px] flex items-center">
           {generatedName
-            ? <span className="font-semibold text-gray-800">{generatedName}</span>
+            ? <span className="font-semibold text-gray-800 dark:text-gray-100">{generatedName}</span>
             : <span className="text-gray-400">Select brand, model, category &amp; spec below…</span>}
         </div>
         <p className="text-[11px] text-gray-400 mt-1">
@@ -97,7 +97,7 @@ function CatalogFormFields({ form, handleChange, setForm, showInitialStock, cate
         </p>
       </div>
       <div>
-        <label className="block text-xs font-semibold text-gray-600 mb-1">Brand *</label>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Brand *</label>
         <BrandSelect
           value={form.brand}
           onChange={(v) => setForm((f) => ({ ...f, brand: v, model: "" }))}
@@ -105,7 +105,7 @@ function CatalogFormFields({ form, handleChange, setForm, showInitialStock, cate
         />
       </div>
       <div>
-        <label className="block text-xs font-semibold text-gray-600 mb-1">Model *</label>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Model *</label>
         <ModelSelect
           brand={form.brand}
           value={form.model}
@@ -114,9 +114,9 @@ function CatalogFormFields({ form, handleChange, setForm, showInitialStock, cate
         />
       </div>
       <div>
-        <label className="block text-xs font-semibold text-gray-600 mb-1">Category *</label>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Category *</label>
         <input name="category" required value={form.category} onChange={handleChange} list="existing-categories"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="e.g. Display" />
         <datalist id="existing-categories">
           {categories.map((c) => (
@@ -125,35 +125,35 @@ function CatalogFormFields({ form, handleChange, setForm, showInitialStock, cate
         </datalist>
       </div>
       <div>
-        <label className="block text-xs font-semibold text-gray-600 mb-1">Spec / Identifier</label>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Spec / Identifier</label>
         <SpecSelect value={form.spec} onChange={(v) => setForm((f) => ({ ...f, spec: v }))} placeholder="e.g. OLED, OEM, 5000MAH" />
       </div>
       <div>
-        <label className="block text-xs font-semibold text-gray-600 mb-1">Type *</label>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Type *</label>
         <select name="part_type" value={form.part_type} onChange={handleChange}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           <option value="factory_new">Factory New</option>
           <option value="salvaged">Salvaged</option>
         </select>
       </div>
       <div>
-        <label className="block text-xs font-semibold text-gray-600 mb-1">Min Stock Threshold</label>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Min Stock Threshold</label>
         <input name="min_stock_threshold" type="number" min="0" value={form.min_stock_threshold} onChange={handleChange}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
       </div>
       <div className="flex items-end pb-2">
-        <label className="flex items-center gap-2 text-xs font-semibold text-gray-600">
+        <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
           <input name="track_serial" type="checkbox" checked={form.track_serial} onChange={handleChange}
-            className="rounded border-gray-300" />
+            className="rounded border-gray-300 dark:border-gray-600" />
           Track each unit (serial)
         </label>
       </div>
       <div className="col-span-2 mt-1 border-t pt-3">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Compatibility</p>
+        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Compatibility</p>
         <p className="text-[11px] text-gray-400">Separate from the name — the full set of devices this part fits (used for smart-reuse suggestions). Pick from the registry to avoid typos; the selected brand &amp; model above are added automatically.</p>
       </div>
       <div className="col-span-2">
-        <label className="block text-xs font-semibold text-gray-600 mb-1">Compatible Brands</label>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Compatible Brands</label>
         <MultiSelect
           value={form.compatible_brands}
           onChange={(arr) => setForm((f) => ({ ...f, compatible_brands: arr }))}
@@ -165,7 +165,7 @@ function CatalogFormFields({ form, handleChange, setForm, showInitialStock, cate
         />
       </div>
       <div className="col-span-2">
-        <label className="block text-xs font-semibold text-gray-600 mb-1">Compatible Models</label>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Compatible Models</label>
         <MultiSelect
           value={form.compatible_models}
           onChange={(arr) => setForm((f) => ({ ...f, compatible_models: arr }))}
@@ -182,31 +182,31 @@ function CatalogFormFields({ form, handleChange, setForm, showInitialStock, cate
       {showInitialStock && (
         <>
           <div className="col-span-2 mt-1 border-t pt-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Initial Stock & Pricing (optional)</p>
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Initial Stock & Pricing (optional)</p>
             <p className="text-xs text-gray-400">Creates the first purchase batch and sets the base selling price.</p>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Quantity</label>
             <input name="quantity" type="number" min="0" value={form.quantity} onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Unit Cost (LKR)</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Unit Cost (LKR)</label>
             <input name="unit_cost" type="number" step="0.01" min="0" value={form.unit_cost} onChange={(e) => {
               const cost = parseFloat(e.target.value) || 0;
               const margin = parseFloat(form.margin) || 0;
               const price = (cost * (1 + margin / 100)).toFixed(2);
               setForm((f) => ({ ...f, unit_cost: e.target.value, unit_price: price }));
-            }} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            }} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Margin %</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Margin %</label>
             <select name="margin" value={form.margin} onChange={(e) => {
               const margin = parseFloat(e.target.value) || 0;
               const cost = parseFloat(form.unit_cost) || 0;
               const price = (cost * (1 + margin / 100)).toFixed(2);
               setForm((f) => ({ ...f, margin: e.target.value, unit_price: price }));
-            }} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            }} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="10">10%</option>
               <option value="20">20%</option>
               <option value="30">30%</option>
@@ -216,12 +216,12 @@ function CatalogFormFields({ form, handleChange, setForm, showInitialStock, cate
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Selling Price (LKR)</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Selling Price (LKR)</label>
             <input name="unit_price" type="number" step="0.01" min="0" value={form.unit_price} onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50" />
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50" />
           </div>
           <div className="col-span-2">
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Supplier</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Supplier</label>
             <SupplierSelect
               value={form.supplier}
               onChange={(v) => setForm((f) => ({ ...f, supplier: v }))}
@@ -536,8 +536,8 @@ export default function InventoryManager() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Inventory Manager</h2>
-          <p className="text-sm text-gray-500 mt-0.5">{items.length} parts catalogued</p>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Inventory Manager</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{items.length} parts catalogued</p>
         </div>
         <button onClick={openAdd}
           className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
@@ -546,13 +546,13 @@ export default function InventoryManager() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-6 mt-2">
+      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6 mt-2">
         <button
           onClick={() => setActiveTab("catalog")}
           className={`px-6 py-3 font-semibold text-sm transition-colors border-b-2 ${
             activeTab === "catalog"
               ? "border-blue-600 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200 hover:border-gray-300 dark:border-gray-600"
           }`}
         >
           Inventory Catalog
@@ -562,7 +562,7 @@ export default function InventoryManager() {
           className={`px-6 py-3 font-semibold text-sm transition-colors border-b-2 ${
             activeTab === "logs"
               ? "border-blue-600 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200 hover:border-gray-300 dark:border-gray-600"
           }`}
         >
           Adjustment Logs
@@ -586,52 +586,52 @@ export default function InventoryManager() {
           <form onSubmit={(e) => { e.preventDefault(); fetchAll(search); }} className="mb-5 flex gap-2">
             <input value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, SKU or category…"
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <button type="submit" className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">Search</button>
+              className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <button type="submit" className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg text-sm font-medium">Search</button>
             {search && (
-              <button type="button" onClick={() => { setSearch(""); fetchAll(""); }} className="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Clear</button>
+              <button type="button" onClick={() => { setSearch(""); fetchAll(""); }} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">Clear</button>
             )}
           </form>
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="py-20 text-center text-gray-400 text-sm">Loading…</div>
         ) : items.length === 0 ? (
-          <div className="py-20 text-center border-2 border-dashed border-gray-100 rounded-xl mx-4 my-4">
-            <p className="font-medium text-gray-500">No inventory items</p>
+          <div className="py-20 text-center border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl mx-4 my-4">
+            <p className="font-medium text-gray-500 dark:text-gray-400">No inventory items</p>
             <p className="text-sm text-gray-400 mt-1">Add your first spare part above</p>
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
               <tr>
                 {["SKU", "Part Name", "Category", "Type", "Qty", "Latest Cost", "Min", "Status"].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {items.map((item) => (
                 <tr 
                   key={item.id} 
                   onClick={() => openItemDetails(item)}
-                  className={`cursor-pointer hover:bg-gray-50 transition-colors ${item.is_low_stock ? "bg-amber-50/40" : ""}`}
+                  className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 transition-colors ${item.is_low_stock ? "bg-amber-50/40" : ""}`}
                 >
-                  <td className="px-4 py-3 font-mono text-xs text-gray-500">{item.sku || "—"}</td>
-                  <td className="px-4 py-3 font-medium text-gray-800">
+                  <td className="px-4 py-3 font-mono text-xs text-gray-500 dark:text-gray-400">{item.sku || "—"}</td>
+                  <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">
                     {item.name}
                     {item.track_serial && <span className="ml-2 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-semibold">SERIAL</span>}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{item.category}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{item.category}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${item.part_type === "factory_new" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
                       {item.part_type === "factory_new" ? "Factory New" : "Salvaged"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-bold text-gray-800">{item.quantity}</td>
-                  <td className="px-4 py-3 text-gray-600">LKR {Number(item.unit_price).toLocaleString()}</td>
-                  <td className="px-4 py-3 text-gray-500">{item.min_stock_threshold}</td>
+                  <td className="px-4 py-3 font-bold text-gray-800 dark:text-gray-100">{item.quantity}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-300">LKR {Number(item.unit_price).toLocaleString()}</td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{item.min_stock_threshold}</td>
                   <td className="px-4 py-3">
                     {item.is_low_stock ? (
                       <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-semibold">Low Stock</span>
@@ -647,38 +647,38 @@ export default function InventoryManager() {
       </div>
         </>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
           {globalLogsLoading ? (
             <div className="py-20 text-center text-gray-400 text-sm">Loading logs…</div>
           ) : globalLogs.length === 0 ? (
             <div className="py-20 text-center text-gray-400 text-sm">No adjustments have been recorded yet.</div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                 <tr>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Date & Time</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Admin</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Item Name</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Batch Code</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Change</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Reason</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Note</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Date & Time</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Admin</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Item Name</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Batch Code</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Change</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Reason</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Note</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {globalLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-gray-500">{new Date(log.created_at).toLocaleString()}</td>
-                    <td className="px-4 py-3 font-medium text-gray-800">{log.admin_name}</td>
-                    <td className="px-4 py-3 text-gray-800">{log.item_name}</td>
-                    <td className="px-4 py-3 font-mono text-gray-500">{log.batch_code || "—"}</td>
+                  <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 transition-colors">
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{new Date(log.created_at).toLocaleString()}</td>
+                    <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">{log.admin_name}</td>
+                    <td className="px-4 py-3 text-gray-800 dark:text-gray-100">{log.item_name}</td>
+                    <td className="px-4 py-3 font-mono text-gray-500 dark:text-gray-400">{log.batch_code || "—"}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${log.delta > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                         {log.delta > 0 ? "+" : ""}{log.delta}
                       </span>
                     </td>
-                    <td className="px-4 py-3 uppercase text-xs font-semibold text-gray-600">{log.reason}</td>
-                    <td className="px-4 py-3 text-gray-500 italic max-w-xs truncate" title={log.note}>{log.note || "—"}</td>
+                    <td className="px-4 py-3 uppercase text-xs font-semibold text-gray-600 dark:text-gray-300">{log.reason}</td>
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 italic max-w-xs truncate" title={log.note}>{log.note || "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -693,7 +693,7 @@ export default function InventoryManager() {
           {formError && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg">{formError}</div>}
           <CatalogFormFields form={form} handleChange={handleChange} setForm={setForm} showInitialStock categories={categories} />
           <div className="flex gap-3 pt-1">
-            <button type="button" onClick={() => setShowAdd(false)} className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+            <button type="button" onClick={() => setShowAdd(false)} className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">Cancel</button>
             <button type="submit" disabled={saving} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-2 rounded-lg text-sm font-semibold transition-colors">{saving ? "Adding…" : "Add Part"}</button>
           </div>
         </form>
@@ -706,7 +706,7 @@ export default function InventoryManager() {
           <CatalogFormFields form={form} handleChange={handleChange} setForm={setForm} showInitialStock={false} categories={categories} />
           <p className="text-xs text-gray-400">Stock &amp; cost are managed through purchase batches (use “Receive”).</p>
           <div className="flex gap-3 pt-1">
-            <button type="button" onClick={() => setEditItem(null)} className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+            <button type="button" onClick={() => setEditItem(null)} className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">Cancel</button>
             <button type="submit" disabled={saving} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-2 rounded-lg text-sm font-semibold transition-colors">{saving ? "Saving…" : "Save Changes"}</button>
           </div>
         </form>
@@ -715,13 +715,13 @@ export default function InventoryManager() {
       {/* QR label print prompt */}
       <Modal open={!!labelPrompt} onClose={() => setLabelPrompt(null)} title={labelPrompt?.title || "Part Added"}>
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            Batch <span className="font-mono font-semibold text-gray-800">{labelPrompt?.code}</span> was {labelPrompt?.action || "created"}.
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Batch <span className="font-mono font-semibold text-gray-800 dark:text-gray-100">{labelPrompt?.code}</span> was {labelPrompt?.action || "created"}.
             Print a QR label for this batch?
           </p>
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={() => setLabelPrompt(null)}
-              className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">Not now</button>
+              className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">Not now</button>
             <button type="button"
               onClick={() => { const p = labelPrompt; setLabelPrompt(null); if (p) printLabel(p); }}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold transition-colors">Print Label</button>
@@ -733,18 +733,18 @@ export default function InventoryManager() {
       <Modal open={!!receiveItem} onClose={() => setReceiveItem(null)} title={`Receive Stock — ${receiveItem?.name ?? ""}`}>
         <form onSubmit={handleReceive} className="space-y-4">
           {formError && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg">{formError}</div>}
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             SKU <span className="font-mono">{receiveItem?.sku}</span> · current stock <strong>{receiveItem?.quantity}</strong>
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Quantity *</label>
               <input type="number" min="1" required value={receiveForm.quantity}
                 onChange={(e) => setReceiveForm((f) => ({ ...f, quantity: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Unit Cost (LKR) *</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Unit Cost (LKR) *</label>
               <input type="number" step="0.01" min="0" required value={receiveForm.unit_cost}
                 onChange={(e) => {
                   const cost = parseFloat(e.target.value) || 0;
@@ -752,16 +752,16 @@ export default function InventoryManager() {
                   const price = (cost * (1 + margin / 100)).toFixed(2);
                   setReceiveForm((f) => ({ ...f, unit_cost: e.target.value, new_selling_price: price }));
                 }}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Margin % (For update)</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Margin % (For update)</label>
               <select value={receiveForm.margin} onChange={(e) => {
                 const margin = parseFloat(e.target.value) || 0;
                 const cost = parseFloat(receiveForm.unit_cost) || 0;
                 const price = (cost * (1 + margin / 100)).toFixed(2);
                 setReceiveForm((f) => ({ ...f, margin: e.target.value, new_selling_price: price }));
-              }} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              }} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="10">10%</option>
                 <option value="20">20%</option>
                 <option value="30">30%</option>
@@ -775,33 +775,33 @@ export default function InventoryManager() {
                 <input type="checkbox" checked={receiveForm.update_selling_price} 
                   onChange={(e) => setReceiveForm(f => ({ ...f, update_selling_price: e.target.checked }))}
                   className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" />
-                <span className="text-sm font-semibold text-gray-700">Update Selling Price? (Current: LKR {receiveItem?.unit_price})</span>
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Update Selling Price? (Current: LKR {receiveItem?.unit_price})</span>
               </label>
               {receiveForm.update_selling_price && (
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">New Selling Price (LKR)</label>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">New Selling Price (LKR)</label>
                   <input type="number" step="0.01" min="0" required value={receiveForm.new_selling_price}
                     onChange={(e) => setReceiveForm((f) => ({ ...f, new_selling_price: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50" />
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50" />
                 </div>
               )}
             </div>
             <div className="col-span-2">
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Supplier</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Supplier</label>
               <SupplierSelect
                 value={receiveForm.supplier}
                 onChange={(v) => setReceiveForm((f) => ({ ...f, supplier: v }))}
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Purchased At</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Purchased At</label>
               <input type="date" max={new Date().toISOString().split("T")[0]} value={receiveForm.purchased_at}
                 onChange={(e) => setReceiveForm((f) => ({ ...f, purchased_at: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
           <div className="flex gap-3 pt-1">
-            <button type="button" onClick={() => setReceiveItem(null)} className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+            <button type="button" onClick={() => setReceiveItem(null)} className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">Cancel</button>
             <button type="submit" disabled={saving} className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white py-2 rounded-lg text-sm font-semibold transition-colors">{saving ? "Saving…" : "Receive & Create Batch"}</button>
           </div>
         </form>
@@ -812,7 +812,7 @@ export default function InventoryManager() {
         {detailsItem && (
           <div className="space-y-6">
             {/* Action Bar */}
-            <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-4">
+            <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700 pb-4">
               <button onClick={() => { setDetailsItem(null); openReceive(detailsItem); }} className="px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-sm font-semibold transition-colors">
                 Receive Stock
               </button>
@@ -837,27 +837,27 @@ export default function InventoryManager() {
               <button onClick={() => {
                 setDetailsItem(null);
                 openEdit(detailsItem);
-              }} className="px-3 py-1.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-sm font-semibold transition-colors">
+              }} className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 rounded-lg text-sm font-semibold transition-colors">
                 Edit Part
               </button>
             </div>
 
             {/* Batches List */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-800 mb-3">Available Batches</h3>
+              <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-3">Available Batches</h3>
               {batchLoading ? (
                 <div className="py-8 text-center text-gray-400 text-sm">Loading batches…</div>
               ) : batches.length === 0 ? (
-                <p className="py-6 text-center text-gray-400 text-sm border-2 border-dashed border-gray-100 rounded-xl">No batches currently available. Use "Receive Stock" to add inventory.</p>
+                <p className="py-6 text-center text-gray-400 text-sm border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl">No batches currently available. Use "Receive Stock" to add inventory.</p>
               ) : (
                 <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
                   {batches.map((b) => (
-                    <div key={b.id} className="border border-gray-200 rounded-lg px-3 py-2 flex items-center justify-between bg-white">
+                    <div key={b.id} className="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 flex items-center justify-between bg-white dark:bg-gray-800">
                       <div>
-                        <p className="font-mono text-sm font-semibold text-gray-800">{b.batch_code}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">
+                        <p className="font-mono text-sm font-semibold text-gray-800 dark:text-gray-100">{b.batch_code}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                           {b.supplier || "—"} · LKR {Number(b.unit_cost).toLocaleString()} ·
-                          <span className="font-semibold text-gray-700"> {b.quantity_remaining}</span> / {b.quantity_received} left
+                          <span className="font-semibold text-gray-700 dark:text-gray-200"> {b.quantity_remaining}</span> / {b.quantity_received} left
                         </p>
                       </div>
                       <button
@@ -877,12 +877,12 @@ export default function InventoryManager() {
       {/* Adjust Stock Modal */}
       <Modal open={showStockModal} onClose={() => setShowStock(false)} title={`Adjust Stock — ${selectedItem?.name}`}>
         <form onSubmit={handleStockAdjust} className="space-y-4">
-          <p className="text-sm text-gray-600">Current stock: <strong className="text-gray-800">{selectedItem?.quantity}</strong></p>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Current stock: <strong className="text-gray-800 dark:text-gray-100">{selectedItem?.quantity}</strong></p>
           <p className="text-xs text-gray-400">Use for recounts/shrinkage. Negative deducts oldest batches first.</p>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Reason for Adjustment *</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Reason for Adjustment *</label>
             <select required value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="recount">Physical Recount Correction</option>
               <option value="damaged">Damaged / Broken</option>
               <option value="shrinkage">Lost / Missing</option>
@@ -891,16 +891,16 @@ export default function InventoryManager() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Stock Change (positive = add, negative = consume) *</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Stock Change (positive = add, negative = consume) *</label>
             <input type="number" required value={stockDelta} onChange={(e) => setStockDelta(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="e.g. +5 or -2" />
           </div>
           {parseInt(stockDelta, 10) < 0 && (
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Batch to Deduct From (Optional)</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Batch to Deduct From (Optional)</label>
               <select value={adjustBatchId} onChange={(e) => setAdjustBatchId(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">-- Automatic (Oldest First) --</option>
                 {availableBatches.filter(b => b.quantity_remaining > 0).map(b => (
                   <option key={b.id} value={b.id}>
@@ -912,16 +912,16 @@ export default function InventoryManager() {
             </div>
           )}
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Notes (Optional)</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Notes (Optional)</label>
             <textarea value={adjustNote} onChange={(e) => setAdjustNote(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Explain the reason..." rows={2} />
           </div>
           {stockDelta && (
-            <p className="text-xs text-gray-500">New quantity: <strong>{(selectedItem?.quantity ?? 0) + (parseInt(stockDelta, 10) || 0)}</strong></p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">New quantity: <strong>{(selectedItem?.quantity ?? 0) + (parseInt(stockDelta, 10) || 0)}</strong></p>
           )}
           <div className="flex gap-3 pt-1">
-            <button type="button" onClick={() => setShowStock(false)} className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+            <button type="button" onClick={() => setShowStock(false)} className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">Cancel</button>
             <button type="submit" disabled={saving} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-2 rounded-lg text-sm font-semibold transition-colors">{saving ? "Saving…" : "Update Stock"}</button>
           </div>
         </form>
@@ -930,30 +930,30 @@ export default function InventoryManager() {
       {/* Adjustment Logs Modal */}
       <Modal open={showLogsModal} onClose={() => setShowLogs(false)} title={`Adjustment Logs — ${selectedItem?.name}`}>
         {logsLoading ? (
-          <p className="text-sm text-gray-500">Loading logs...</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Loading logs...</p>
         ) : adjustLogs.length === 0 ? (
-          <p className="text-sm text-gray-500">No manual adjustments recorded for this item.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">No manual adjustments recorded for this item.</p>
         ) : (
           <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
             {adjustLogs.map((log) => (
-              <div key={log.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+              <div key={log.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-900">
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${log.delta > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                       {log.delta > 0 ? "+" : ""}{log.delta}
                     </span>
-                    <span className="ml-2 text-sm font-semibold text-gray-800 uppercase tracking-wide">{log.reason}</span>
+                    <span className="ml-2 text-sm font-semibold text-gray-800 dark:text-gray-100 uppercase tracking-wide">{log.reason}</span>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-gray-500">{new Date(log.created_at).toLocaleString()}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(log.created_at).toLocaleString()}</p>
                     <p className="text-[11px] text-gray-400 mt-0.5">By {log.admin_name}</p>
                   </div>
                 </div>
                 {log.batch_code && (
-                  <p className="text-[11px] font-mono text-gray-500 mb-1">Batch: {log.batch_code}</p>
+                  <p className="text-[11px] font-mono text-gray-500 dark:text-gray-400 mb-1">Batch: {log.batch_code}</p>
                 )}
                 {log.note && (
-                  <p className="text-sm text-gray-600 mt-1 italic border-l-2 border-gray-300 pl-2">{log.note}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 italic border-l-2 border-gray-300 dark:border-gray-600 pl-2">{log.note}</p>
                 )}
               </div>
             ))}

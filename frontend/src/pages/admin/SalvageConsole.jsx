@@ -5,10 +5,10 @@ function Modal({ open, onClose, title, children }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white">
-          <h3 className="text-base font-bold text-gray-800">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white dark:bg-gray-800">
+          <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 text-xl leading-none">&times;</button>
         </div>
         <div className="p-6">{children}</div>
       </div>
@@ -97,7 +97,7 @@ function ScraperPanel({ brand, model, onSelectPrice }) {
               <button
                 type="button"
                 onClick={() => setShowDetails(!showDetails)}
-                className="text-xs text-gray-500 hover:text-gray-700 underline"
+                className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200 underline"
               >
                 {showDetails ? "Hide Details" : "Show Details"}
               </button>
@@ -115,13 +115,13 @@ function ScraperPanel({ brand, model, onSelectPrice }) {
             {showDetails && result.listings?.length > 0 && (
               <div className="max-h-36 overflow-y-auto space-y-1 mt-2">
                 {result.listings.map((l, i) => (
-                  <div key={i} className="flex items-center justify-between bg-white rounded-lg px-3 py-1.5 border border-gray-100">
+                  <div key={i} className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg px-3 py-1.5 border border-gray-100 dark:border-gray-800">
                     <div className="flex-1 mr-3 min-w-0">
-                      <p className="text-xs text-gray-700 truncate">{l.title}</p>
+                      <p className="text-xs text-gray-700 dark:text-gray-200 truncate">{l.title}</p>
                       {l.source && <p className="text-[10px] text-gray-400 font-medium tracking-wide uppercase mt-0.5">{l.source}</p>}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs font-semibold text-gray-800">LKR {Number(l.price).toLocaleString()}</span>
+                      <span className="text-xs font-semibold text-gray-800 dark:text-gray-100">LKR {Number(l.price).toLocaleString()}</span>
                       {result.listings?.length > 1 && (
                         <button
                           type="button"
@@ -398,8 +398,8 @@ export default function SalvageConsole() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Salvage Console</h2>
-          <p className="text-sm text-gray-500 mt-0.5">{assessments.length} assessment{assessments.length !== 1 ? "s" : ""} recorded</p>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Salvage Console</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{assessments.length} assessment{assessments.length !== 1 ? "s" : ""} recorded</p>
         </div>
         <button
           onClick={() => { setShowCreate(true); setFormError(""); setForm(EMPTY_FORM); setJob(null); setJobSearch(""); }}
@@ -426,7 +426,7 @@ export default function SalvageConsole() {
             <thead className="bg-amber-50 border-b border-amber-100">
               <tr>
                 <th className="px-5 py-2 w-10">
-                  <input type="checkbox" onChange={(e) => setSelectedBatch(e.target.checked ? pendingUnclaimed.map(p => p.job_id) : [])} checked={selectedBatch.length === pendingUnclaimed.length && pendingUnclaimed.length > 0} className="w-4 h-4 text-amber-600 rounded border-gray-300 focus:ring-amber-500" />
+                  <input type="checkbox" onChange={(e) => setSelectedBatch(e.target.checked ? pendingUnclaimed.map(p => p.job_id) : [])} checked={selectedBatch.length === pendingUnclaimed.length && pendingUnclaimed.length > 0} className="w-4 h-4 text-amber-600 rounded border-gray-300 dark:border-gray-600 focus:ring-amber-500" />
                 </th>
                 <th className="text-left px-5 py-2 text-xs font-semibold text-amber-800">Job ID</th>
                 <th className="text-left px-5 py-2 text-xs font-semibold text-amber-800">Device</th>
@@ -438,7 +438,7 @@ export default function SalvageConsole() {
               {pendingUnclaimed.map((p) => (
                 <tr key={p.job_id} className="hover:bg-amber-100/30 transition-colors">
                   <td className="px-5 py-3">
-                    <input type="checkbox" checked={selectedBatch.includes(p.job_id)} onChange={() => toggleBatch(p.job_id)} className="w-4 h-4 text-amber-600 rounded border-gray-300 focus:ring-amber-500" />
+                    <input type="checkbox" checked={selectedBatch.includes(p.job_id)} onChange={() => toggleBatch(p.job_id)} className="w-4 h-4 text-amber-600 rounded border-gray-300 dark:border-gray-600 focus:ring-amber-500" />
                   </td>
                   <td className="px-5 py-3 font-mono font-semibold text-blue-700 text-xs">{p.job_public_id}</td>
                   <td className="px-5 py-3 text-amber-900 font-medium">{p.device}</td>
@@ -459,44 +459,44 @@ export default function SalvageConsole() {
       )}
 
       {/* Existing Assessments Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         {loading ? (
           <div className="py-20 text-center text-gray-400 text-sm">Loading…</div>
         ) : assessments.length === 0 ? (
-          <div className="py-20 text-center border-2 border-dashed border-gray-100 rounded-xl mx-4 my-4">
-            <p className="font-medium text-gray-500">No salvage assessments yet</p>
+          <div className="py-20 text-center border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl mx-4 my-4">
+            <p className="font-medium text-gray-500 dark:text-gray-400">No salvage assessments yet</p>
             <p className="text-sm text-gray-400 mt-1">Create an assessment for an unclaimed or delivered device</p>
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
               <tr>
                 {["Job ID", "Device", "Market Price", "Refurbish Value", "Salvage Value", "Recommendation", "Status", "Profit/Loss", "Actions"].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {assessments.map((a) => (
-                <tr key={a.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 transition-colors">
                   <td className="px-4 py-3 font-mono font-semibold text-blue-600 text-xs">{a.job_public_id}</td>
-                  <td className="px-4 py-3 text-gray-700">{a.device}</td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-gray-700 dark:text-gray-200">{a.device}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-300">
                     {a.scraped_market_price ? `LKR ${Number(a.scraped_market_price).toLocaleString()}` : "—"}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-300">
                     {a.refurbish_value ? `LKR ${Number(a.refurbish_value).toLocaleString()}` : "—"}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-300">
                     {a.salvage_value ? `LKR ${Number(a.salvage_value).toLocaleString()}` : "—"}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${REC_COLORS[a.recommendation] ?? "bg-gray-100 text-gray-600"}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${REC_COLORS[a.recommendation] ?? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"}`}>
                       {a.recommendation?.replace(/_/g, " ")}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[a.status] ?? "bg-gray-100 text-gray-600"}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[a.status] ?? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"}`}>
                       {a.status}
                     </span>
                   </td>
@@ -507,10 +507,10 @@ export default function SalvageConsole() {
                           <span className={`text-xs font-bold ${Number(a.profit_loss) >= 0 ? "text-green-600" : "text-red-600"}`}>
                             {Number(a.profit_loss) >= 0 ? "+" : "-"}LKR {Math.abs(Number(a.profit_loss)).toLocaleString()}
                           </span>
-                          <span className="text-[10px] text-gray-500">AI Acc: {a.ai_accuracy_score ? `${(a.ai_accuracy_score*100).toFixed(0)}%` : "N/A"}</span>
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400">AI Acc: {a.ai_accuracy_score ? `${(a.ai_accuracy_score*100).toFixed(0)}%` : "N/A"}</span>
                         </div>
                       ) : (
-                        <button onClick={() => { setActualsModal(a); setActualsForm({ actual_refurbish_cost: a.actual_refurbish_cost||"", actual_resale_price: a.actual_resale_price||"", actual_parts_revenue: a.actual_parts_revenue||"" }); }} className="text-[10px] font-bold bg-white hover:bg-gray-50 text-gray-600 px-2.5 py-1.5 rounded-lg border border-gray-200 shadow-sm transition-colors whitespace-nowrap">
+                        <button onClick={() => { setActualsModal(a); setActualsForm({ actual_refurbish_cost: a.actual_refurbish_cost||"", actual_resale_price: a.actual_resale_price||"", actual_parts_revenue: a.actual_parts_revenue||"" }); }} className="text-[10px] font-bold bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 text-gray-600 dark:text-gray-300 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm transition-colors whitespace-nowrap">
                           Record Actuals
                         </button>
                       )
@@ -520,7 +520,7 @@ export default function SalvageConsole() {
                   </td>
                   <td className="px-4 py-3">
                     {a.status === "pending" ? (
-                      <span className="text-xs text-gray-500 italic">Processing...</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 italic">Processing...</span>
                     ) : a.status === "assessed" ? (
                       <div className="flex gap-2">
                         <button
@@ -543,7 +543,7 @@ export default function SalvageConsole() {
                         </button>
                       </div>
                     ) : (
-                      <span className="text-xs text-gray-500 italic">No actions</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 italic">No actions</span>
                     )}
                   </td>
                 </tr>
@@ -561,31 +561,31 @@ export default function SalvageConsole() {
           )}
 
           {selectedJob ? (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 flex justify-between items-center">
+            <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 flex justify-between items-center">
               <div>
-                <p className="text-xs text-gray-500 font-semibold mb-0.5">Selected Job</p>
-                <p className="text-sm font-bold text-gray-800">{selectedJob.job_id} — {selectedJob.device_brand} {selectedJob.device_model}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-0.5">Selected Job</p>
+                <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{selectedJob.job_id} — {selectedJob.device_brand} {selectedJob.device_model}</p>
               </div>
               <button type="button" onClick={() => { setJob(null); setJobSearch(""); }} className="text-xs text-blue-600 hover:underline">Change</button>
             </div>
           ) : (
             <div className="relative">
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Search Job *</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Search Job *</label>
               <input
                 value={jobSearch}
                 onChange={(e) => searchJobs(e.target.value)}
                 placeholder="Type job ID or customer name…"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               {jobResults.length > 0 && (
-                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
                   {jobResults.map((j) => (
                     <button
                       key={j.id} type="button" onClick={() => selectJob(j)}
                       className="w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors"
                     >
                       <p className="text-xs font-mono font-bold text-blue-600">{j.job_id}</p>
-                      <p className="text-sm text-gray-700">{j.customer_name} — {j.device_brand} {j.device_model}</p>
+                      <p className="text-sm text-gray-700 dark:text-gray-200">{j.customer_name} — {j.device_brand} {j.device_model}</p>
                       <p className="text-xs text-gray-400 capitalize">{j.status?.replace(/_/g, " ")}</p>
                     </button>
                   ))}
@@ -611,7 +611,7 @@ export default function SalvageConsole() {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <div className="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100 dark:border-gray-800 dark:border-gray-700">
             <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200">Market Price (LKR)</label>
               <p className="text-[10px] text-gray-400 mb-1 leading-tight">Value if in working condition</p>
@@ -653,9 +653,9 @@ export default function SalvageConsole() {
             )}
             
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Recommendation *</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Recommendation *</label>
               <select name="recommendation" value={form.recommendation} onChange={handleChange} required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium">
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium">
                 <option value="" disabled>Select Recommendation</option>
                 <option value="refurbish">Refurbish — repair and resell</option>
                 <option value="salvage_for_parts">Salvage for Parts — strip and stock</option>
@@ -669,7 +669,7 @@ export default function SalvageConsole() {
               <button
                 type="button"
                 onClick={() => setShowParts(!showParts)}
-                className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-900 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <span className="text-xs font-bold text-gray-700 dark:text-gray-200">
                   📦 Parts Breakdown ({partsBreakdown.length} parts)
@@ -695,7 +695,7 @@ export default function SalvageConsole() {
                       </span>
                     </div>
                   ))}
-                  <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800 font-bold text-xs">
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-900 dark:bg-gray-800 font-bold text-xs">
                     <span className="text-gray-700 dark:text-gray-200">Total Salvage Value</span>
                     <span className="text-purple-700 dark:text-purple-300 w-24 text-right">
                       LKR {partsBreakdown.reduce((s, p) => s + (p.value || 0), 0).toLocaleString()}
@@ -721,7 +721,7 @@ export default function SalvageConsole() {
 
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={() => setShowCreate(false)}
-              className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
+              className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">
               Cancel
             </button>
             <button type="submit" disabled={saving}
@@ -735,7 +735,7 @@ export default function SalvageConsole() {
       {/* Snooze Modal */}
       <Modal open={!!snoozeJob} onClose={() => setSnoozeJob(null)} title="Extend Time">
         <form onSubmit={submitSnooze} className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             How many days do you want to extend the pickup time for <strong>{snoozeJob?.device}</strong>?
             This will revert its status back to <strong>Ready for Pickup</strong> for the specified duration.
           </p>
@@ -745,14 +745,14 @@ export default function SalvageConsole() {
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Days to delay</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Days to delay</label>
             <input
               type="number"
               min="1"
               max="365"
               value={snoozeDays}
               onChange={(e) => setSnoozeDays(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
           </div>
 
@@ -760,7 +760,7 @@ export default function SalvageConsole() {
             <button
               type="button"
               onClick={() => setSnoozeJob(null)}
-              className="flex-1 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-2.5 rounded-lg transition-colors"
+              className="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 text-gray-700 dark:text-gray-200 font-bold py-2.5 rounded-lg transition-colors"
             >
               Cancel
             </button>
@@ -787,23 +787,23 @@ export default function SalvageConsole() {
           {actualsModal?.recommendation === "refurbish" ? (
             <>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Actual Refurbish Cost (LKR)</label>
-                <input type="number" required min="0" step="0.01" value={actualsForm.actual_refurbish_cost} onChange={(e) => setActualsForm({...actualsForm, actual_refurbish_cost: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Actual Refurbish Cost (LKR)</label>
+                <input type="number" required min="0" step="0.01" value={actualsForm.actual_refurbish_cost} onChange={(e) => setActualsForm({...actualsForm, actual_refurbish_cost: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Actual Resale Price (LKR)</label>
-                <input type="number" required min="0" step="0.01" value={actualsForm.actual_resale_price} onChange={(e) => setActualsForm({...actualsForm, actual_resale_price: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Actual Resale Price (LKR)</label>
+                <input type="number" required min="0" step="0.01" value={actualsForm.actual_resale_price} onChange={(e) => setActualsForm({...actualsForm, actual_resale_price: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
               </div>
             </>
           ) : (
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Actual Parts Revenue (LKR)</label>
-              <input type="number" required min="0" step="0.01" value={actualsForm.actual_parts_revenue} onChange={(e) => setActualsForm({...actualsForm, actual_parts_revenue: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Actual Parts Revenue (LKR)</label>
+              <input type="number" required min="0" step="0.01" value={actualsForm.actual_parts_revenue} onChange={(e) => setActualsForm({...actualsForm, actual_parts_revenue: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
             </div>
           )}
           
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setActualsModal(null)} className="flex-1 bg-white border border-gray-300 py-2.5 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
+            <button type="button" onClick={() => setActualsModal(null)} className="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 py-2.5 rounded-lg text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 transition-colors">Cancel</button>
             <button type="submit" disabled={saving} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">{saving ? "Saving..." : "Save Actuals"}</button>
           </div>
         </form>
