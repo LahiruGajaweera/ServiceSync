@@ -63,17 +63,17 @@ export default function ScanField({ onCode, placeholder = "Scan or type code, th
             }
           }}
           placeholder={placeholder}
-          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
           type="button"
           onClick={() => setCam((c) => !c)}
-          className={`px-3 py-2 rounded-lg text-sm font-medium border ${cam ? "bg-red-50 border-red-200 text-red-600" : "bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100"}`}
+          className={`px-3 py-2 rounded-lg text-sm font-medium border ${cam ? "bg-red-50 border-red-200 text-red-600" : "bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-800"}`}
         >
           {cam ? "Stop" : "Camera"}
         </button>
       </div>
-      {cam && <div id="scan-region" className="rounded-lg overflow-hidden border border-gray-200" />}
+      {cam && <div id="scan-region" className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700" />}
       {camError && <p className="text-xs text-red-500">{camError}</p>}
     </div>
   );

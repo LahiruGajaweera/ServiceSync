@@ -95,7 +95,7 @@ export default function ConsumePartForm({ jobId, onConsumed }) {
   return (
     <form onSubmit={submit} className="space-y-3">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
           Batch Code
         </label>
 
@@ -105,7 +105,7 @@ export default function ConsumePartForm({ jobId, onConsumed }) {
           value={code}
           onChange={(e) => setCode(e.target.value)}
           placeholder="e.g. SS-BAT-0003-B1"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <datalist id="batch-code-options">
           {suggestions.map((b) => (
@@ -122,7 +122,7 @@ export default function ConsumePartForm({ jobId, onConsumed }) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
           Quantity
         </label>
         <input
@@ -130,15 +130,15 @@ export default function ConsumePartForm({ jobId, onConsumed }) {
           min={1}
           value={quantity}
           onChange={(e) => setQuantity(e.target.value)}
-          className="w-32 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-32 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
       {/* Live preview of the resolved batch */}
       {selected && (
-        <div className="rounded-lg bg-gray-50 border border-gray-200 p-3 text-sm">
-          <p className="font-semibold text-gray-800">{selected.item_name}</p>
-          <p className="text-gray-500">
+        <div className="rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-3 text-sm">
+          <p className="font-semibold text-gray-800 dark:text-gray-100">{selected.item_name}</p>
+          <p className="text-gray-500 dark:text-gray-400">
             {selected.sku} · {selected.quantity_remaining} in stock · cost LKR{" "}
             {Number(selected.unit_cost).toFixed(2)} / unit
           </p>

@@ -130,7 +130,7 @@ function ConditionPhotoUploader({ photos, setPhotos }) {
         <div className="relative rounded-lg overflow-hidden bg-black flex flex-col items-center">
           <video ref={videoRef} autoPlay playsInline className="max-h-64 object-contain w-full" />
           <div className="absolute bottom-2 flex gap-2">
-            <button type="button" onClick={capturePhoto} className="bg-white text-black px-4 py-1.5 rounded-full font-bold shadow-lg">Snap Photo</button>
+            <button type="button" onClick={capturePhoto} className="bg-white dark:bg-gray-800 text-black px-4 py-1.5 rounded-full font-bold shadow-lg">Snap Photo</button>
             <button type="button" onClick={stopCamera} className="bg-red-600 text-white px-4 py-1.5 rounded-full font-bold shadow-lg">Close</button>
           </div>
         </div>
@@ -139,7 +139,7 @@ function ConditionPhotoUploader({ photos, setPhotos }) {
           <button type="button" onClick={startCamera} className="bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-blue-200">
             📷 Open Camera
           </button>
-          <label className="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-gray-200 cursor-pointer">
+          <label className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-gray-200 cursor-pointer">
             📁 Upload Files
             <input type="file" multiple accept="image/*" onChange={handleFileUpload} className="hidden" />
           </label>
@@ -149,7 +149,7 @@ function ConditionPhotoUploader({ photos, setPhotos }) {
       {photos.length > 0 && (
         <div className="flex gap-2 overflow-x-auto py-2">
           {photos.map((p, i) => (
-            <div key={i} className="relative w-16 h-16 shrink-0 rounded-lg overflow-hidden border border-gray-300">
+            <div key={i} className="relative w-16 h-16 shrink-0 rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
               <img src={p.preview} className="w-full h-full object-cover" alt="" />
               <button type="button" onClick={() => removePhoto(i)} className="absolute top-0 right-0 bg-red-500 text-white w-5 h-5 flex items-center justify-center text-xs m-0.5 rounded-full leading-none">&times;</button>
             </div>
@@ -166,10 +166,10 @@ function Modal({ open, onClose, title, wide, children }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className={`bg-white rounded-2xl shadow-xl w-full ${wide ? "max-w-xl" : "max-w-md"} max-h-[92vh] overflow-y-auto`}>
-        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
-          <h3 className="text-base font-bold text-gray-800">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+      <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full ${wide ? "max-w-xl" : "max-w-md"} max-h-[92vh] overflow-y-auto`}>
+        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white dark:bg-gray-800 z-10">
+          <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 text-xl leading-none">&times;</button>
         </div>
         <div className="p-6">{children}</div>
       </div>
@@ -226,18 +226,18 @@ function QuoteModal({ open, onClose }) {
 
   return (
     <Modal open={open} onClose={onClose} title="Quick Quote Estimator" wide>
-      <p className="text-xs text-gray-500 mb-4">
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
         Give a customer a rough price without opening a job. Pick the device, select the parts
         likely needed, add a labour charge, and read off the estimated total.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">Device Brand</label>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Device Brand</label>
           <BrandSelect value={brand} onChange={(v) => { setBrand(v); setModel(""); setParts(null); setSelected({}); }} placeholder="Samsung" />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">Device Model</label>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Device Model</label>
           <ModelSelect brand={brand} value={model} onChange={(v) => { setModel(v); setParts(null); setSelected({}); }} placeholder="Galaxy A54" />
         </div>
       </div>
@@ -254,24 +254,24 @@ function QuoteModal({ open, onClose }) {
       {parts !== null && (
         <div className="mb-4">
           {parts.inventory_parts.length === 0 ? (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               No priced inventory parts found for {brand} {model}. You can still give a labour-only estimate below.
             </p>
           ) : (
             <div className="space-y-1.5">
-              <p className="text-xs font-semibold text-gray-600 mb-1">Select parts to include in the estimate</p>
+              <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Select parts to include in the estimate</p>
               {parts.inventory_parts.map((p) => {
                 const sel = selected[p.id];
                 return (
-                  <div key={p.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 text-sm">
+                  <div key={p.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2 text-sm">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={!!sel}
                         onChange={() => toggle(p)}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
                       />
-                      <span className="font-medium text-gray-800">{p.name}</span>
+                      <span className="font-medium text-gray-800 dark:text-gray-100">{p.name}</span>
                       <span className="text-xs text-gray-400">({p.part_type === "salvaged" ? "salvaged" : "new"}, stock {p.quantity})</span>
                     </label>
                     <div className="flex items-center gap-3">
@@ -281,10 +281,10 @@ function QuoteModal({ open, onClose }) {
                           min="1"
                           value={sel.qty}
                           onChange={(e) => setQty(p.id, e.target.value)}
-                          className="w-14 border border-gray-300 rounded px-2 py-1 text-xs"
+                          className="w-14 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs"
                         />
                       )}
-                      <span className="text-gray-600 w-28 text-right">LKR {Number(p.unit_price).toLocaleString()}</span>
+                      <span className="text-gray-600 dark:text-gray-300 w-28 text-right">LKR {Number(p.unit_price).toLocaleString()}</span>
                     </div>
                   </div>
                 );
@@ -301,11 +301,11 @@ function QuoteModal({ open, onClose }) {
 
       <div className="border-t pt-4 space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-500">Parts subtotal</span>
-          <span className="font-semibold text-gray-700">LKR {partsSubtotal.toLocaleString()}</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">Parts subtotal</span>
+          <span className="font-semibold text-gray-700 dark:text-gray-200">LKR {partsSubtotal.toLocaleString()}</span>
         </div>
         <div className="flex items-center justify-between">
-          <label className="text-sm text-gray-500">Labour charge (LKR)</label>
+          <label className="text-sm text-gray-500 dark:text-gray-400">Labour charge (LKR)</label>
           <input
             type="number"
             min="0"
@@ -313,11 +313,11 @@ function QuoteModal({ open, onClose }) {
             value={labor}
             onChange={(e) => setLabor(e.target.value)}
             placeholder="0"
-            className="w-32 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-right"
+            className="w-32 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm text-right"
           />
         </div>
         <div className="flex items-center justify-between border-t pt-2">
-          <span className="text-base font-bold text-gray-800">Estimated Total</span>
+          <span className="text-base font-bold text-gray-800 dark:text-gray-100">Estimated Total</span>
           <span className="text-base font-bold text-blue-700">LKR {total.toLocaleString()}</span>
         </div>
         <p className="text-[11px] text-gray-400">Indicative only — final price may change after the device is investigated.</p>
@@ -464,7 +464,7 @@ function InvoiceReceipt({ job, onClose }) {
           Job <strong>{job.job_id}</strong> created successfully.
         </div>
 
-        <div className="border border-gray-200 rounded-xl p-5">
+        <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-5">
           <div className="text-center">
             <p className="text-lg font-extrabold text-blue-600">{SHOP.name}</p>
             <p className="text-xs text-gray-400">{SHOP.tagline}</p>
@@ -472,26 +472,26 @@ function InvoiceReceipt({ job, onClose }) {
           <hr className="border-dashed my-3" />
           <div className="text-center">
             <p className="text-xs text-gray-400 uppercase tracking-wide">Repair Job / Receipt</p>
-            <p className="text-xl font-bold tracking-wider text-gray-800 my-1">{job.job_id}</p>
+            <p className="text-xl font-bold tracking-wider text-gray-800 dark:text-gray-100 my-1">{job.job_id}</p>
             <p className="text-xs text-gray-400">{fmtDate(job.received_date || new Date())}</p>
           </div>
           <hr className="border-dashed my-3" />
           <div className="space-y-1.5 text-xs">
-            <div className="flex justify-between"><span className="text-gray-400">Customer</span><span className="font-semibold text-gray-700">{job.customer_name || "—"}</span></div>
-            <div className="flex justify-between"><span className="text-gray-400">Phone</span><span className="font-semibold text-gray-700">{job.customer_phone || "—"}</span></div>
-            <div className="flex justify-between"><span className="text-gray-400">Device</span><span className="font-semibold text-gray-700">{job.device_brand} {job.device_model}</span></div>
-            {job.device_imei && <div className="flex justify-between"><span className="text-gray-400">IMEI</span><span className="font-semibold text-gray-700">{job.device_imei}</span></div>}
-            <div className="flex justify-between"><span className="text-gray-400">Fault</span><span className="font-semibold text-gray-700">{fmtFault(job.fault_category)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-400">Est. Ready</span><span className="font-semibold text-gray-700">{fmtDate(job.estimated_completion_date)}</span></div>
-            {job.estimated_cost != null && <div className="flex justify-between"><span className="text-gray-400">Est. Cost</span><span className="font-semibold text-gray-700">LKR {Number(job.estimated_cost).toLocaleString()}</span></div>}
-            <div className="flex justify-between"><span className="text-gray-400">Investigated</span><span className="font-semibold text-gray-700">{job.investigated ? "Yes" : "No"}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">Customer</span><span className="font-semibold text-gray-700 dark:text-gray-200">{job.customer_name || "—"}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">Phone</span><span className="font-semibold text-gray-700 dark:text-gray-200">{job.customer_phone || "—"}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">Device</span><span className="font-semibold text-gray-700 dark:text-gray-200">{job.device_brand} {job.device_model}</span></div>
+            {job.device_imei && <div className="flex justify-between"><span className="text-gray-400">IMEI</span><span className="font-semibold text-gray-700 dark:text-gray-200">{job.device_imei}</span></div>}
+            <div className="flex justify-between"><span className="text-gray-400">Fault</span><span className="font-semibold text-gray-700 dark:text-gray-200">{fmtFault(job.fault_category)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">Est. Ready</span><span className="font-semibold text-gray-700 dark:text-gray-200">{fmtDate(job.estimated_completion_date)}</span></div>
+            {job.estimated_cost != null && <div className="flex justify-between"><span className="text-gray-400">Est. Cost</span><span className="font-semibold text-gray-700 dark:text-gray-200">LKR {Number(job.estimated_cost).toLocaleString()}</span></div>}
+            <div className="flex justify-between"><span className="text-gray-400">Investigated</span><span className="font-semibold text-gray-700 dark:text-gray-200">{job.investigated ? "Yes" : "No"}</span></div>
           </div>
           <hr className="border-dashed my-3" />
           <div className="text-center">
             {qr ? (
               <img src={qr} alt="Tracking QR" className="mx-auto w-40 h-40" />
             ) : (
-              <div className="w-40 h-40 mx-auto bg-gray-50 flex items-center justify-center text-xs text-gray-300">Generating QR…</div>
+              <div className="w-40 h-40 mx-auto bg-gray-50 dark:bg-gray-900 flex items-center justify-center text-xs text-gray-300">Generating QR…</div>
             )}
             <p className="text-xs font-semibold text-blue-600 mt-1">Scan to track your repair</p>
             <p className="text-[10px] text-gray-400 break-all">{trackUrl}</p>
@@ -500,7 +500,7 @@ function InvoiceReceipt({ job, onClose }) {
 
         <div className="flex gap-3">
           <button type="button" onClick={onClose}
-            className="flex-1 border border-gray-300 text-gray-600 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">
+            className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">
             Close
           </button>
           <button type="button" onClick={handlePrint}
@@ -685,13 +685,13 @@ export default function JobManagement() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Job Management</h2>
-          <p className="text-sm text-gray-500 mt-0.5">{jobs.length} jobs {statusFilter ? `(${statusFilter.replace(/_/g, " ")})` : "total"}</p>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Job Management</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{jobs.length} jobs {statusFilter ? `(${statusFilter.replace(/_/g, " ")})` : "total"}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowQuote(true)}
-            className="bg-white border border-blue-600 text-blue-600 hover:bg-blue-50 text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+            className="bg-white dark:bg-gray-800 border border-blue-600 text-blue-600 hover:bg-blue-50 text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
           >
             Quick Quote
           </button>
@@ -705,15 +705,15 @@ export default function JobManagement() {
       </div>
 
       {/* Status filter tabs */}
-      <div className="flex gap-1 mb-5 bg-gray-100 p-1 rounded-xl w-fit overflow-x-auto">
+      <div className="flex gap-1 mb-5 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl w-fit overflow-x-auto">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.value}
             onClick={() => handleTabChange(tab.value)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
               statusFilter === tab.value
-                ? "bg-white text-gray-800 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
+                ? "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow-sm"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200"
             }`}
           >
             {tab.label}
@@ -722,12 +722,12 @@ export default function JobManagement() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="py-20 text-center text-gray-400 text-sm">Loading…</div>
         ) : jobs.length === 0 ? (
-          <div className="py-20 text-center border-2 border-dashed border-gray-100 rounded-xl mx-4 my-4">
-            <p className="font-medium text-gray-500">No jobs found</p>
+          <div className="py-20 text-center border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl mx-4 my-4">
+            <p className="font-medium text-gray-500 dark:text-gray-400">No jobs found</p>
             <p className="text-sm text-gray-400 mt-1">
               {statusFilter ? `No jobs with status "${statusFilter.replace(/_/g, " ")}"` : "Register the first job above"}
             </p>
@@ -735,17 +735,17 @@ export default function JobManagement() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                 <tr>
                   {["Job ID", "Customer", "Device", "Fault", "Status", "Technician", "Received", "Actions"].map((h) => (
-                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {jobs.map((job) => (
                   <tr key={job.id} 
-                      className="hover:bg-gray-50 transition-colors cursor-pointer"
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 transition-colors cursor-pointer"
                       onClick={(e) => {
                         // Don't trigger if they clicked a button in the row
                         if (e.target.tagName !== "BUTTON" && !e.target.closest("button")) {
@@ -754,19 +754,19 @@ export default function JobManagement() {
                       }}>
                     <td className="px-4 py-3 font-mono font-semibold text-blue-600 whitespace-nowrap">{job.job_id}</td>
                     <td className="px-4 py-3">
-                      <p className="font-medium text-gray-800">{job.customer_name}</p>
+                      <p className="font-medium text-gray-800 dark:text-gray-100">{job.customer_name}</p>
                       <p className="text-xs text-gray-400">{job.customer_phone}</p>
                     </td>
-                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                    <td className="px-4 py-3 text-gray-700 dark:text-gray-200 whitespace-nowrap">
                       {job.device_brand} {job.device_model}
                     </td>
-                    <td className="px-4 py-3 text-gray-600 capitalize">
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300 capitalize">
                       {job.fault_category?.replace(/_/g, " ")}
                     </td>
                     <td className="px-4 py-3">
                       <JobStatusBadge status={job.status} />
                     </td>
-                    <td className="px-4 py-3 text-gray-500">
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
                       {job.technician_name || <span className="text-gray-300 italic text-xs">Unassigned</span>}
                     </td>
                     <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">
@@ -809,29 +809,29 @@ export default function JobManagement() {
 
           {/* Section 1: Customer */}
           <div>
-            <p className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-3 pb-1 border-b">
+            <p className="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide mb-3 pb-1 border-b">
               1 · Customer
             </p>
             <div className="relative">
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Search Customer *</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Search Customer *</label>
               <input
                 value={custSearch}
                 onChange={(e) => searchCustomers(e.target.value)}
                 placeholder="Type name or phone…"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               {custSearching && (
                 <p className="absolute left-3 top-9 text-xs text-gray-400 mt-1">Searching…</p>
               )}
               {custResults.length > 0 && (
-                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
                   {custResults.map((c) => (
                     <button
                       key={c.id} type="button" onClick={() => selectCustomer(c)}
                       className="w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors"
                     >
-                      <p className="text-sm font-medium text-gray-800">{c.name}</p>
-                      <p className="text-xs text-gray-500">{c.phone_number}</p>
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{c.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{c.phone_number}</p>
                     </button>
                   ))}
                 </div>
@@ -859,27 +859,27 @@ export default function JobManagement() {
                 )}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Name *</label>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Name *</label>
                     <input name="name" value={newCust.name} onChange={handleNewCustChange}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Full name" />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Phone *</label>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Phone *</label>
                     <input name="phone_number" value={newCust.phone_number} onChange={handleNewCustChange}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="07XXXXXXXX" />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Email</label>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Email</label>
                     <input name="email" value={newCust.email} onChange={handleNewCustChange}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="optional" />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Address</label>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Address</label>
                     <input name="address" value={newCust.address} onChange={handleNewCustChange}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="optional" />
                   </div>
                 </div>
@@ -897,12 +897,12 @@ export default function JobManagement() {
 
           {/* Section 2: Device & Fault */}
           <div>
-            <p className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-3 pb-1 border-b">
+            <p className="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide mb-3 pb-1 border-b">
               2 · Device & Fault
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Device Brand *</label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Device Brand *</label>
                 <BrandSelect
                   required
                   value={form.device_brand}
@@ -911,7 +911,7 @@ export default function JobManagement() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Device Model *</label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Device Model *</label>
                 <ModelSelect
                   required
                   brand={form.device_brand}
@@ -921,53 +921,53 @@ export default function JobManagement() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">IMEI (optional)</label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">IMEI (optional)</label>
                 <input name="device_imei" value={form.device_imei} onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="15-digit IMEI" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Fault Category *</label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Fault Category *</label>
                 <select name="fault_category" value={form.fault_category} onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   {FAULT_CATEGORIES.map((c) => (
                     <option key={c.value} value={c.value}>{c.label}</option>
                   ))}
                 </select>
               </div>
               <div className="col-span-2">
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Fault Description</label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Fault Description</label>
                 <textarea name="fault_description" value={form.fault_description} onChange={handleChange} rows={2}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   placeholder="Describe the issue in more detail…" />
               </div>
               <div className="col-span-2">
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Physical Condition</label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Physical Condition</label>
                 <textarea name="physical_condition" value={form.physical_condition} onChange={handleChange} rows={2}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   placeholder="e.g. Screen cracked, deep scratch on back glass…" />
               </div>
               <div className="col-span-2">
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Condition Photos</label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Condition Photos</label>
                 <ConditionPhotoUploader photos={photos} setPhotos={setPhotos} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Est. Completion Date</label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Est. Completion Date</label>
                 <input name="estimated_completion_date" type="date" min={getTodayDateString()} value={form.estimated_completion_date} onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Estimated Cost (LKR)</label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Estimated Cost (LKR)</label>
                 <input name="estimated_cost" type="number" min="0" step="0.01" value={form.estimated_cost} onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Optional — rough quote" />
                 <p className="text-[11px] text-gray-400 mt-1">Leave blank if not investigated / no estimate given.</p>
               </div>
               <div className="flex items-center gap-2 pt-1">
                 <input id="investigated" name="investigated" type="checkbox" checked={form.investigated}
                   onChange={(e) => setForm((f) => ({ ...f, investigated: e.target.checked }))}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                <label htmlFor="investigated" className="text-sm text-gray-600 select-none">
+                  className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
+                <label htmlFor="investigated" className="text-sm text-gray-600 dark:text-gray-300 select-none">
                   Device investigated by technician
                 </label>
               </div>
@@ -976,14 +976,14 @@ export default function JobManagement() {
 
           {/* Section 3: Technician & Notes */}
           <div>
-            <p className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-3 pb-1 border-b">
+            <p className="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide mb-3 pb-1 border-b">
               3 · Assignment & Notes
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Assign Technician</label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Assign Technician</label>
                 <select name="technician_id" value={form.technician_id} onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="">— Unassigned —</option>
                   {technicians.map((t) => (
                     <option key={t.id} value={t.id}>{t.name}</option>
@@ -991,9 +991,9 @@ export default function JobManagement() {
                 </select>
               </div>
               <div className="col-span-2">
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Internal Notes</label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Internal Notes</label>
                 <textarea name="notes" value={form.notes} onChange={handleChange} rows={2}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   placeholder="For staff only…" />
               </div>
             </div>
@@ -1005,7 +1005,7 @@ export default function JobManagement() {
           {/* Submit */}
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={() => setShowCreate(false)}
-              className="flex-1 border border-gray-300 text-gray-600 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">
+              className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">
               Cancel
             </button>
             <button type="submit" disabled={saving}

@@ -99,7 +99,7 @@ export default function SpecSelect({
         onKeyDown={handleKeyDown}
         autoComplete="off"
         placeholder={placeholder}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       {open && (filtered.length > 0 || canAdd) && (
         <ul className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg text-sm">
@@ -118,13 +118,13 @@ export default function SpecSelect({
             </li>
           ))}
           {canAdd && (
-            <li className="border-t border-gray-100">
+            <li className="border-t border-gray-100 dark:border-gray-800">
               <button
                 type="button"
                 disabled={saving}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={handleAddNew}
-                className="w-full text-left px-3 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors font-medium disabled:text-blue-300 dark:disabled:text-gray-500"
+                className="w-full text-left px-3 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors font-medium disabled:text-blue-300 dark:disabled:text-gray-500 dark:text-gray-400"
               >
                 {saving ? "Saving…" : `+ Add "${q}" as a new spec`}
               </button>

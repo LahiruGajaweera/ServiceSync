@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const inputCls =
-  "w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm " +
+  "w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm " +
   "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent " +
   "placeholder:text-gray-400 transition";
 
@@ -93,8 +93,11 @@ export default function ForgotPasswordPage() {
     }
     setBusy(true);
     try {
-      const user = await resetPassword(otpInfo.otp_id, code.trim(), newPassword);
-      navigate(user.role === "admin" ? "/admin" : "/tech", { replace: true });
+      await resetPassword(otpInfo.otp_id, code.trim(), newPassword);
+      navigate("/login", { 
+        replace: true, 
+        state: { successMessage: "Password reset successfully! Please log in with your new password." } 
+      });
     } catch (err) {
       setError(parseErr(err, "Password reset failed."));
       // If the code expired or maxed out between verify and submit, send the user back.
@@ -112,21 +115,21 @@ export default function ForgotPasswordPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-extrabold text-blue-600 tracking-tight">ServiceSync</h1>
-          <p className="text-gray-500 mt-2 text-sm">Reset your password</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">Reset your password</p>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
           {step === "identify" && (
             <>
-              <h2 className="text-xl font-bold text-gray-800 mb-1">Forgot password?</h2>
-              <p className="text-sm text-gray-500 mb-6">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-1">Forgot password?</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                 Enter the email or phone number on your account and we'll send a verification code.
               </p>
 
               <form onSubmit={handleIdentifySubmit} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">
                     Email or Phone
                   </label>
                   <input
@@ -161,10 +164,10 @@ export default function ForgotPasswordPage() {
 
           {step === "verify" && (
             <>
-              <h2 className="text-xl font-bold text-gray-800 mb-1">Enter the code</h2>
-              <p className="text-sm text-gray-500 mb-4">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-1">Enter the code</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                 We sent a 6-digit code to{" "}
-                <span className="font-medium text-gray-700">{otpInfo?.destination_masked}</span>.
+                <span className="font-medium text-gray-700 dark:text-gray-200">{otpInfo?.destination_masked}</span>.
               </p>
 
               {otpInfo?.dev_otp && (
@@ -175,7 +178,7 @@ export default function ForgotPasswordPage() {
 
               <form onSubmit={handleVerify} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">
                     Verification code
                   </label>
                   <input
@@ -225,13 +228,13 @@ export default function ForgotPasswordPage() {
           {step === "newpass" && (
             <>
               <div className="flex items-center gap-2 mb-1">
-                <h2 className="text-xl font-bold text-gray-800">Code verified</h2>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Code verified</h2>
               </div>
-              <p className="text-sm text-gray-500 mb-6">Set a new password for your account.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Set a new password for your account.</p>
 
               <form onSubmit={handleReset} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">
                     New password
                   </label>
                   <input
@@ -246,7 +249,7 @@ export default function ForgotPasswordPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">
                     Confirm new password
                   </label>
                   <input

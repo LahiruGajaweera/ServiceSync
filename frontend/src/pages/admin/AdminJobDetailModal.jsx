@@ -7,10 +7,10 @@ function Modal({ open, onClose, title, children }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h3 className="text-base font-bold text-gray-800">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+          <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 text-xl leading-none">&times;</button>
         </div>
         <div className="p-6">{children}</div>
       </div>
@@ -212,8 +212,8 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
   if (!job && !loading) {
     return (
       <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 text-center">
-          <p className="text-gray-500 mb-4">Job not found.</p>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md p-8 text-center">
+          <p className="text-gray-500 dark:text-gray-400 mb-4">Job not found.</p>
           <button onClick={onClose} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">Close</button>
         </div>
       </div>
@@ -226,14 +226,14 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
-      <div className="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto relative">
+      <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto relative">
         {/* Modal Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-4 flex items-center justify-between z-10">
           <div>
-            <h2 className="text-lg font-bold text-gray-800">Job Detail & Management</h2>
-            <p className="text-xs text-gray-500">Job ID: {job?.job_id || "Loading..."}</p>
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">Job Detail & Management</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Job ID: {job?.job_id || "Loading..."}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 text-3xl leading-none">&times;</button>
         </div>
 
         <div className="p-8 space-y-6">
@@ -261,7 +261,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
               <button 
                 onClick={handleRejectRevert}
                 disabled={processingRevert}
-                className="bg-white text-amber-700 border border-amber-300 hover:bg-amber-100 px-4 py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
+                className="bg-white dark:bg-gray-800 text-amber-700 border border-amber-300 hover:bg-amber-100 px-4 py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
               >
                 Reject
               </button>
@@ -278,7 +278,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
       )}
 
       {/* Job Header */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Job ID</p>
@@ -290,42 +290,42 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-6 text-sm">
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Customer</p>
-            <p className="font-medium text-gray-800">{job.customer_name}</p>
-            <p className="text-gray-500 text-xs">{job.customer_phone}</p>
+            <p className="font-medium text-gray-800 dark:text-gray-100">{job.customer_name}</p>
+            <p className="text-gray-500 dark:text-gray-400 text-xs">{job.customer_phone}</p>
           </div>
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Device</p>
-            <p className="font-medium text-gray-800">{job.device_brand} {job.device_model}</p>
-            {job.device_imei && <p className="text-gray-500 text-xs">IMEI: {job.device_imei}</p>}
+            <p className="font-medium text-gray-800 dark:text-gray-100">{job.device_brand} {job.device_model}</p>
+            {job.device_imei && <p className="text-gray-500 dark:text-gray-400 text-xs">IMEI: {job.device_imei}</p>}
           </div>
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Fault</p>
-            <p className="font-medium text-gray-800 capitalize">{job.fault_category?.replace(/_/g, " ")}</p>
-            {job.fault_description && <p className="text-gray-500 text-xs">{job.fault_description}</p>}
+            <p className="font-medium text-gray-800 dark:text-gray-100 capitalize">{job.fault_category?.replace(/_/g, " ")}</p>
+            {job.fault_description && <p className="text-gray-500 dark:text-gray-400 text-xs">{job.fault_description}</p>}
           </div>
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Technician</p>
-            <p className="font-medium text-gray-800">{job.technician_name || "Unassigned"}</p>
+            <p className="font-medium text-gray-800 dark:text-gray-100">{job.technician_name || "Unassigned"}</p>
             {job.estimated_completion_date && (
-              <p className="text-gray-500 text-xs">Est. {new Date(job.estimated_completion_date).toLocaleDateString("en-LK")}</p>
+              <p className="text-gray-500 dark:text-gray-400 text-xs">Est. {new Date(job.estimated_completion_date).toLocaleDateString("en-LK")}</p>
             )}
           </div>
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Estimated Cost</p>
-            <p className="font-medium text-gray-800">
+            <p className="font-medium text-gray-800 dark:text-gray-100">
               {job.estimated_cost != null ? `LKR ${Number(job.estimated_cost).toLocaleString()}` : "Not quoted"}
             </p>
-            <p className="text-gray-500 text-xs">{job.investigated ? "Investigated" : "Not investigated"}</p>
+            <p className="text-gray-500 dark:text-gray-400 text-xs">{job.investigated ? "Investigated" : "Not investigated"}</p>
           </div>
         </div>
 
         {/* Physical Condition & Photos */}
         {(job.physical_condition || (job.images && job.images.length > 0)) && (
-          <div className="mt-6 pt-4 border-t border-gray-100">
+          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
             {job.physical_condition && (
               <div className="mb-3">
                 <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Physical Condition</p>
-                <p className="font-medium text-gray-800">{job.physical_condition}</p>
+                <p className="font-medium text-gray-800 dark:text-gray-100">{job.physical_condition}</p>
               </div>
             )}
             {job.images && job.images.length > 0 && (
@@ -334,7 +334,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {job.images.map((img) => (
                     <a key={img.id} href={`${import.meta.env.VITE_API_URL || "http://localhost:8000"}${img.file_path}`} target="_blank" rel="noreferrer" className="shrink-0">
-                      <img src={`${import.meta.env.VITE_API_URL || "http://localhost:8000"}${img.file_path}`} className="w-20 h-20 object-cover rounded-lg border border-gray-200 hover:opacity-80 transition-opacity" alt="Condition" />
+                      <img src={`${import.meta.env.VITE_API_URL || "http://localhost:8000"}${img.file_path}`} className="w-20 h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700 hover:opacity-80 transition-opacity" alt="Condition" />
                     </a>
                   ))}
                 </div>
@@ -346,46 +346,46 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Parts Used */}
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6">
+        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-700">Parts Used</h3>
+            <h3 className="font-semibold text-gray-700 dark:text-gray-200">Parts Used</h3>
           </div>
 
           {parts.length === 0 ? (
-            <div className="py-10 text-center border-2 border-dashed border-gray-100 rounded-xl">
+            <div className="py-10 text-center border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl">
               <p className="text-sm text-gray-400">No parts recorded for this job</p>
             </div>
           ) : (
             <>
               <table className="w-full text-sm">
-                <thead className="border-b border-gray-100">
+                <thead className="border-b border-gray-100 dark:border-gray-800">
                   <tr>
                     {["Part", "Source", "Batch", "Used By", "Qty", "Cost", "Price", "Subtotal"].map((h) => (
                       <th key={h} className="text-left pb-2 text-xs font-semibold text-gray-400 uppercase">{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                   {parts.map((p) => (
                     <tr key={p.id}>
-                      <td className="py-2.5 font-medium text-gray-800">{p.part_name || "—"}</td>
+                      <td className="py-2.5 font-medium text-gray-800 dark:text-gray-100">{p.part_name || "—"}</td>
                       <td className="py-2.5">
                         <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${p.part_source === "inventory" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
                           {p.part_source}
                         </span>
                       </td>
-                      <td className="py-2.5 text-gray-500 font-mono text-xs">{p.batch_code || "—"}{p.supplier ? <span className="block text-gray-400">{p.supplier}</span> : null}</td>
-                      <td className="py-2.5 text-gray-600">{p.used_by_name || "—"}</td>
-                      <td className="py-2.5 text-gray-600">{p.quantity}</td>
-                      <td className="py-2.5 text-gray-500 line-through text-xs">LKR {Number(p.unit_cost).toLocaleString()}</td>
-                      <td className="py-2.5 text-gray-800 font-medium">LKR {Number(p.unit_price).toLocaleString()}</td>
-                      <td className="py-2.5 font-bold text-gray-800">LKR {(Number(p.unit_price) * p.quantity).toLocaleString()}</td>
+                      <td className="py-2.5 text-gray-500 dark:text-gray-400 font-mono text-xs">{p.batch_code || "—"}{p.supplier ? <span className="block text-gray-400">{p.supplier}</span> : null}</td>
+                      <td className="py-2.5 text-gray-600 dark:text-gray-300">{p.used_by_name || "—"}</td>
+                      <td className="py-2.5 text-gray-600 dark:text-gray-300">{p.quantity}</td>
+                      <td className="py-2.5 text-gray-500 dark:text-gray-400 line-through text-xs">LKR {Number(p.unit_cost).toLocaleString()}</td>
+                      <td className="py-2.5 text-gray-800 dark:text-gray-100 font-medium">LKR {Number(p.unit_price).toLocaleString()}</td>
+                      <td className="py-2.5 font-bold text-gray-800 dark:text-gray-100">LKR {(Number(p.unit_price) * p.quantity).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
-                <p className="text-sm font-bold text-gray-800">Parts Total: LKR {partsTotal.toLocaleString()}</p>
+              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex justify-end">
+                <p className="text-sm font-bold text-gray-800 dark:text-gray-100">Parts Total: LKR {partsTotal.toLocaleString()}</p>
               </div>
             </>
           )}
@@ -394,18 +394,18 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
         {/* Right column: Invoice + History */}
         <div className="space-y-6">
           {/* Status History */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="font-semibold text-gray-700 mb-4">Status History</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+            <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-4">Status History</h3>
             {history.length === 0 ? (
               <p className="text-sm text-gray-400">No history recorded</p>
             ) : (
-              <ol className="relative border-l border-gray-200 space-y-4 ml-2">
+              <ol className="relative border-l border-gray-200 dark:border-gray-700 space-y-4 ml-2">
                 {history.map((h) => (
                   <li key={h.id} className="ml-4">
                     <span className={`absolute -left-1.5 mt-1 w-3 h-3 rounded-full ${HISTORY_COLORS[h.status] ?? "bg-gray-400"}`} />
-                    <p className="text-xs font-semibold text-gray-700 capitalize">{h.status.replace(/_/g, " ")}</p>
+                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 capitalize">{h.status.replace(/_/g, " ")}</p>
                     <p className="text-xs text-gray-400">{h.changed_by_name}</p>
-                    {h.notes && <p className="text-xs text-gray-500 italic mt-0.5">{h.notes}</p>}
+                    {h.notes && <p className="text-xs text-gray-500 dark:text-gray-400 italic mt-0.5">{h.notes}</p>}
                     <p className="text-xs text-gray-300 mt-0.5">
                       {h.created_at ? new Date(h.created_at).toLocaleString("en-LK") : ""}
                     </p>
@@ -416,8 +416,8 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
           </div>
 
           {/* Status Update Form */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="font-semibold text-gray-700 mb-4">Update Status</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+            <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-4">Update Status</h3>
             {job.status === "pending" || job.status === "in_progress" ? (
               <div className="bg-amber-50 text-amber-800 text-sm p-4 rounded-lg">
                 This job is currently <strong>{job.status.replace("_", " ")}</strong>. Admins cannot update its status to Ready or Delivered until the technician marks it as Completed.
@@ -425,9 +425,9 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
             ) : (
               <form onSubmit={handleUpdateStatus} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">New Status</label>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">New Status</label>
                   <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="" disabled>— Select Status —</option>
                     {[
                       { value: "ready_for_pickup", label: "Ready for Pickup", order: 3 },
@@ -458,9 +458,9 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Notes (optional)</label>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Notes (optional)</label>
                   <textarea value={statusNotes} onChange={(e) => setStatusNotes(e.target.value)} rows={2}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     placeholder="Reason for change..." />
                 </div>
                 <button type="submit" disabled={savingStatus || !newStatus}
@@ -472,11 +472,11 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
           </div>
 
           {/* Invoice */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="font-semibold text-gray-700 mb-4">Invoice</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+            <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-4">Invoice</h3>
             {!invoice ? (
               <div className="space-y-3">
-                <p className="text-sm text-gray-500">No invoice generated yet.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">No invoice generated yet.</p>
                 <button
                   onClick={() => { setInvError(""); setLaborCost(job.labor_cost || ""); setTaxRate("0"); setShowInvoice(true); }}
                   disabled={job.status !== "ready_for_pickup"}
@@ -487,13 +487,13 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
               </div>
             ) : (
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between text-gray-600">
+                <div className="flex justify-between text-gray-600 dark:text-gray-300">
                   <span>Subtotal</span><span>LKR {Number(invoice.subtotal).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-gray-600">
+                <div className="flex justify-between text-gray-600 dark:text-gray-300">
                   <span>Tax</span><span>LKR {Number(invoice.tax_amount).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between font-bold text-gray-800 border-t border-gray-100 pt-2 mt-2">
+                <div className="flex justify-between font-bold text-gray-800 dark:text-gray-100 border-t border-gray-100 dark:border-gray-800 pt-2 mt-2">
                   <span>Total</span><span>LKR {Number(invoice.total_amount).toLocaleString()}</span>
                 </div>
                 <div className="pt-2">
@@ -527,9 +527,9 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg">{partError}</div>
           )}
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Part Source</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Part Source</label>
             <select value={partSource} onChange={(e) => { setPartSource(e.target.value); setSelectedItem(""); }}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="inventory">Inventory Stock</option>
               <option value="donor">Donor Part</option>
             </select>
@@ -538,7 +538,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
           {partSource === "inventory" && (
             <>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Select Part *</label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Select Part *</label>
                 <select required value={selectedItem} onChange={(e) => {
                   setSelectedItem(e.target.value);
                   setSelectedBatchId("");
@@ -554,7 +554,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
                     }
                   }
                 }}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="">— Select inventory item —</option>
                   {invItems.map((i) => (
                     <option key={i.id} value={i.id}>{i.sku ? `${i.sku} · ` : ""}{i.name} (Stock: {i.quantity})</option>
@@ -565,7 +565,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
                   if (item && item.batches && item.batches.length > 0) {
                     return (
                       <div className="mt-3">
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Select Specific Batch (Optional)</label>
+                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Select Specific Batch (Optional)</label>
                         <select value={selectedBatchId} onChange={(e) => {
                           const bid = e.target.value;
                           setSelectedBatchId(bid);
@@ -576,7 +576,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
                             setActualCost(item.batches.filter(b => b.quantity_remaining > 0)[0]?.unit_cost || item.batches[item.batches.length-1].unit_cost);
                           }
                         }}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                           <option value="">Auto-Select (Oldest First)</option>
                           {item.batches.filter(b => b.quantity_remaining > 0).map(b => (
                             <option key={b.id} value={b.id}>{b.batch_code} — LKR {b.unit_cost} ({b.quantity_remaining} left)</option>
@@ -592,9 +592,9 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
                 )}
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Final Selling Price (LKR) *</label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Final Selling Price (LKR) *</label>
                 <input type="number" step="0.01" min="0" required value={overridePrice} onChange={(e) => setOverridePrice(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50" />
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50" />
                 <p className="text-xs text-gray-400 mt-1">Lower this value to give the customer a discount.</p>
               </div>
             </>
@@ -602,24 +602,24 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
 
           {partSource === "donor" && (
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Donor Part ID</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Donor Part ID</label>
               <input value={selectedItem} onChange={(e) => setSelectedItem(e.target.value)}
                 placeholder="Paste donor part UUID"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Quantity *</label>
               <input type="number" min="1" required value={quantity} onChange={(e) => setQuantity(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             {partSource === "donor" && (
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Unit Cost (LKR) *</label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Unit Cost (LKR) *</label>
                 <input type="number" min="0" step="0.01" required value={unitCost} onChange={(e) => setUnitCost(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="0.00" />
               </div>
             )}
@@ -627,7 +627,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
 
           <div className="flex gap-3">
             <button type="button" onClick={() => setShowPart(false)}
-              className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
+              className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">
               Cancel
             </button>
             <button type="submit" disabled={savingPart}
@@ -649,25 +649,25 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Labor Cost (LKR)</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Labor Cost (LKR)</label>
               <input type="number" min="0" step="0.01" value={laborCost} onChange={(e) => setLaborCost(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="0.00" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Tax Rate (%)</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Tax Rate (%)</label>
               <input type="number" min="0" max="100" step="0.1" value={taxRate} onChange={(e) => setTaxRate(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
-            <div className="flex justify-between text-gray-600"><span>Subtotal</span><span>LKR {sub.toLocaleString()}</span></div>
-            <div className="flex justify-between text-gray-600"><span>Tax ({taxRate}%)</span><span>LKR {taxAmt.toFixed(2)}</span></div>
-            <div className="flex justify-between font-bold text-gray-800 border-t border-gray-200 pt-1 mt-1"><span>Total</span><span>LKR {total.toFixed(2)}</span></div>
+          <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 text-sm space-y-1">
+            <div className="flex justify-between text-gray-600 dark:text-gray-300"><span>Subtotal</span><span>LKR {sub.toLocaleString()}</span></div>
+            <div className="flex justify-between text-gray-600 dark:text-gray-300"><span>Tax ({taxRate}%)</span><span>LKR {taxAmt.toFixed(2)}</span></div>
+            <div className="flex justify-between font-bold text-gray-800 dark:text-gray-100 border-t border-gray-200 dark:border-gray-700 pt-1 mt-1"><span>Total</span><span>LKR {total.toFixed(2)}</span></div>
           </div>
           <div className="flex gap-3">
             <button type="button" onClick={() => setShowInvoice(false)}
-              className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
+              className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">
               Cancel
             </button>
             <button type="submit" disabled={savingInv}
@@ -681,13 +681,13 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
       {/* Mark Paid Modal */}
       <Modal open={showPay} onClose={() => setShowPay(false)} title="Mark Invoice as Paid">
         <form onSubmit={handleMarkPaid} className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             Total: <strong>LKR {Number(invoice?.total_amount || 0).toLocaleString()}</strong>
           </p>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Payment Method</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Payment Method</label>
             <select value={payMethod} onChange={(e) => setPayMethod(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
               <option value="cash">Cash</option>
               <option value="card">Card</option>
               <option value="transfer">Bank Transfer</option>
@@ -695,7 +695,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
           </div>
           <div className="flex gap-3">
             <button type="button" onClick={() => setShowPay(false)}
-              className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
+              className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">
               Cancel
             </button>
             <button type="submit"

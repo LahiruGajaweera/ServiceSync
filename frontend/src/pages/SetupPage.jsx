@@ -4,7 +4,7 @@ import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 const inputCls =
-  "w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm " +
+  "w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm " +
   "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent " +
   "placeholder:text-gray-400 transition";
 
@@ -131,29 +131,29 @@ export default function SetupPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-extrabold text-blue-600 tracking-tight">ServiceSync</h1>
-          <p className="text-gray-500 mt-2 text-sm">Smart Repair Shop Management System</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">Smart Repair Shop Management System</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
           {step === "details" ? (
             <>
-              <h2 className="text-xl font-bold text-gray-800">Welcome — Let's get started</h2>
-              <p className="text-sm text-gray-500 mt-1 mb-6">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Welcome — Let's get started</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-6">
                 Create the owner / administrator account. We'll verify your{" "}
                 {channel === "email" ? "email" : "phone number"} with a one-time code.
               </p>
 
               <form onSubmit={handleDetailsSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Full Name</label>
                   <input name="name" required autoFocus value={form.name} onChange={handleChange}
                     placeholder="e.g. Kasun Perera" className={inputCls} />
                 </div>
 
                 {/* Channel toggle */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Verify using</label>
-                  <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-lg">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Verify using</label>
+                  <div className="grid grid-cols-2 gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
                     {[
                       { v: "email", label: "Email" },
                       { v: "phone", label: "Phone (SMS)" },
@@ -163,7 +163,7 @@ export default function SetupPage() {
                         type="button"
                         onClick={() => { setChannel(opt.v); setError(""); }}
                         className={`py-2 rounded-md text-sm font-medium transition-colors ${
-                          channel === opt.v ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                          channel === opt.v ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200"
                         }`}
                       >
                         {opt.label}
@@ -174,26 +174,26 @@ export default function SetupPage() {
 
                 {channel === "email" ? (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Email Address</label>
                     <input name="email" type="email" required value={form.email} onChange={handleChange}
                       placeholder="owner@example.com" className={inputCls} />
                   </div>
                 ) : (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Phone Number</label>
                     <input name="phone_number" required value={form.phone_number} onChange={handleChange}
                       placeholder="07XXXXXXXX or +94XXXXXXXXX" className={inputCls} />
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Password</label>
                   <input name="password" type="password" required value={form.password} onChange={handleChange}
                     placeholder="At least 6 characters" className={inputCls} />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm Password</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Confirm Password</label>
                   <input name="confirm" type="password" required value={form.confirm} onChange={handleChange}
                     placeholder="Re-enter password" className={inputCls} />
                 </div>
@@ -216,9 +216,9 @@ export default function SetupPage() {
                 className="text-sm text-blue-500 hover:underline mb-3">
                 ← Back
               </button>
-              <h2 className="text-xl font-bold text-gray-800">Enter verification code</h2>
-              <p className="text-sm text-gray-500 mt-1 mb-6">
-                We sent a 6-digit code to <strong className="text-gray-700">{otpInfo?.destination_masked}</strong>.
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Enter verification code</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-6">
+                We sent a 6-digit code to <strong className="text-gray-700 dark:text-gray-200">{otpInfo?.destination_masked}</strong>.
               </p>
 
               {otpInfo?.dev_otp && (
@@ -230,7 +230,7 @@ export default function SetupPage() {
 
               <form onSubmit={handleVerify} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">6-Digit Code</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">6-Digit Code</label>
                   <input
                     value={code}
                     onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}

@@ -358,7 +358,8 @@ def get_assessment(assessment_id: UUID, db: Session) -> SalvageAssessment:
                     condition="poor",
                     source="unclaimed_job",
                     source_job_id=job.id,
-                    status="available"
+                    status="available",
+                    assigned_technician_id=job.technician_id
                 )
                 db.add(new_donor)
                 

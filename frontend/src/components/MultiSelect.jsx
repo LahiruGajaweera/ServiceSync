@@ -137,24 +137,24 @@ export default function MultiSelect({
         }}
         autoComplete="off"
         placeholder={placeholder}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 dark:bg-gray-800 disabled:text-gray-400 disabled:cursor-not-allowed"
       />
       {!disabled && open && (filtered.length > 0 || canAdd) && (
-        <ul className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg text-sm">
+        <ul className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg text-sm">
           {filtered.map((o) => (
             <li key={o}>
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => add(o)}
-                className="w-full text-left px-3 py-2 hover:bg-blue-50 text-gray-700"
+                className="w-full text-left px-3 py-2 hover:bg-blue-50 text-gray-700 dark:text-gray-200"
               >
                 {o}
               </button>
             </li>
           ))}
           {canAdd && (
-            <li className="border-t border-gray-100">
+            <li className="border-t border-gray-100 dark:border-gray-800">
               <button
                 type="button"
                 disabled={saving}

@@ -18,9 +18,9 @@ const FAULT_COLORS = ["#3b82f6","#a855f7","#f59e0b","#22c55e","#ef4444","#06b6d4
 
 function KpiCard({ label, value, sub, accent }) {
   return (
-    <div className={`bg-white rounded-xl shadow-sm p-5 border-l-4 ${accent}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border-l-4 ${accent}`}>
       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</p>
-      <p className="text-2xl font-bold text-gray-800 mt-0.5">{value}</p>
+      <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 mt-0.5">{value}</p>
       {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
     </div>
   );
@@ -28,8 +28,8 @@ function KpiCard({ label, value, sub, accent }) {
 
 function Section({ title, children }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <h3 className="font-semibold text-gray-700 mb-4 text-sm uppercase tracking-wide">{title}</h3>
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+      <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-4 text-sm uppercase tracking-wide">{title}</h3>
       {children}
     </div>
   );
@@ -95,7 +95,7 @@ export default function AnalyticsDashboard() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-xl font-bold text-gray-800">Analytics Dashboard</h2>
+        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Analytics Dashboard</h2>
         <span className="text-xs text-gray-400">Live data from ServiceSync</span>
       </div>
 
@@ -176,8 +176,8 @@ export default function AnalyticsDashboard() {
                 {statusDist.map((entry) => (
                   <div key={entry.status} className="flex items-center gap-2 text-xs">
                     <span className="w-3 h-3 rounded-full shrink-0" style={{ background: STATUS_COLORS[entry.status] ?? "#94a3b8" }} />
-                    <span className="text-gray-600 capitalize">{entry.status.replace(/_/g, " ")}</span>
-                    <span className="ml-auto font-semibold text-gray-800">{entry.count}</span>
+                    <span className="text-gray-600 dark:text-gray-300 capitalize">{entry.status.replace(/_/g, " ")}</span>
+                    <span className="ml-auto font-semibold text-gray-800 dark:text-gray-100">{entry.count}</span>
                   </div>
                 ))}
               </div>
@@ -214,17 +214,17 @@ export default function AnalyticsDashboard() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100">
+                <tr className="border-b border-gray-100 dark:border-gray-800">
                   {["Technician", "Total Jobs", "Active", "Completed", "Delivered", "Unclaimed"].map((h) => (
                     <th key={h} className="text-left pb-2 text-xs font-semibold text-gray-400 uppercase pr-4">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                 {techStats.map((t) => (
-                  <tr key={t.technician_id} className="hover:bg-gray-50">
-                    <td className="py-2.5 font-medium text-gray-800 pr-4">{t.name}</td>
-                    <td className="py-2.5 font-bold text-gray-700 pr-4">{t.total}</td>
+                  <tr key={t.technician_id} className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">
+                    <td className="py-2.5 font-medium text-gray-800 dark:text-gray-100 pr-4">{t.name}</td>
+                    <td className="py-2.5 font-bold text-gray-700 dark:text-gray-200 pr-4">{t.total}</td>
                     <td className="py-2.5 pr-4">
                       <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
                         {t.status_breakdown.in_progress ?? 0}
