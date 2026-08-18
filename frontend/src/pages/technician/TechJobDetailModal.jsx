@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
 import JobStatusBadge from "../../components/JobStatusBadge";
+import SmartPartsPanel from "../../components/SmartPartsPanel";
 
 const STATUS_OPTIONS = [
   { value: "in_progress",      label: "Mark In Progress" },
@@ -219,6 +220,10 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
                 <span className="text-sm font-bold text-gray-800">LKR {partsTotal.toLocaleString()}</span>
               </div>
             )}
+            
+            <div className="mt-4">
+              <SmartPartsPanel brand={job.device_brand || ""} model={job.device_model || ""} />
+            </div>
           </div>
 
           <div className="border-t border-gray-100"></div>

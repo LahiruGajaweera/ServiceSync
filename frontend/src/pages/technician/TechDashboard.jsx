@@ -5,6 +5,9 @@ import api from "../../services/api";
 import JobStatusBadge from "../../components/JobStatusBadge";
 import ScanField from "../../components/ScanField";
 import TechJobDetailModal from "./TechJobDetailModal";
+import BrandSelect from "../../components/BrandSelect";
+import ModelSelect from "../../components/ModelSelect";
+import SmartPartsPanel from "../../components/SmartPartsPanel";
 
 const STATUS_OPTIONS = [
   { value: "in_progress",      label: "Mark In Progress" },
@@ -60,6 +63,11 @@ export default function TechDashboard() {
   const [partInfo, setPartInfo]     = useState("");
   const [savingPart, setSavingPart] = useState(false);
   const [partLoggedCounter, setPartLoggedCounter] = useState(0);
+
+  // Quick Parts Lookup
+  const [showPartsLookup, setShowPartsLookup] = useState(false);
+  const [lookupBrand, setLookupBrand] = useState("");
+  const [lookupModel, setLookupModel] = useState("");
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
@@ -170,6 +178,16 @@ export default function TechDashboard() {
 
   return (
     <div className="p-8">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-800">My Dashboard</h2>
+        <button
+          onClick={() => { setShowPartsLookup(true); setLookupBrand(""); setLookupModel(""); }}
+          className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+        >
+          Quick Parts Lookup
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
         <StatCard label="Assigned to Me"  value={loading ? "…" : pending}          color="text-blue-600" />
         <StatCard label="In Progress"     value={loading ? "…" : inProgress}       color="text-amber-600" />
@@ -486,6 +504,39 @@ export default function TechDashboard() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Quick Parts Lookup Modal */}
+      <Modal open={showPartsLookup} onClose={() => setShowPartsLookup(false)} title="Quick Parts Lookup">
+        <div className="space-y-4">
+          <p className="text-xs text-gray-500 mb-2">
+            Check compatibility and stock levels for inventory and donor parts.
+          </p>
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Device Brand</label>
+              <BrandSelect value={lookupBrand} onChange={(v) => { setLookupBrand(v); setLookupModel(""); }} placeholder="Samsung" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Device Model</label>
+              <ModelSelect brand={lookupBrand} value={lookupModel} onChange={setLookupModel} placeholder="Galaxy A54" />
+            </div>
+          </div>
+          
+          <div className="mt-4">
+            <SmartPartsPanel brand={lookupBrand} model={lookupModel} />
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setShowPartsLookup(false)}
+              className="w-full border border-gray-300 text-gray-600 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50"
+            >
+              Close
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
