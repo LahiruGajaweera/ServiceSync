@@ -47,25 +47,28 @@ export default function AnalyticsDashboard() {
   const [techLeaderboard, setTechLeaderboard] = useState([]);
   const [faultDist, setFaultDist]   = useState([]);
   const [faultFilters, setFaultFilters] = useState({
-    days: "all",
+    startDate: "",
+    endDate: "",
     brand: "all",
-    model: "",
-    status: "all",
+    model: "all",
   });
+  const [datePreset, setDatePreset] = useState("custom");
   const [statusDist, setStatusDist] = useState([]);
+  const [deviceModels, setDeviceModels] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState(null);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [sumRes, jobsRes, revRes, techRes, statusRes, leaderRes] = await Promise.all([
-          api.get("/analytics/summary"),
-          api.get("/analytics/jobs-trend", { params: { days: 30 } }),
-          api.get("/analytics/revenue-trend", { params: { months: 6 } }),
-          api.get("/analytics/technician-stats"),
-          api.get("/analytics/status-distribution"),
-          api.get("/analytics/technician-performance"),
+        const [sumRes, jobsRes, revRes, techRes, statusRes, leaderRes, modelsRes] = await Promise.all([
+          api.get("/analytics/summary").catch(e => ({ data: null })),
+          api.get("/analytics/jobs-trend", { params: { days: 30 } }).catch(e => ({ data: [] })),
+          api.get("/analytics/revenue-trend", { params: { months: 6 } }).catch(e => ({ data: [] })),
+          api.get("/analytics/technician-stats").catch(e => ({ data: [] })),
+          api.get("/analytics/status-distribution").catch(e => ({ data: [] })),
+          api.get("/analytics/technician-performance").catch(e => ({ data: [] })),
+          api.get("/analytics/device-models").catch(e => ({ data: [] })),
         ]);
         setSummary(sumRes.data);
         setJobsTrend(jobsRes.data);
@@ -73,8 +76,11 @@ export default function AnalyticsDashboard() {
         setTechStats(techRes.data);
         setStatusDist(statusRes.data);
         setTechLeaderboard(leaderRes.data);
+        setDeviceModels(modelsRes.data);
       } catch (e) {
-        setError("Failed to load analytics. Make sure the backend is running.");
+        console.error("Analytics load error:", e);
+        const errMsg = e.response?.data?.detail || e.message || "Unknown error";
+        setError(`Failed to load analytics. Make sure the backend is running. Details: ${errMsg}`);
       } finally {
         setLoading(false);
       }
@@ -82,22 +88,66 @@ export default function AnalyticsDashboard() {
     load();
   }, []);
 
-  useEffect(() => {
-    const loadFaults = async () => {
-      try {
-        const params = {};
-        if (faultFilters.days !== "all") params.days = faultFilters.days;
-        if (faultFilters.brand !== "all") params.brand = faultFilters.brand;
-        if (faultFilters.model.trim() !== "") params.model = faultFilters.model.trim();
-        if (faultFilters.status !== "all") params.status = faultFilters.status;
+  const handlePresetChange = (preset) => {
+    setDatePreset(preset);
+    const now = new Date();
+    let start = "";
+    let end = "";
 
-        const res = await api.get("/analytics/fault-distribution", { params });
-        setFaultDist(res.data);
-      } catch (e) {
-        console.error("Failed to load fault distribution", e);
-      }
-    };
+    if (preset === "last_7_days") {
+      const d = new Date();
+      d.setDate(d.getDate() - 7);
+      start = d.toISOString().split("T")[0];
+      end = now.toISOString().split("T")[0];
+    } else if (preset === "current_month") {
+      start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+    } else if (preset === "last_month") {
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split("T")[0];
+      end = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split("T")[0];
+    } else if (preset === "last_3_months") {
+      const d = new Date();
+      d.setMonth(d.getMonth() - 3);
+      start = d.toISOString().split("T")[0];
+      end = now.toISOString().split("T")[0];
+    }
+
+    if (preset !== "custom") {
+      setFaultFilters(prev => ({ ...prev, startDate: start, endDate: end }));
+    }
+  };
+
+  const loadFaults = async () => {
+    try {
+      const params = {};
+      if (faultFilters.startDate) params.start_date = faultFilters.startDate;
+      if (faultFilters.endDate) params.end_date = faultFilters.endDate;
+      if (faultFilters.brand !== "all") params.brand = faultFilters.brand;
+      if (faultFilters.model !== "all") params.model = faultFilters.model;
+
+      const res = await api.get("/analytics/fault-distribution", { params });
+      
+      const allCategories = ["screen", "battery", "charging_port", "water_damage", "software", "camera", "buttons", "other"];
+      const dataMap = new Map(allCategories.map(c => [c, 0]));
+      
+      (res.data || []).forEach(item => {
+        dataMap.set(item.fault_category, item.count);
+      });
+      
+      const finalData = allCategories.map(cat => ({
+        fault_category: cat,
+        count: dataMap.get(cat)
+      })).sort((a, b) => b.count - a.count);
+
+      setFaultDist(finalData);
+    } catch (e) {
+      console.error("Failed to load fault distribution", e);
+    }
+  };
+
+  useEffect(() => {
     loadFaults();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [faultFilters]);
 
   if (loading) {
@@ -118,8 +168,8 @@ export default function AnalyticsDashboard() {
   const j = summary?.jobs ?? {};
   const r = summary?.revenue ?? {};
 
-  const combinedTechs = [...techStats].map(t => {
-    const leaderData = techLeaderboard.find(l => l.technician_id === t.technician_id);
+  const combinedTechs = [...(techStats || [])].map(t => {
+    const leaderData = (techLeaderboard || []).find(l => l.technician_id === t.technician_id);
     return {
       ...t,
       score: leaderData?.performance_score ?? null,
@@ -141,7 +191,7 @@ export default function AnalyticsDashboard() {
       </div>
 
       {/* ── Tabs Navigation ──────────────────────────────────────── */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
+      <div className="flex border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setActiveTab("overview")}
           className={`py-2.5 px-5 text-sm font-semibold border-b-2 transition-colors ${
@@ -280,27 +330,55 @@ export default function AnalyticsDashboard() {
 
       {activeTab === "fault-analysis" && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm flex flex-wrap gap-4 items-end border border-gray-100 dark:border-gray-700">
-            <div className="flex-1 min-w-[150px]">
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Timeframe</label>
+          <Section title="Fault Category Breakdown">
+            <div className="bg-gray-50/80 dark:bg-gray-900/40 px-3 py-2 rounded-xl mb-3 grid grid-cols-1 md:grid-cols-5 gap-3 items-end border border-gray-100 dark:border-gray-800">
+            
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Time Range</label>
               <select 
-                value={faultFilters.days} 
-                onChange={(e) => setFaultFilters({ ...faultFilters, days: e.target.value })}
-                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2.5 dark:bg-gray-900 dark:border-gray-700 dark:placeholder-gray-400 dark:text-gray-200"
+                value={datePreset} 
+                onChange={(e) => handlePresetChange(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2 dark:bg-gray-900 dark:border-gray-700 dark:placeholder-gray-400 dark:text-gray-200"
               >
-                <option value="all">All Time</option>
-                <option value="7">Last 7 Days</option>
-                <option value="30">Last 30 Days</option>
-                <option value="180">Last 6 Months</option>
+                <option value="custom">Custom Date Range</option>
+                <option value="last_7_days">Last 7 Days</option>
+                <option value="current_month">Current Month</option>
+                <option value="last_month">Last Month</option>
+                <option value="last_3_months">Last 3 Months</option>
               </select>
             </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Start Date</label>
+              <input 
+                type="date"
+                value={faultFilters.startDate} 
+                onChange={(e) => {
+                  setDatePreset("custom");
+                  setFaultFilters({ ...faultFilters, startDate: e.target.value });
+                }}
+                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2 dark:bg-gray-900 dark:border-gray-700 dark:placeholder-gray-400 dark:text-gray-200"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">End Date</label>
+              <input 
+                type="date"
+                value={faultFilters.endDate} 
+                onChange={(e) => {
+                  setDatePreset("custom");
+                  setFaultFilters({ ...faultFilters, endDate: e.target.value });
+                }}
+                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2 dark:bg-gray-900 dark:border-gray-700 dark:placeholder-gray-400 dark:text-gray-200"
+              />
+            </div>
             
-            <div className="flex-1 min-w-[150px]">
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Brand</label>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Brand</label>
               <select 
                 value={faultFilters.brand} 
                 onChange={(e) => setFaultFilters({ ...faultFilters, brand: e.target.value })}
-                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2.5 dark:bg-gray-900 dark:border-gray-700 dark:placeholder-gray-400 dark:text-gray-200"
+                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2 dark:bg-gray-900 dark:border-gray-700 dark:placeholder-gray-400 dark:text-gray-200"
               >
                 <option value="all">All Brands</option>
                 <option value="Apple">Apple</option>
@@ -313,44 +391,36 @@ export default function AnalyticsDashboard() {
               </select>
             </div>
             
-            <div className="flex-1 min-w-[150px]">
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Model</label>
-              <input 
-                type="text" 
-                placeholder="e.g. iPhone 13"
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Model</label>
+              <select 
                 value={faultFilters.model} 
                 onChange={(e) => setFaultFilters({ ...faultFilters, model: e.target.value })}
-                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2.5 dark:bg-gray-900 dark:border-gray-700 dark:placeholder-gray-400 dark:text-gray-200"
-              />
-            </div>
-            
-            <div className="flex-1 min-w-[150px]">
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Job Status</label>
-              <select 
-                value={faultFilters.status} 
-                onChange={(e) => setFaultFilters({ ...faultFilters, status: e.target.value })}
-                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2.5 dark:bg-gray-900 dark:border-gray-700 dark:placeholder-gray-400 dark:text-gray-200"
+                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2 dark:bg-gray-900 dark:border-gray-700 dark:placeholder-gray-400 dark:text-gray-200"
               >
-                <option value="all">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed (Repaired)</option>
-                <option value="delivered">Delivered</option>
+                <option value="all">All Models</option>
+                {(Array.isArray(deviceModels) ? deviceModels : []).map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
               </select>
             </div>
-          </div>
-
-          <Section title="Fault Category Breakdown">
+            </div>
+          
           {faultDist.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-10">No jobs yet</p>
           ) : (
-            <ResponsiveContainer width="100%" height={320}>
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart data={faultDist} layout="vertical" margin={{ top: 4, right: 16, left: 90, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
-                <YAxis type="category" dataKey="fault_category" tick={{ fontSize: 13 }} width={100} tickFormatter={(v) => v.replace(/_/g, " ")} />
-                <Tooltip formatter={(v) => [v, "Jobs"]} labelFormatter={(l) => l.replace(/_/g, " ")} />
-                <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                <YAxis type="category" dataKey="fault_category" tick={{ fontSize: 12 }} width={100} interval={0} tickFormatter={(v) => v.replace(/_/g, " ")} />
+                <Tooltip 
+                  formatter={(v) => [v, "Jobs"]} 
+                  labelFormatter={(l) => l.replace(/_/g, " ")} 
+                  contentStyle={{ backgroundColor: "#1e293b", border: "none", borderRadius: "8px", color: "#f8fafc" }}
+                  itemStyle={{ color: "#38bdf8" }}
+                />
+                <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={22}>
                   {faultDist.map((_, i) => (
                     <Cell key={i} fill={FAULT_COLORS[i % FAULT_COLORS.length]} />
                   ))}

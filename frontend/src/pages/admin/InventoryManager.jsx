@@ -7,7 +7,7 @@ import SpecSelect from "../../components/SpecSelect";
 import MultiSelect from "../../components/MultiSelect";
 import SupplierSelect from "../../components/SupplierSelect";
 import AlertCard from "../../components/AlertCard";
-
+import AutoSlidingAlerts from "../../components/AutoSlidingAlerts";
 function Modal({ open, onClose, title, children }) {
   if (!open) return null;
   return (
@@ -578,17 +578,7 @@ export default function InventoryManager() {
           {inventoryForecast && inventoryForecast.filter(i => i.status === "critical" || i.status === "warning").length > 0 && (
             <section className="mb-6">
               <h3 className="font-semibold text-gray-700 mb-4 text-sm uppercase tracking-wide">Smart Alerts: Inventory Demand Prediction</h3>
-              <div className="flex flex-col gap-3">
-                {inventoryForecast.filter(i => i.status === "critical" || i.status === "warning").map((inv, idx) => (
-                  <AlertCard
-                    key={idx}
-                    type={inv.status}
-                    title={inv.part_name}
-                    value={`${inv.restock_recommended} needed`}
-                    message={`Predicted demand: ${inv.predicted_demand}. Current stock: ${inv.current_stock}.`}
-                  />
-                ))}
-              </div>
+              <AutoSlidingAlerts alerts={inventoryForecast.filter(i => i.status === "critical" || i.status === "warning")} />
             </section>
           )}
 

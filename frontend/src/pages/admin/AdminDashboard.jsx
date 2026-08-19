@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import AlertCard from "../../components/AlertCard";
-
+import AutoSlidingAlerts from "../../components/AutoSlidingAlerts";
 
 function StatCard({ label, value, sub, color, subClassName = "text-gray-400" }) {
   return (
@@ -215,17 +215,7 @@ export default function AdminDashboard() {
       {inventoryForecast && inventoryForecast.filter(i => i.status === "critical" || i.status === "warning").length > 0 && (
         <div className="mb-8">
           <h3 className="font-semibold text-gray-700 mb-4 text-sm uppercase tracking-wide">Smart Alerts: Inventory Demand Prediction</h3>
-          <div className="flex flex-col gap-3">
-            {inventoryForecast.filter(i => i.status === "critical" || i.status === "warning").map((inv, idx) => (
-              <AlertCard
-                key={idx}
-                type={inv.status}
-                title={inv.part_name}
-                value={`${inv.restock_recommended} needed`}
-                message={`Predicted demand: ${inv.predicted_demand}. Current stock: ${inv.current_stock}.`}
-              />
-            ))}
-          </div>
+          <AutoSlidingAlerts alerts={inventoryForecast.filter(i => i.status === "critical" || i.status === "warning")} />
         </div>
       )}
 
