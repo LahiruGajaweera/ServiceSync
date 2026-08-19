@@ -130,11 +130,34 @@ def get_technician_stats(db: Session) -> list[dict]:
     return sorted(result, key=lambda x: x["total"], reverse=True)
 
 
-def get_fault_distribution(db: Session) -> list[dict]:
+from typing import Optional
+from datetime import datetime, timedelta, timezone
+
+def get_fault_distribution(
+    db: Session,
+    days: Optional[int] = None,
+    brand: Optional[str] = None,
+    model: Optional[str] = None,
+    status: Optional[str] = None,
+) -> list[dict]:
     """Job count by fault category."""
+    query = db.query(Job.fault_category, func.count(Job.id).label("count"))
+
+    if days is not None:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        query = query.filter(Job.received_date >= cutoff)
+
+    if brand and brand.lower() != "all":
+        query = query.filter(Job.device_brand == brand)
+
+    if model and model.lower() != "all":
+        query = query.filter(Job.device_model == model)
+
+    if status and status.lower() != "all":
+        query = query.filter(Job.status == status)
+
     rows = (
-        db.query(Job.fault_category, func.count(Job.id).label("count"))
-        .group_by(Job.fault_category)
+        query.group_by(Job.fault_category)
         .order_by(func.count(Job.id).desc())
         .all()
     )
