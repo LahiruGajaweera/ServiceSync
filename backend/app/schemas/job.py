@@ -20,6 +20,7 @@ JOB_STATUSES = Literal[
 class JobCreate(BaseModel):
     customer_id: UUID
     technician_id: UUID | None = None
+    rework_of_job_id: UUID | None = None
     device_brand: str
     device_model: str
     device_imei: str | None = None
@@ -44,6 +45,14 @@ class JobStatusUpdate(BaseModel):
     status: JOB_STATUSES
     estimated_cost: Decimal | None = None
     notes: str | None = None
+    
+    # Structured completion data (sent when status == 'completed')
+    actual_fault: str | None = None
+    identified_fault: str | None = None
+    complexity_level: Literal["low", "medium", "high"] | None = None
+    diagnostic_time_mins: int | None = None
+    repair_time_mins: int | None = None
+    resolution_notes: str | None = None
 
 
 class JobRevertRequest(BaseModel):
@@ -57,6 +66,15 @@ class JobLaborUpdate(BaseModel):
 
 class AssignTechnicianRequest(BaseModel):
     technician_id: UUID | None = None
+
+
+class TimerToggleRequest(BaseModel):
+    mode: str | None = None  # "diagnostic" or "repair". None means pause.
+
+
+class AutoResumeRequest(BaseModel):
+    mode: str
+    away_seconds: int
 
 
 class JobListItem(BaseModel):
@@ -85,6 +103,21 @@ class JobListItem(BaseModel):
     admin_alert: str | None = None
     labor_cost: Decimal | None = None
     physical_condition: str | None = None
+    
+    actual_fault: str | None = None
+    complexity_level: str | None = None
+    diagnostic_time_mins: int | None = None
+    repair_time_mins: int | None = None
+    
+    rework_of_job_id: UUID | None = None
+    active_repair_start_time: datetime | None = None
+    total_diagnostic_seconds: int | None = 0
+    total_active_repair_seconds: int | None = 0
+    total_away_seconds: int | None = 0
+    current_timer_mode: str | None = None
+
+    model_config = {"from_attributes": True}
+    resolution_notes: str | None = None
     images: list[JobImageResponse] = []
     created_at: datetime | None = None
 

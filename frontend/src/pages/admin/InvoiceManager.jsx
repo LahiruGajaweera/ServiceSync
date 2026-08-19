@@ -171,24 +171,18 @@ export default function InvoiceManager() {
 
       {/* QR Code Modal */}
       <Modal open={showQr} onClose={() => setShowQr(false)} title="Invoice QR Data">
-<<<<<<< Updated upstream
-        <div className="space-y-3">
-          <p className="text-xs text-gray-500 dark:text-gray-400">Scan or share this data string with the customer receipt:</p>
-          <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 font-mono text-xs text-gray-700 dark:text-gray-200 break-all">
-=======
         <div className="space-y-4">
-          <p className="text-sm text-gray-600 text-center">Scan this QR code to view invoice details:</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 text-center">Scan this QR code to view invoice details:</p>
           
-          <div className="flex justify-center bg-gray-50 p-4 rounded-xl border border-gray-100">
+          <div className="flex justify-center bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
             {qrImgSrc ? (
               <img src={qrImgSrc} alt="QR Code" className="w-48 h-48 rounded-lg shadow-sm" />
             ) : (
-              <div className="w-48 h-48 flex items-center justify-center text-gray-400 text-sm">Generating...</div>
+              <div className="w-48 h-48 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm">Generating...</div>
             )}
           </div>
           
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 font-mono text-[10px] text-gray-500 break-all text-center">
->>>>>>> Stashed changes
+          <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 font-mono text-[10px] text-gray-500 dark:text-gray-400 break-all text-center">
             {selectedInv?.qr_code_data}
           </div>
           <button onClick={() => setShowQr(false)}

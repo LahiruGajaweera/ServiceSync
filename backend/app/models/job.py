@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Boolean, Column, Date, Enum, ForeignKey, Numeric, String, Text, DateTime, func
+from sqlalchemy import Boolean, Column, Date, Enum, ForeignKey, Numeric, String, Text, DateTime, func, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -14,6 +14,8 @@ class Job(Base):
     technician_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     device_brand = Column(String(100), nullable=False)
     device_model = Column(String(100), nullable=False)
+    current_timer_mode = Column(String(20), nullable=True)  # 'diagnostic' or 'repair'
+    total_away_seconds = Column(Integer, nullable=False, default=0)
     device_imei = Column(String(20), nullable=True)
     fault_category = Column(
         Enum(
@@ -51,10 +53,27 @@ class Job(Base):
     final_warning_sent = Column(Boolean, nullable=False, default=False)
     salvage_delayed_until = Column(DateTime(timezone=True), nullable=True)
     labor_cost = Column(Numeric(10, 2), nullable=True, default=0)
+
+    # Structured repair completion data
+    actual_fault = Column(String(100), nullable=True)
+    identified_fault = Column(String(100), nullable=True)
+    complexity_level = Column(Enum("low", "medium", "high", name="complexity_level"), nullable=True)
+    diagnostic_time_mins = Column(Integer, nullable=True)
+    repair_time_mins = Column(Integer, nullable=True)
+    resolution_notes = Column(Text, nullable=True)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Performance Enhancements
+    rework_of_job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=True)
+    active_repair_start_time = Column(DateTime(timezone=True), nullable=True)
+    total_diagnostic_seconds = Column(Integer, nullable=False, default=0)
+    total_active_repair_seconds = Column(Integer, nullable=False, default=0)
+    current_timer_mode = Column(Enum("diagnostic", "repair", name="timer_mode"), nullable=True)
 
     images = relationship("JobImage", backref="job", cascade="all, delete-orphan", lazy="joined")
+    reworks = relationship("Job", backref="original_job", remote_side=[id])
 
 
 class JobStatusHistory(Base):

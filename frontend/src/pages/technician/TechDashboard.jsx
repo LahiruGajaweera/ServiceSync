@@ -92,6 +92,8 @@ export default function TechDashboard() {
   useEffect(() => { fetchMyJobs(); }, []);
 
   const myJobs    = jobs.filter((j) => j.technician_id === user?.id);
+  const activeQueue = myJobs.filter(j => ["pending", "in_progress"].includes(j.status));
+  const inProgressJobs = myJobs.filter(j => j.status === "in_progress");
   const unclaimed = jobs.filter((j) => !j.technician_id);
 
   const myDonors = donors.filter((d) => d.assigned_technician_id === user?.id);
@@ -255,9 +257,9 @@ export default function TechDashboard() {
 
         {loading ? (
           <div className="py-12 text-center text-gray-400 text-sm">Loading…</div>
-        ) : myJobs.length === 0 ? (
+        ) : activeQueue.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-gray-400 border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl">
-            <p className="font-medium text-gray-500 dark:text-gray-400">No jobs claimed yet</p>
+            <p className="font-medium text-gray-500 dark:text-gray-400">No active jobs in queue</p>
             <p className="text-sm mt-1">Claim an available job above to get started</p>
           </div>
         ) : (
@@ -270,7 +272,7 @@ export default function TechDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-              {myJobs.slice(0, 8).map((job) => (
+              {activeQueue.slice(0, 8).map((job) => (
                 <tr 
                   key={job.id} 
                   className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 cursor-pointer transition-colors"
