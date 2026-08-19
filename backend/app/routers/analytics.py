@@ -46,14 +46,14 @@ def technician_stats(
 
 @router.get("/fault-distribution")
 def fault_distribution(
-    days: Optional[int] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
     brand: Optional[str] = None,
     model: Optional[str] = None,
-    status: Optional[str] = None,
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
-    return analytics_service.get_fault_distribution(db, days, brand, model, status)
+    return analytics_service.get_fault_distribution(db, start_date, end_date, brand, model)
 
 
 @router.get("/status-distribution")
@@ -62,6 +62,14 @@ def status_distribution(
     _: User = Depends(require_admin),
 ):
     return analytics_service.get_status_distribution(db)
+
+
+@router.get("/device-models")
+def get_device_models(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    return analytics_service.get_device_models(db)
 
 
 @router.get("/predictions/faults")

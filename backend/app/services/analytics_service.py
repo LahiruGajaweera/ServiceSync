@@ -135,26 +135,33 @@ from datetime import datetime, timedelta, timezone
 
 def get_fault_distribution(
     db: Session,
-    days: Optional[int] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
     brand: Optional[str] = None,
     model: Optional[str] = None,
-    status: Optional[str] = None,
 ) -> list[dict]:
     """Job count by fault category."""
     query = db.query(Job.fault_category, func.count(Job.id).label("count"))
 
-    if days is not None:
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-        query = query.filter(Job.received_date >= cutoff)
+    if start_date:
+        try:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            query = query.filter(Job.received_date >= start_dt)
+        except ValueError:
+            pass
+
+    if end_date:
+        try:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=timezone.utc, hour=23, minute=59, second=59)
+            query = query.filter(Job.received_date <= end_dt)
+        except ValueError:
+            pass
 
     if brand and brand.lower() != "all":
         query = query.filter(Job.device_brand == brand)
 
     if model and model.lower() != "all":
         query = query.filter(Job.device_model == model)
-
-    if status and status.lower() != "all":
-        query = query.filter(Job.status == status)
 
     rows = (
         query.group_by(Job.fault_category)
@@ -173,3 +180,8 @@ def get_status_distribution(db: Session) -> list[dict]:
         .all()
     )
     return [{"status": r.status, "count": r.count} for r in rows]
+
+def get_device_models(db: Session) -> list[str]:
+    """List of distinct device models in jobs."""
+    rows = db.query(Job.device_model).distinct().filter(Job.device_model.is_not(None)).order_by(Job.device_model).all()
+    return [r[0] for r in rows]
