@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Any
+import httpx
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -17,24 +18,60 @@ except ImportError:
     ML_AVAILABLE = False
 
 
-def forecast_fault_trends(db: Session, months_back: int = 6) -> list[dict[str, Any]]:
+def _get_rainy_days_forecast(location: str = "Colombo") -> bool:
+    """
+    Calls Open-Meteo API for the given location in Sri Lanka to check if there is
+    significant rainfall expected in the next 14 days.
+    """
+    locations = {
+        "Colombo": ("6.9271", "79.8612"),
+        "Kandy": ("7.2906", "80.6337"),
+        "Galle": ("6.0367", "80.2170"),
+        "Jaffna": ("9.6615", "80.0255"),
+        "Gampaha": ("7.0873", "79.9996"),
+        "Kurunegala": ("7.4818", "80.3609"),
+        "Anuradhapura": ("8.3114", "80.4037")
+    }
+    
+    lat, lon = locations.get(location, locations["Colombo"])
+    
+    try:
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=precipitation_sum&timezone=Asia%2FColombo&forecast_days=14"
+        with httpx.Client(timeout=5.0) as client:
+            response = client.get(url)
+            if response.status_code == 200:
+                data = response.json()
+                precipitations = data.get("daily", {}).get("precipitation_sum", [])
+                
+                # Count days with more than 5mm of rain
+                rainy_days = sum(1 for p in precipitations if p is not None and p > 5.0)
+                
+                # If more than 4 days out of 14 are significantly rainy, consider it rainy season
+                return rainy_days >= 4
+    except Exception:
+        pass
+        
+    return False
+
+
+def forecast_fault_trends(db: Session, months_back: int = 6, device_model: str = None, location: str = "Colombo") -> list[dict[str, Any]]:
     """
     Analyzes job fault categories over the last N months and forecasts
     the expected percentage change for the next month.
+    Optionally filters by device_model and applies weather for a specific location.
     """
     cutoff_date = datetime.now() - timedelta(days=months_back * 30)
     
-    jobs = (
-        db.query(
-            func.date_trunc('month', Job.received_date).label('month'),
-            Job.fault_category,
-            func.count(Job.id).label('count')
-        )
-        .filter(Job.received_date >= cutoff_date)
-        .group_by('month', Job.fault_category)
-        .order_by('month')
-        .all()
-    )
+    query = db.query(
+        func.date_trunc('month', Job.received_date).label('month'),
+        Job.fault_category,
+        func.count(Job.id).label('count')
+    ).filter(Job.received_date >= cutoff_date)
+
+    if device_model:
+        query = query.filter(Job.device_model == device_model)
+
+    jobs = query.group_by('month', Job.fault_category).order_by('month').all()
 
     if not jobs or not ML_AVAILABLE:
         return []
@@ -44,9 +81,74 @@ def forecast_fault_trends(db: Session, months_back: int = 6) -> list[dict[str, A
     
     pivot = df.pivot(index='month', columns='fault_category', values='count').fillna(0)
     
+    is_rainy_season = _get_rainy_days_forecast(location)
+    
     trends = []
     for category in pivot.columns:
         series = pivot[category]
+        if len(series) < 3:
+            continue
+            
+        try:
+            model = SimpleExpSmoothing(series, initialization_method="estimated").fit()
+            forecast = model.forecast(1).iloc[0]
+            current_avg = series.iloc[-2:].mean() if len(series) >= 2 else series.iloc[-1]
+            
+            weather_impacted = False
+            if is_rainy_season and category == "water_damage":
+                forecast = forecast * 1.3
+                weather_impacted = True
+            
+            if current_avg > 0:
+                percent_change = ((forecast - current_avg) / current_avg) * 100
+            else:
+                percent_change = 0
+                
+            trends.append({
+                "fault_category": category,
+                "current_avg": round(current_avg, 1),
+                "forecasted": round(forecast, 1),
+                "trend_percentage": round(percent_change, 1),
+                "status": "increasing" if percent_change > 5 else "decreasing" if percent_change < -5 else "stable",
+                "weather_impacted": weather_impacted
+            })
+        except Exception:
+            pass
+            
+    # Sort by highest trend percentage
+    return sorted(trends, key=lambda x: x['trend_percentage'], reverse=True)
+
+
+def forecast_device_trends(db: Session, months_back: int = 6, fault_category: str = None) -> list[dict[str, Any]]:
+    """
+    Analyzes job volume by device model over the last N months and forecasts
+    which devices will have the most repairs next month.
+    Optionally filters by fault_category.
+    """
+    cutoff_date = datetime.now() - timedelta(days=months_back * 30)
+    
+    query = db.query(
+        func.date_trunc('month', Job.received_date).label('month'),
+        Job.device_model,
+        func.count(Job.id).label('count')
+    ).filter(Job.received_date >= cutoff_date).filter(Job.device_model.isnot(None))
+
+    if fault_category:
+        query = query.filter(Job.fault_category == fault_category)
+
+    jobs = query.group_by('month', Job.device_model).order_by('month').all()
+
+    if not jobs or not ML_AVAILABLE:
+        return []
+
+    df = pd.DataFrame(jobs, columns=['month', 'device_model', 'count'])
+    df['month'] = pd.to_datetime(df['month'])
+    
+    pivot = df.pivot(index='month', columns='device_model', values='count').fillna(0)
+    
+    trends = []
+    for model_name in pivot.columns:
+        series = pivot[model_name]
         if len(series) < 3:
             continue
             
@@ -61,7 +163,7 @@ def forecast_fault_trends(db: Session, months_back: int = 6) -> list[dict[str, A
                 percent_change = 0
                 
             trends.append({
-                "fault_category": category,
+                "device_model": model_name,
                 "current_avg": round(current_avg, 1),
                 "forecasted": round(forecast, 1),
                 "trend_percentage": round(percent_change, 1),
@@ -70,7 +172,8 @@ def forecast_fault_trends(db: Session, months_back: int = 6) -> list[dict[str, A
         except Exception:
             pass
             
-    return sorted(trends, key=lambda x: x['trend_percentage'], reverse=True)
+    # Sort by highest forecasted volume
+    return sorted(trends, key=lambda x: x['forecasted'], reverse=True)
 
 
 def calculate_technician_scores(db: Session) -> list[dict[str, Any]]:
