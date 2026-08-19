@@ -259,8 +259,10 @@ def calculate_technician_scores(db: Session) -> list[dict[str, Any]]:
             
         efficiency_sum = 0
         rework_penalty = 0
+        fault_efficiencies = {}
         for _, row in group.iterrows():
             key = row['baseline_key']
+            fault_cat = row['effective_fault']
             if specific_counts.get(key, 0) >= 3:
                 baseline = specific_baselines.get(key, 24.0)
             else:
@@ -271,14 +273,35 @@ def calculate_technician_scores(db: Session) -> list[dict[str, Any]]:
             efficiency_sum += efficiency
             
             # Check if this job resulted in a rework later
-            if row['job_id'] in reworked_job_ids:
+            is_rework = row['job_id'] in reworked_job_ids
+            if is_rework:
                 rework_penalty += 15  # -15 penalty per rework
+                
+            if fault_cat not in fault_efficiencies:
+                fault_efficiencies[fault_cat] = []
+            fault_efficiencies[fault_cat].append({
+                "eff": efficiency,
+                "rework": is_rework
+            })
             
         avg_efficiency = efficiency_sum / total_jobs
         score = min(round((avg_efficiency / 1.0) * 80), 100)
         
         # Apply rework penalty
         score = max(score - rework_penalty, 0)
+        
+        # Calculate Top Specialty
+        top_specialty = None
+        best_spec_score = -1
+        for fault_cat, jobs_list in fault_efficiencies.items():
+            if len(jobs_list) >= 2: # Require at least 2 jobs in a category to be a specialty
+                cat_avg_eff = sum(j["eff"] for j in jobs_list) / len(jobs_list)
+                cat_rework_rate = sum(1 for j in jobs_list if j["rework"]) / len(jobs_list)
+                # Score formula: rewards high efficiency and penalizes reworks
+                spec_score = cat_avg_eff * (1 - cat_rework_rate)
+                if spec_score > best_spec_score and spec_score > 0.8: # Must be reasonably good
+                    best_spec_score = spec_score
+                    top_specialty = fault_cat
         
         tech = db.query(User).filter(User.id == tech_id).first()
         if tech:
@@ -287,6 +310,7 @@ def calculate_technician_scores(db: Session) -> list[dict[str, Any]]:
                 "name": tech.name,
                 "total_jobs_completed": total_jobs,
                 "performance_score": score,
+                "top_specialty": top_specialty.replace('_', ' ').title() if top_specialty else None,
                 "rating": "Excellent" if score >= 90 else "Good" if score >= 75 else "Needs Improvement"
             })
             

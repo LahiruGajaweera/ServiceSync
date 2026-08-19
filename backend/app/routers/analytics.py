@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from typing import Optional
 
 from app.core.database import get_db
 from app.core.deps import require_admin
@@ -45,10 +46,14 @@ def technician_stats(
 
 @router.get("/fault-distribution")
 def fault_distribution(
+    days: Optional[int] = None,
+    brand: Optional[str] = None,
+    model: Optional[str] = None,
+    status: Optional[str] = None,
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
-    return analytics_service.get_fault_distribution(db)
+    return analytics_service.get_fault_distribution(db, days, brand, model, status)
 
 
 @router.get("/status-distribution")
