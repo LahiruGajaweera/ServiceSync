@@ -66,6 +66,8 @@ export default function TechnicianLayout() {
         <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6 shrink-0">
           <DateTimeDisplay />
           <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <RevertNotifications />
             <Link
               to="profile"
               className="relative p-2 text-gray-400 hover:text-gray-600 dark:text-gray-300 transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-800"
@@ -76,8 +78,6 @@ export default function TechnicianLayout() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </Link>
-            <ThemeToggle />
-            <RevertNotifications />
           </div>
         </header>
         <div className="flex-1 overflow-y-auto">

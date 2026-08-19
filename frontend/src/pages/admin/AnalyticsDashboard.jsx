@@ -43,6 +43,7 @@ export default function AnalyticsDashboard() {
   const [jobsTrend, setJobsTrend]   = useState([]);
   const [revTrend, setRevTrend]     = useState([]);
   const [techStats, setTechStats]   = useState([]);
+  const [techLeaderboard, setTechLeaderboard] = useState([]);
   const [faultDist, setFaultDist]   = useState([]);
   const [statusDist, setStatusDist] = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -51,13 +52,14 @@ export default function AnalyticsDashboard() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [sumRes, jobsRes, revRes, techRes, faultRes, statusRes] = await Promise.all([
+        const [sumRes, jobsRes, revRes, techRes, faultRes, statusRes, leaderRes] = await Promise.all([
           api.get("/analytics/summary"),
           api.get("/analytics/jobs-trend", { params: { days: 30 } }),
           api.get("/analytics/revenue-trend", { params: { months: 6 } }),
           api.get("/analytics/technician-stats"),
           api.get("/analytics/fault-distribution"),
           api.get("/analytics/status-distribution"),
+          api.get("/analytics/technician-performance"),
         ]);
         setSummary(sumRes.data);
         setJobsTrend(jobsRes.data);
@@ -65,6 +67,7 @@ export default function AnalyticsDashboard() {
         setTechStats(techRes.data);
         setFaultDist(faultRes.data);
         setStatusDist(statusRes.data);
+        setTechLeaderboard(leaderRes.data);
       } catch (e) {
         setError("Failed to load analytics. Make sure the backend is running.");
       } finally {
@@ -244,6 +247,7 @@ export default function AnalyticsDashboard() {
                       <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">
                         {t.status_breakdown.unclaimed ?? 0}
                       </span>
+
                     </td>
                   </tr>
                 ))}
@@ -252,6 +256,56 @@ export default function AnalyticsDashboard() {
           </div>
         )}
       </Section>
+        
+      {/* Technician Leaderboard */}
+      <Section title="Technician Performance Leaderboard">
+          {techLeaderboard.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-6">Not enough data for scoring</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="pb-2 text-left text-xs font-semibold text-gray-400 uppercase">Technician</th>
+                    <th className="pb-2 text-left text-xs font-semibold text-gray-400 uppercase">Jobs Completed</th>
+                    <th className="pb-2 text-left text-xs font-semibold text-gray-400 uppercase">Score</th>
+                    <th className="pb-2 text-left text-xs font-semibold text-gray-400 uppercase">Rating</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {techLeaderboard.map((t, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50">
+                      <td className="py-3 font-medium text-gray-800 flex items-center gap-2">
+                        {idx === 0 && <span title="Top Performer">🥇</span>}
+                        {idx === 1 && <span title="Runner Up">🥈</span>}
+                        {idx === 2 && <span title="Third Place">🥉</span>}
+                        {idx > 2 && <span className="w-5 text-center text-gray-400">{idx + 1}</span>}
+                        {t.technician_name}
+                      </td>
+                      <td className="py-3 text-gray-600">{t.jobs_completed}</td>
+                      <td className="py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-brand-500 rounded-full" style={{width: `${Math.min(t.performance_score, 100)}%`}}></div>
+                          </div>
+                          <span className="font-bold text-gray-800">{Math.round(t.performance_score)}</span>
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <span className={`px-2 py-1 rounded-md text-xs font-semibold ${
+                          t.rating === "Excellent" ? "bg-green-100 text-green-800" :
+                          t.rating === "Good" ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800"
+                        }`}>
+                          {t.rating}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Section>
     </div>
   );
 }

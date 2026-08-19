@@ -62,10 +62,21 @@ def status_distribution(
 @router.get("/predictions/faults")
 def predict_faults(
     months_back: int = 6,
+    device_model: str = None,
+    location: str = "Colombo",
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
-    return predictive_service.forecast_fault_trends(db, months_back=months_back)
+    return predictive_service.forecast_fault_trends(db, months_back=months_back, device_model=device_model, location=location)
+
+@router.get("/predictions/devices")
+def predict_devices(
+    months_back: int = 6,
+    fault_category: str = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    return predictive_service.forecast_device_trends(db, months_back=months_back, fault_category=fault_category)
 
 
 @router.get("/predictions/inventory")

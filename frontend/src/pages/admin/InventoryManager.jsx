@@ -6,6 +6,7 @@ import ModelSelect from "../../components/ModelSelect";
 import SpecSelect from "../../components/SpecSelect";
 import MultiSelect from "../../components/MultiSelect";
 import SupplierSelect from "../../components/SupplierSelect";
+import AlertCard from "../../components/AlertCard";
 
 function Modal({ open, onClose, title, children }) {
   if (!open) return null;
@@ -238,6 +239,7 @@ export default function InventoryManager() {
   const [lowStock, setLowStock]     = useState([]);
   const categories = Array.from(new Set(items.map((item) => item.category).filter(Boolean))).sort();
   const [loading, setLoading]       = useState(true);
+  const [inventoryForecast, setInventoryForecast] = useState([]);
   const [search, setSearch]         = useState("");
   const [showAddModal, setShowAdd]  = useState(false);
   const [editItem, setEditItem]     = useState(null);
@@ -289,12 +291,14 @@ export default function InventoryManager() {
   const fetchAll = async (q = search) => {
     setLoading(true);
     try {
-      const [itemsRes, lowRes] = await Promise.all([
+      const [itemsRes, lowRes, invRes] = await Promise.all([
         api.get("/inventory/", { params: q ? { search: q } : {} }),
         api.get("/inventory/low-stock"),
+        api.get("/analytics/predictions/inventory"),
       ]);
       setItems(itemsRes.data);
       setLowStock(lowRes.data);
+      setInventoryForecast(invRes.data);
     } finally {
       setLoading(false);
     }
@@ -571,7 +575,24 @@ export default function InventoryManager() {
 
       {activeTab === "catalog" ? (
         <>
-          {/* Low stock banner */}
+          {inventoryForecast && inventoryForecast.filter(i => i.status === "critical" || i.status === "warning").length > 0 && (
+            <section className="mb-6">
+              <h3 className="font-semibold text-gray-700 mb-4 text-sm uppercase tracking-wide">Smart Alerts: Inventory Demand Prediction</h3>
+              <div className="flex flex-col gap-3">
+                {inventoryForecast.filter(i => i.status === "critical" || i.status === "warning").map((inv, idx) => (
+                  <AlertCard
+                    key={idx}
+                    type={inv.status}
+                    title={inv.part_name}
+                    value={`${inv.restock_recommended} needed`}
+                    message={`Predicted demand: ${inv.predicted_demand}. Current stock: ${inv.current_stock}.`}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Low Stock Alerts */}
           {lowStock.length > 0 && (
             <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl px-5 py-3">
               <p className="text-sm text-amber-800 font-medium">
