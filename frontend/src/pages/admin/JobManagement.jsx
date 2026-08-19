@@ -53,7 +53,7 @@ const getTodayDateString = () => {
 const getEmptyForm = () => ({
   customer_id: "", technician_id: "",
   device_brand: "", device_model: "", device_imei: "",
-  fault_category: "screen", fault_description: "",
+  fault_category: "screen", fault_description: "", rework_of_job_id: "",
   estimated_completion_date: getTodayDateString(), estimated_cost: "", investigated: false, notes: "", physical_condition: "",
 });
 
@@ -649,6 +649,7 @@ export default function JobManagement() {
         investigated: form.investigated,
         notes: form.notes || null,
         physical_condition: form.physical_condition || null,
+        rework_of_job_id: form.rework_of_job_id || null,
       };
       const { data } = await api.post("/jobs/", payload);
       
@@ -940,6 +941,13 @@ export default function JobManagement() {
                 <textarea name="fault_description" value={form.fault_description} onChange={handleChange} rows={2}
                   className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   placeholder="Describe the issue in more detail…" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Rework of Job ID (optional)</label>
+                <input name="rework_of_job_id" value={form.rework_of_job_id} onChange={handleChange}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-amber-50 dark:bg-amber-900/10"
+                  placeholder="Paste UUID of original job if this is a rework" />
+                <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">If this device was returned for the same fault, linking the original job will correctly penalize the original technician.</p>
               </div>
               <div className="col-span-2">
                 <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Physical Condition</label>

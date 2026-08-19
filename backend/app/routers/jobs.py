@@ -13,6 +13,8 @@ from app.schemas.job import (
     JobListItem,
     JobStatusUpdate,
     PublicJobResponse,
+    TimerToggleRequest,
+    AutoResumeRequest,
 )
 from app.services import invoice_service, job_parts_service, job_service
 from app.schemas.invoice import JobPartCreate
@@ -39,6 +41,14 @@ def my_jobs(
     current_user: User = Depends(get_current_user),
 ):
     return job_service.list_jobs(db, status=status, technician_id=current_user.id, include_unassigned=True)
+
+
+@router.get("/faults/identified", response_model=list[str])
+def get_identified_faults(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    return job_service.get_all_identified_faults(db)
 
 
 @router.patch("/{job_id}/claim", response_model=JobListItem)
@@ -151,6 +161,26 @@ def assign_technician(
     _=Depends(require_admin),
 ):
     return job_service.assign_technician(job_id, data, db)
+
+
+@router.post("/{job_id}/toggle-timer")
+def toggle_job_timer(
+    job_id: UUID,
+    data: TimerToggleRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return job_service.toggle_timer(job_id, data, current_user, db)
+
+
+@router.post("/{job_id}/auto-resume")
+def auto_resume_job_timer(
+    job_id: UUID,
+    data: AutoResumeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return job_service.auto_resume_timer(job_id, data, current_user, db)
 
 
 # ── Parts used ────────────────────────────────────────────────────────────────

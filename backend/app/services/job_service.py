@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, aliased
 from app.models.customer import Customer
 from app.models.job import Job, JobStatusHistory, JobImage
 from app.models.user import User
-from app.schemas.job import AssignTechnicianRequest, JobCreate, JobStatusUpdate
+from app.schemas.job import AssignTechnicianRequest, JobCreate, JobStatusUpdate, TimerToggleRequest, AutoResumeRequest
 
 
 # ─── helpers ─────────────────────────────────────────────────────────────────
@@ -49,6 +49,12 @@ def _job_dict(job: Job, customer_name=None, customer_phone=None, technician_name
         "physical_condition": job.physical_condition,
         "images": images or [],
         "created_at": job.created_at,
+        "created_at": job.created_at,
+        "rework_of_job_id": job.rework_of_job_id,
+        "active_repair_start_time": job.active_repair_start_time,
+        "total_diagnostic_seconds": job.total_diagnostic_seconds,
+        "total_active_repair_seconds": job.total_active_repair_seconds,
+        "current_timer_mode": job.current_timer_mode,
     }
 
 
@@ -81,6 +87,77 @@ def _query_jobs(db: Session, status: str | None = None, technician_id: UUID | No
 
 
 # ─── public ──────────────────────────────────────────────────────────────────
+
+def toggle_timer(job_id: UUID, data: TimerToggleRequest, current_user: User, db: Session) -> dict:
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+        
+    if job.technician_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to toggle timer for this job")
+        
+    now_time = datetime.now(timezone.utc)
+    requested_mode = data.mode
+
+    if job.active_repair_start_time:
+        # A timer is running. Stop it and record elapsed time.
+        elapsed = (now_time - job.active_repair_start_time.replace(tzinfo=timezone.utc)).total_seconds()
+        
+        if job.current_timer_mode == "diagnostic":
+            job.total_diagnostic_seconds = (job.total_diagnostic_seconds or 0) + int(elapsed)
+        else:
+            job.total_active_repair_seconds = (job.total_active_repair_seconds or 0) + int(elapsed)
+            
+        job.active_repair_start_time = None
+        job.current_timer_mode = None
+        
+        # If the user clicked to switch to the OTHER mode (requested_mode is different than the one that was running)
+        # We start the new mode immediately. If requested_mode is None or same, it's just a pause.
+        if requested_mode and requested_mode != job.current_timer_mode: # wait, current_timer_mode is None now.
+            pass # We will handle starting the new mode below
+            
+    # If we are starting a timer (either because it was paused, or we just switched modes)
+    if requested_mode and not job.active_repair_start_time:
+        job.active_repair_start_time = now_time
+        job.current_timer_mode = requested_mode
+        if job.status == "pending":
+            job.status = "in_progress"
+            
+    db.commit()
+    db.refresh(job)
+    
+    customer = db.query(Customer).filter(Customer.id == job.customer_id).first()
+    tech = db.query(User).filter(User.id == job.technician_id).first()
+    return _job_dict(job, customer.name if customer else None, customer.phone_number if customer else None, tech.name if tech else None)
+
+
+def auto_resume_timer(job_id: UUID, data: AutoResumeRequest, current_user: User, db: Session) -> dict:
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+        
+    if job.technician_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to toggle timer for this job")
+        
+    now_time = datetime.now(timezone.utc)
+    
+    if data.away_seconds > 0:
+        # Cap away seconds to 12 hours max per session to prevent overnight penalties
+        capped_away = min(data.away_seconds, 12 * 3600)
+        job.total_away_seconds = (job.total_away_seconds or 0) + capped_away
+
+    # Start timer
+    job.active_repair_start_time = now_time
+    job.current_timer_mode = data.mode
+    if job.status == "pending":
+        job.status = "in_progress"
+            
+    db.commit()
+    db.refresh(job)
+    
+    customer = db.query(Customer).filter(Customer.id == job.customer_id).first()
+    tech = db.query(User).filter(User.id == job.technician_id).first()
+    return _job_dict(job, customer.name if customer else None, customer.phone_number if customer else None, tech.name if tech else None)
 
 def create_job(data: JobCreate, created_by: User, db: Session, background_tasks: BackgroundTasks = None) -> dict:
     job = Job(
@@ -136,6 +213,11 @@ def list_jobs(db: Session, status: str | None = None, technician_id: UUID | None
         })
         
     return [_job_dict(job, cname, cphone, tname, images_by_job.get(job.id, [])) for job, cname, cphone, tname in rows]
+
+
+def get_all_identified_faults(db: Session) -> list[str]:
+    results = db.query(Job.identified_fault).filter(Job.identified_fault.isnot(None)).distinct().all()
+    return [r[0] for r in results if r[0]]
 
 
 def get_job(job_id: UUID, db: Session) -> dict:
@@ -231,6 +313,20 @@ def update_status(job_id: UUID, data: JobStatusUpdate, changed_by: User, db: Ses
 
     if data.status in ["completed", "failed", "rejected"]:
         job.completed_date = datetime.now(timezone.utc)
+        
+        # Save structured completion data
+        if data.actual_fault is not None:
+            job.actual_fault = data.actual_fault
+        if data.identified_fault is not None:
+            job.identified_fault = data.identified_fault
+        if data.complexity_level is not None:
+            job.complexity_level = data.complexity_level
+        if data.diagnostic_time_mins is not None:
+            job.diagnostic_time_mins = data.diagnostic_time_mins
+        if data.repair_time_mins is not None:
+            job.repair_time_mins = data.repair_time_mins
+        if data.resolution_notes is not None:
+            job.resolution_notes = data.resolution_notes
 
     history = JobStatusHistory(
         job_id=job.id,

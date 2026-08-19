@@ -1,11 +1,14 @@
+import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
 import ThemeToggle from "../components/ThemeToggle";
 import RevertNotifications from "../components/RevertNotifications";
 import DateTimeDisplay from "../components/DateTimeDisplay";
 
 const NAV = [
   { to: "/tech",      label: "My Dashboard", exact: true },
+  { to: "/tech/workspace", label: "Active Workspace" },
   { to: "/tech/jobs", label: "Job Queue" },
   { to: "/tech/donors", label: "Donor Devices" },
 ];
@@ -14,6 +17,20 @@ export default function TechnicianLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [activeJobs, setActiveJobs] = useState([]);
+
+  useEffect(() => {
+    const fetchActiveJobs = () => {
+      if (user?.role === "technician") {
+        api.get("/jobs/mine")
+          .then(res => setActiveJobs(res.data.filter(j => j.status === "in_progress")))
+          .catch(() => {});
+      }
+    };
+    fetchActiveJobs();
+    window.addEventListener("refreshActiveJobs", fetchActiveJobs);
+    return () => window.removeEventListener("refreshActiveJobs", fetchActiveJobs);
+  }, [user]);
 
   const isActive = (item) =>
     item.exact
@@ -34,19 +51,43 @@ export default function TechnicianLayout() {
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Technician Panel</p>
         </div>
 
-        <nav className="flex-1 py-3">
+        <nav className="flex-1 py-3 overflow-y-auto">
           {NAV.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={`flex items-center px-5 py-2.5 text-sm transition-colors border-l-2 ${
-                isActive(item)
-                  ? "border-green-500 bg-green-50 text-green-700 font-medium"
-                  : "border-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 hover:text-gray-900 dark:text-white"
-              }`}
-            >
-              {item.label}
-            </Link>
+            <div key={item.to}>
+              <Link
+                to={item.to}
+                className={`flex items-center px-5 py-2.5 text-sm transition-colors border-l-2 ${
+                  isActive(item) && (!item.exact || location.pathname === item.to)
+                    ? "border-green-500 bg-green-50 text-green-700 font-medium"
+                    : "border-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 hover:text-gray-900 dark:text-white"
+                }`}
+              >
+                {item.label}
+              </Link>
+              {item.to === "/tech/workspace" && isActive(item) && activeJobs.length > 0 && (
+                <div className="bg-gray-50 dark:bg-gray-900/30 py-2 border-y border-gray-100 dark:border-gray-800">
+                  {activeJobs.map(job => {
+                    const isSelected = new URLSearchParams(location.search).get("job") === String(job.id);
+                    return (
+                      <Link
+                        key={job.id}
+                        to={`/tech/workspace?job=${job.id}`}
+                        className={`block pl-9 pr-5 py-2 text-xs transition-colors border-l-2 ${
+                          isSelected
+                            ? "border-green-400 text-green-700 font-bold dark:text-green-400 bg-green-50/50 dark:bg-green-900/10"
+                            : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono">{job.job_id}</span>
+                          <span className="truncate ml-2 opacity-80">{job.device_model}</span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           ))}
         </nav>
 

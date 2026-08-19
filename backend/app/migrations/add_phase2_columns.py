@@ -1,45 +1,49 @@
-"""
-Migration: Add Phase 2 columns to salvage_assessments table.
-Run this script once to add the new columns.
-
-Usage:
-    docker compose exec backend python -m app.migrations.add_phase2_columns
-"""
 import os
 import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+from sqlalchemy import create_engine, text
 
-from sqlalchemy import text
-from app.core.database import engine
+# Add the parent directory to sys.path so we can import app modules
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
+from app.core.config import settings
 
-def migrate():
+def run():
+    print(f"Connecting to: {settings.DATABASE_URL}")
+    engine = create_engine(str(settings.DATABASE_URL))
+    
+    queries = [
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS actual_fault VARCHAR(100);",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS identified_fault VARCHAR(100);",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS diagnostic_time_mins INTEGER;",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS repair_time_mins INTEGER;",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS resolution_notes TEXT;"
+    ]
+    
     with engine.connect() as conn:
-        # Check if columns already exist before adding
-        result = conn.execute(text(
-            "SELECT column_name FROM information_schema.columns "
-            "WHERE table_name = 'salvage_assessments'"
-        ))
-        existing_columns = {row[0] for row in result}
+        try:
+            conn.execute(text("CREATE TYPE complexity_level AS ENUM ('low', 'medium', 'high');"))
+            conn.commit()
+        except Exception:
+            conn.rollback() # Type might already exist
+            
+        try:
+            conn.execute(text("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS complexity_level complexity_level;"))
+            conn.commit()
+            print("Added complexity_level")
+        except Exception as e:
+            conn.rollback()
+            print(f"Error adding complexity_level: {e}")
+            
+        for q in queries:
+            try:
+                conn.execute(text(q))
+                conn.commit()
+                print(f"Executed: {q}")
+            except Exception as e:
+                conn.rollback()
+                print(f"Error: {e}")
+                
+    print("Phase 2 Migration Complete")
 
-        columns_to_add = {
-            "actual_refurbish_cost": "NUMERIC(10, 2)",
-            "actual_resale_price": "NUMERIC(10, 2)",
-            "actual_parts_revenue": "NUMERIC(10, 2)",
-            "profit_loss": "NUMERIC(10, 2)",
-            "ai_accuracy_score": "FLOAT"
-        }
-
-        for col_name, col_type in columns_to_add.items():
-            if col_name not in existing_columns:
-                conn.execute(text(f"ALTER TABLE salvage_assessments ADD COLUMN {col_name} {col_type}"))
-                print(f"✅ Added '{col_name}' column")
-            else:
-                print(f"⏭️  '{col_name}' column already exists")
-
-        conn.commit()
-        print("\n🎉 Phase 2 Migration complete!")
-
-
-if __name__ == "__main__":
-    migrate()
+if __name__ == '__main__':
+    run()

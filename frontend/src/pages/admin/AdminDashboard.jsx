@@ -4,21 +4,15 @@ import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import AlertCard from "../../components/AlertCard";
 
+
 function StatCard({ label, value, sub, color, subClassName = "text-gray-400" }) {
   return (
-<<<<<<< Updated upstream
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-      <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
-      <p className={`text-3xl font-bold mt-1 ${color}`}>{value}</p>
-      {sub && <p className={`text-xs mt-1.5 ${subClassName}`}>{sub}</p>}
-=======
-    <div className="bg-white rounded-xl shadow-sm px-5 py-4 flex flex-col justify-center min-h-[100px]">
-      <p className="text-sm font-medium text-gray-500">{label}</p>
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm px-5 py-4 flex flex-col justify-center min-h-[100px]">
+      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</p>
       <div className="mt-1 flex items-baseline gap-2">
-        <span className={`text-2xl font-bold ${color}`}>{value}</span>
+        <span className={`text-3xl font-bold ${color}`}>{value}</span>
       </div>
-      {sub && <p className={`text-xs mt-1 ${subClassName} line-clamp-1`} title={typeof sub === 'string' ? sub : ''}>{sub}</p>}
->>>>>>> Stashed changes
+      {sub && <p className={`text-xs mt-1.5 ${subClassName} line-clamp-1`} title={typeof sub === 'string' ? sub : ''}>{sub}</p>}
     </div>
   );
 }
@@ -53,11 +47,8 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({ activeJobs: "…", pendingPickup: "…", lowStock: "…", revenue: "…" });
   const [recentJobs, setRecentJobs] = useState([]);
   const [lowStockItems, setLowStockItems] = useState([]);
-<<<<<<< Updated upstream
   const [adminTasks, setAdminTasks] = useState([]);
   const [showTasksModal, setShowTasksModal] = useState(false);
-=======
->>>>>>> Stashed changes
   const [currentLowStockIdx, setCurrentLowStockIdx] = useState(0);
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [now, setNow] = useState(new Date());
@@ -84,7 +75,8 @@ export default function AdminDashboard() {
         api.get("/jobs/", { params: { status: "ready_for_pickup" } }),
         api.get("/inventory/low-stock"),
         api.get("/jobs/"),
-        api.get("/analytics/summary")
+        api.get("/analytics/summary"),
+        api.get("/tasks/")
       ]);
 
       let lsCount = "—";
@@ -104,28 +96,32 @@ export default function AdminDashboard() {
       if (recentRes.status === "fulfilled") {
         setRecentJobs(recentRes.value.data.slice(0, 6));
       }
+      if (tasksRes && tasksRes.status === "fulfilled") {
+        setAdminTasks(tasksRes.value.data);
+      }
     } finally {
       setLoadingJobs(false);
     }
   };
 
   useEffect(() => { 
-<<<<<<< Updated upstream
     fetchStats(); 
     const interval = setInterval(fetchStats, 15000); // Poll every 15 seconds
     return () => clearInterval(interval);
   }, []);
   
   const handleCompleteTask = async (taskId) => {
-=======
-    fetchStats();
-    const interval = setInterval(fetchStats, 15000);
-    return () => clearInterval(interval);
-  }, []);
+    try {
+        await api.patch(`/tasks/${taskId}/complete`);
+        setAdminTasks(prev => prev.filter(t => t.id !== taskId));
+        if (adminTasks.length <= 1) setShowTasksModal(false);
+    } catch (err) {
+        console.error("Failed to complete task:", err);
+    }
+  };
 
   useEffect(() => {
     const fetchForecast = async () => {
->>>>>>> Stashed changes
       try {
         const { data } = await api.get("/analytics/predictions/inventory");
         setInventoryForecast(data);
@@ -155,7 +151,6 @@ export default function AdminDashboard() {
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Overview of system operations and statistics</p>
       </div>
       
-<<<<<<< Updated upstream
       {/* Admin Pending Call Tasks Alert - Compact Banner */}
       {adminTasks.length > 0 && (
           <div className="mb-8 bg-red-50 border border-red-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -198,9 +193,6 @@ export default function AdminDashboard() {
               )}
           </div>
       </Modal>
-      
-=======
->>>>>>> Stashed changes
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
         <StatCard label="Active Jobs"       value={stats.activeJobs}    sub="Currently under repair"        color="text-blue-600" />
         <StatCard label="Pending Pickup"    value={stats.pendingPickup} sub="Repairs ready to collect"      color="text-amber-600" />

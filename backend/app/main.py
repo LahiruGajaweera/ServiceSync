@@ -65,6 +65,11 @@ def _run_migrations() -> None:
         "ALTER TABLE donor_devices ADD COLUMN IF NOT EXISTS source_description VARCHAR(255)",
         "ALTER TABLE donor_devices ADD COLUMN IF NOT EXISTS assigned_technician_id UUID REFERENCES users(id)",
         "ALTER TABLE donor_parts ADD COLUMN IF NOT EXISTS approval_status VARCHAR(20) NOT NULL DEFAULT 'approved'",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS actual_fault VARCHAR(100)",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS identified_fault VARCHAR(100)",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS diagnostic_time_mins INTEGER",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS repair_time_mins INTEGER",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS resolution_notes TEXT",
     ]
     
     with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:

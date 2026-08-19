@@ -25,6 +25,15 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
   const [estimatedCost, setEstimatedCost] = useState("");
   const [savingStatus, setSavingStatus] = useState(false);
   
+  // Structured Completion State
+  const [actualFault, setActualFault] = useState("");
+  const [identifiedFault, setIdentifiedFault] = useState("");
+  const [pastFaults, setPastFaults] = useState([]);
+  const [complexity, setComplexity] = useState("medium");
+  const [diagnosticTime, setDiagnosticTime] = useState("");
+  const [repairTime, setRepairTime] = useState("");
+  const [resolutionNotes, setResolutionNotes] = useState("");
+  
   // Revert state
   const [revertMode, setRevertMode] = useState(false);
   const [revertTarget, setRevertTarget] = useState("pending");
@@ -36,8 +45,14 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
     if (!job) return;
     setLoading(true);
     try {
-      const { data } = await api.get(`/jobs/${job.id}/parts`);
-      setParts(data);
+      const [partsRes, faultsRes] = await Promise.all([
+        api.get(`/jobs/${job.id}/parts`),
+        api.get('/jobs/faults/identified').catch(() => ({ data: [] }))
+      ]);
+      setParts(partsRes.data);
+      if (faultsRes.data) {
+        setPastFaults(faultsRes.data);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -57,6 +72,13 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
       setNewStatus(nextStatus);
       setStatusNotes("");
       setEstimatedCost(job.estimated_cost || "");
+      
+      setActualFault(job.fault_category || "");
+      setIdentifiedFault(job.identified_fault || "");
+      setComplexity("medium");
+      setDiagnosticTime("");
+      setRepairTime("");
+      setResolutionNotes("");
     }
   }, [open, job]);
 
@@ -104,8 +126,21 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
         }
 
         const payload = { status: newStatus, notes: statusNotes };
-        if (newStatus === "completed" && estimatedCost !== "") {
-          payload.estimated_cost = parseFloat(estimatedCost);
+        if (newStatus === "completed") {
+          if (estimatedCost !== "") payload.estimated_cost = parseFloat(estimatedCost);
+          
+          if (!diagnosticTime || !repairTime || !resolutionNotes) {
+            alert("Diagnostic Time, Repair Time, and Action Taken are required to complete a job.");
+            setSavingStatus(false);
+            return;
+          }
+          
+          payload.actual_fault = actualFault;
+          payload.identified_fault = identifiedFault;
+          payload.complexity_level = complexity;
+          payload.diagnostic_time_mins = parseInt(diagnosticTime, 10);
+          payload.repair_time_mins = parseInt(repairTime, 10);
+          payload.resolution_notes = resolutionNotes;
         }
         await api.patch(`/jobs/${job.id}/status`, payload);
       }
@@ -309,19 +344,84 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
                   )}
                 </div>
                 {newStatus === "completed" && (
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Estimated Cost Quote</label>
-                    <input type="number" min="0" step="0.01" value={estimatedCost} onChange={(e) => setEstimatedCost(e.target.value)}
-                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                      placeholder="Quote (Optional)" />
+                  <div className="space-y-3 bg-blue-50/50 p-4 rounded-xl border border-blue-100 dark:bg-blue-900/10 dark:border-blue-800">
+                    <h5 className="text-xs font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wide">Completion Report</h5>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">Actual Fault Category</label>
+                        <select value={actualFault} onChange={(e) => setActualFault(e.target.value)}
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          <option value="screen">Screen</option>
+                          <option value="battery">Battery</option>
+                          <option value="charging_port">Charging Port</option>
+                          <option value="camera">Camera</option>
+                          <option value="speaker">Speaker</option>
+                          <option value="software">Software</option>
+                          <option value="water_damage">Water Damage</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">Fault Identified *</label>
+                        <input 
+                          type="text" 
+                          list="past-faults-list"
+                          value={identifiedFault} 
+                          onChange={(e) => setIdentifiedFault(e.target.value)}
+                          required
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="e.g. Display Connector Damage"
+                        />
+                        <datalist id="past-faults-list">
+                          {pastFaults.map((f, idx) => (
+                            <option key={idx} value={f} />
+                          ))}
+                        </datalist>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">Job Complexity</label>
+                      <select value={complexity} onChange={(e) => setComplexity(e.target.value)}
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="low">Low (Basic replacement, quick fix)</option>
+                        <option value="medium">Medium (Standard repair)</option>
+                        <option value="high">High (Micro-soldering, board level, water damage)</option>
+                      </select>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">Diagnostic Time (mins) *</label>
+                        <input type="number" min="0" value={diagnosticTime} onChange={(e) => setDiagnosticTime(e.target.value)} required
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. 15" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">Repair Time (mins) *</label>
+                        <input type="number" min="0" value={repairTime} onChange={(e) => setRepairTime(e.target.value)} required
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. 45" />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">Resolution / Action Taken *</label>
+                      <textarea value={resolutionNotes} onChange={(e) => setResolutionNotes(e.target.value)} rows={3} required
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                        placeholder="Explain exactly what you did to fix the device..." />
+                    </div>
+
                   </div>
                 )}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Notes (optional)</label>
-                  <textarea value={statusNotes} onChange={(e) => setStatusNotes(e.target.value)} rows={2}
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
-                    placeholder="What did you do?" />
-                </div>
+                
+                {newStatus !== "completed" && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Notes (optional)</label>
+                    <textarea value={statusNotes} onChange={(e) => setStatusNotes(e.target.value)} rows={2}
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                      placeholder="What did you do?" />
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <button type="submit" disabled={savingStatus}
                     className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white py-2 rounded-lg text-sm font-semibold">

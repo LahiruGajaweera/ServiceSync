@@ -184,8 +184,17 @@ def calculate_technician_scores(db: Session) -> list[dict[str, Any]]:
         db.query(
             Job.technician_id,
             Job.fault_category,
+            Job.actual_fault,
             Job.received_date,
-            Job.completed_date
+            Job.completed_date,
+            Job.diagnostic_time_mins,
+            Job.repair_time_mins,
+            Job.complexity_level,
+            Job.device_model,
+            Job.total_diagnostic_seconds,
+            Job.total_active_repair_seconds,
+            Job.total_away_seconds,
+            Job.id
         )
         .filter(Job.status.in_(["completed", "ready_for_pickup", "delivered"]))
         .filter(Job.technician_id.isnot(None))
@@ -193,17 +202,54 @@ def calculate_technician_scores(db: Session) -> list[dict[str, Any]]:
         .all()
     )
 
+    # Fetch reworks to penalize original technicians
+    reworks = (
+        db.query(Job.rework_of_job_id)
+        .filter(Job.rework_of_job_id.isnot(None))
+        .all()
+    )
+    reworked_job_ids = {r[0] for r in reworks}
+
     if not completed_jobs or not ML_AVAILABLE:
         return []
 
-    df = pd.DataFrame(completed_jobs, columns=['technician_id', 'fault_category', 'received', 'completed'])
-    df['duration_hours'] = (df['completed'] - df['received']).dt.total_seconds() / 3600.0
+    df = pd.DataFrame(completed_jobs, columns=['technician_id', 'fault_category', 'actual_fault', 'received', 'completed', 'diag_mins', 'rep_mins', 'complexity', 'device_model', 'total_diagnostic_seconds', 'total_active_repair_seconds', 'total_away_seconds', 'job_id'])
+    
+    # Calculate duration (if active timer used, prioritize it; else fallback)
+    def calc_duration(row):
+        active_secs = (row['total_diagnostic_seconds'] or 0) + (row['total_active_repair_seconds'] or 0)
+        away_secs = (row['total_away_seconds'] or 0)
+        # Apply 50% penalty for away time (it adds to duration, making them look slower)
+        total_seconds = active_secs + (away_secs * 0.5)
+        
+        if active_secs > 0:
+            return total_seconds / 3600.0
+        if pd.notna(row['diag_mins']) and pd.notna(row['rep_mins']):
+            return (row['diag_mins'] + row['rep_mins']) / 60.0
+        return (row['completed'] - row['received']).total_seconds() / 3600.0
+
+    df['duration_hours'] = df.apply(calc_duration, axis=1)
+    
+    # Apply complexity multiplier
+    def get_multiplier(comp):
+        if comp == 'high': return 0.5
+        if comp == 'medium': return 0.8
+        return 1.0
+
+    df['duration_hours'] = df['duration_hours'] * df['complexity'].apply(get_multiplier)
     
     df = df[df['duration_hours'] > 0]
     if df.empty:
         return []
 
-    category_baselines = df.groupby('fault_category')['duration_hours'].mean().to_dict()
+    # Dynamic Baselines by Model + Fault
+    df['effective_fault'] = df['actual_fault'].fillna(df['fault_category'])
+    df['baseline_key'] = df['device_model'] + "_" + df['effective_fault']
+    
+    # Calculate averages
+    general_baselines = df.groupby('effective_fault')['duration_hours'].mean().to_dict()
+    specific_baselines = df.groupby('baseline_key')['duration_hours'].mean().to_dict()
+    specific_counts = df['baseline_key'].value_counts()
 
     scores = []
     for tech_id, group in df.groupby('technician_id'):
@@ -212,14 +258,27 @@ def calculate_technician_scores(db: Session) -> list[dict[str, Any]]:
             continue
             
         efficiency_sum = 0
+        rework_penalty = 0
         for _, row in group.iterrows():
-            baseline = category_baselines.get(row['fault_category'], 24.0)
+            key = row['baseline_key']
+            if specific_counts.get(key, 0) >= 3:
+                baseline = specific_baselines.get(key, 24.0)
+            else:
+                baseline = general_baselines.get(row['effective_fault'], 24.0)
+                
             efficiency = baseline / row['duration_hours'] if row['duration_hours'] > 0 else 1
             efficiency = min(max(efficiency, 0.5), 1.5)
             efficiency_sum += efficiency
             
+            # Check if this job resulted in a rework later
+            if row['job_id'] in reworked_job_ids:
+                rework_penalty += 15  # -15 penalty per rework
+            
         avg_efficiency = efficiency_sum / total_jobs
         score = min(round((avg_efficiency / 1.0) * 80), 100)
+        
+        # Apply rework penalty
+        score = max(score - rework_penalty, 0)
         
         tech = db.query(User).filter(User.id == tech_id).first()
         if tech:
