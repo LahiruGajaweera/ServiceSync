@@ -73,10 +73,6 @@ export default function ProfilePage() {
       setOtpId(res.data.otp_id);
       setMaskedDest(res.data.destination_masked);
       setStep(2);
-      
-      if (res.data.dev_otp) {
-        setOtpCode(res.data.dev_otp);
-      }
     } catch (err) {
       setStatus({ type: 'error', message: err.response?.data?.detail || 'Failed to send verification code.' });
     } finally {

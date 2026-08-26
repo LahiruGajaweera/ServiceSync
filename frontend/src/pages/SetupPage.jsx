@@ -221,13 +221,6 @@ export default function SetupPage() {
                 We sent a 6-digit code to <strong className="text-gray-700 dark:text-gray-200">{otpInfo?.destination_masked}</strong>.
               </p>
 
-              {otpInfo?.dev_otp && (
-                <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm">
-                  <strong>Dev mode</strong> (no SMS/email provider configured). Your code is{" "}
-                  <span className="font-mono font-bold tracking-widest">{otpInfo.dev_otp}</span>.
-                </div>
-              )}
-
               <form onSubmit={handleVerify} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">6-Digit Code</label>
