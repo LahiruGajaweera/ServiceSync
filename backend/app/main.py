@@ -71,6 +71,14 @@ def _run_migrations() -> None:
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS diagnostic_time_mins INTEGER",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS repair_time_mins INTEGER",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS resolution_notes TEXT",
+        
+        # QC Checklist
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_mic_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_camera_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_touch_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_biometrics_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_wifi_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_charging_tested BOOLEAN NOT NULL DEFAULT FALSE",
     ]
     
     with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:

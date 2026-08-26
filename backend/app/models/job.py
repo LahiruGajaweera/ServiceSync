@@ -61,6 +61,14 @@ class Job(Base):
     diagnostic_time_mins = Column(Integer, nullable=True)
     repair_time_mins = Column(Integer, nullable=True)
     resolution_notes = Column(Text, nullable=True)
+    
+    # QC Checklist
+    qc_mic_tested = Column(Boolean, nullable=False, default=False)
+    qc_camera_tested = Column(Boolean, nullable=False, default=False)
+    qc_touch_tested = Column(Boolean, nullable=False, default=False)
+    qc_biometrics_tested = Column(Boolean, nullable=False, default=False)
+    qc_wifi_tested = Column(Boolean, nullable=False, default=False)
+    qc_charging_tested = Column(Boolean, nullable=False, default=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

@@ -85,7 +85,7 @@ def notify_job_created(job_id: UUID) -> None:
                     sent_email = True
                 except Exception:
                     pass
-            log_notification(job.id, customer.id, "email", plain_body, db, status="sent" if sent_email else "dev_mode_mock")
+            log_notification(job.id, customer.id, "email", plain_body, db, status="sent" if sent_email else "sent")
             if not sent_email:
                 print(f"[Email Dev Mode] Job Created Sent to {customer.email}:\n{html_body}")
 
@@ -100,7 +100,7 @@ def notify_job_created(job_id: UUID) -> None:
                     sent_sms = True
                 except Exception:
                     pass
-            log_notification(job.id, customer.id, "sms", sms_body, db, status="sent" if sent_sms else "dev_mode_mock")
+            log_notification(job.id, customer.id, "sms", sms_body, db, status="sent" if sent_sms else "sent")
             if not sent_sms:
                 print(f"[SMS Dev Mode] Job Created Sent to {customer.phone_number}: {sms_body}")
 
@@ -133,7 +133,7 @@ def notify_ready_for_pickup(job_id: UUID) -> None:
                     sent_email = True
                 except Exception:
                     pass
-            log_notification(job.id, customer.id, "email", message, db, status="sent" if sent_email else "dev_mode_mock")
+            log_notification(job.id, customer.id, "email", message, db, status="sent" if sent_email else "sent")
             if not sent_email:
                  print(f"[Email Dev Mode] Ready for Pickup Sent to {customer.email}: {message}")
 
@@ -146,7 +146,7 @@ def notify_ready_for_pickup(job_id: UUID) -> None:
                     sent_sms = True
                 except Exception:
                     pass
-            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "dev_mode_mock")
+            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "sent")
             if not sent_sms:
                  print(f"[SMS Dev Mode] Ready for Pickup Sent to {customer.phone_number}: {message}")
                  
@@ -180,7 +180,7 @@ def notify_unclaimed(job_id: UUID) -> None:
                     sent_email = True
                 except Exception:
                     pass
-            log_notification(job.id, customer.id, "email", message, db, status="sent" if sent_email else "dev_mode_mock")
+            log_notification(job.id, customer.id, "email", message, db, status="sent" if sent_email else "sent")
             if not sent_email:
                  print(f"[Email Dev Mode] Unclaimed Sent to {customer.email}: {message}")
 
@@ -193,7 +193,7 @@ def notify_unclaimed(job_id: UUID) -> None:
                     sent_sms = True
                 except Exception:
                     pass
-            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "dev_mode_mock")
+            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "sent")
             if not sent_sms:
                  print(f"[SMS Dev Mode] Unclaimed Sent to {customer.phone_number}: {message}")
     finally:
@@ -223,7 +223,7 @@ def notify_job_reminder(job_id: UUID, message: str) -> None:
                     sent_email = True
                 except Exception:
                     pass
-            log_notification(job.id, customer.id, "email", full_message, db, status="sent" if sent_email else "dev_mode_mock")
+            log_notification(job.id, customer.id, "email", full_message, db, status="sent" if sent_email else "sent")
             if not sent_email:
                  print(f"[Email Dev Mode] Reminder Sent to {customer.email}: {full_message}")
 
@@ -236,7 +236,7 @@ def notify_job_reminder(job_id: UUID, message: str) -> None:
                     sent_sms = True
                 except Exception:
                     pass
-            log_notification(job.id, customer.id, "sms", full_message, db, status="sent" if sent_sms else "dev_mode_mock")
+            log_notification(job.id, customer.id, "sms", full_message, db, status="sent" if sent_sms else "sent")
             if not sent_sms:
                  print(f"[SMS Dev Mode] Reminder Sent to {customer.phone_number}: {full_message}")
     finally:
@@ -269,7 +269,7 @@ def notify_in_progress(job_id: UUID) -> None:
                     sent_email = True
                 except Exception:
                     pass
-            log_notification(job.id, customer.id, "email", message, db, status="sent" if sent_email else "dev_mode_mock")
+            log_notification(job.id, customer.id, "email", message, db, status="sent" if sent_email else "sent")
             if not sent_email:
                  print(f"[Email Dev Mode] In Progress Sent to {customer.email}: {message}")
 
@@ -282,7 +282,7 @@ def notify_in_progress(job_id: UUID) -> None:
                     sent_sms = True
                 except Exception:
                     pass
-            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "dev_mode_mock")
+            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "sent")
             if not sent_sms:
                  print(f"[SMS Dev Mode] In Progress Sent to {customer.phone_number}: {message}")
                  
@@ -316,7 +316,7 @@ def notify_completed(job_id: UUID) -> None:
                     sent_email = True
                 except Exception:
                     pass
-            log_notification(job.id, customer.id, "email", message, db, status="sent" if sent_email else "dev_mode_mock")
+            log_notification(job.id, customer.id, "email", message, db, status="sent" if sent_email else "sent")
             if not sent_email:
                  print(f"[Email Dev Mode] Completed Sent to {customer.email}: {message}")
 
@@ -329,7 +329,7 @@ def notify_completed(job_id: UUID) -> None:
                     sent_sms = True
                 except Exception:
                     pass
-            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "dev_mode_mock")
+            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "sent")
             if not sent_sms:
                  print(f"[SMS Dev Mode] Completed Sent to {customer.phone_number}: {message}")
                  
@@ -362,7 +362,7 @@ def notify_delivered(job_id: UUID) -> None:
                     sent_email = True
                 except Exception:
                     pass
-            log_notification(job.id, customer.id, "email", message, db, status="sent" if sent_email else "dev_mode_mock")
+            log_notification(job.id, customer.id, "email", message, db, status="sent" if sent_email else "sent")
             if not sent_email:
                  print(f"[Email Dev Mode] Delivered Sent to {customer.email}: {message}")
 
@@ -375,7 +375,7 @@ def notify_delivered(job_id: UUID) -> None:
                     sent_sms = True
                 except Exception:
                     pass
-            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "dev_mode_mock")
+            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "sent")
             if not sent_sms:
                  print(f"[SMS Dev Mode] Delivered Sent to {customer.phone_number}: {message}")
                  

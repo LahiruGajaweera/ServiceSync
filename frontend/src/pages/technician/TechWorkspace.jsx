@@ -19,12 +19,12 @@ export default function TechWorkspace() {
   const fetchMyJobs = async () => {
     try {
       const { data } = await api.get("/jobs/mine");
-      const inProgress = data.filter((j) => j.technician_id === user?.id && j.status === "in_progress");
-      setJobs(inProgress);
+      const activeJobs = data.filter((j) => j.technician_id === user?.id && ["pending", "in_progress"].includes(j.status));
+      setJobs(activeJobs);
       
       const jobIdParam = searchParams.get("job");
-      if (inProgress.length > 0 && !jobIdParam) {
-        setSearchParams({ job: inProgress[0].id });
+      if (activeJobs.length > 0 && !jobIdParam) {
+        setSearchParams({ job: activeJobs[0].id });
       }
       
       // Notify sidebar to refresh active jobs
@@ -57,7 +57,7 @@ export default function TechWorkspace() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
             <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">No Active Jobs</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">You don't have any jobs currently marked as "In Progress".</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">You don't have any jobs currently marked as "Pending" or "In Progress".</p>
             <button 
               onClick={() => navigate("/tech")}
               className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors"
@@ -239,6 +239,14 @@ function WorkspaceJobPanel({ job, onRefresh, onOpenPartLog }) {
   const [revertReason, setRevertReason] = useState("");
   const [savedLaborCost, setSavedLaborCost] = useState(0);
 
+  // QC Checklist State
+  const [qcMicTested, setQcMicTested] = useState(false);
+  const [qcCameraTested, setQcCameraTested] = useState(false);
+  const [qcTouchTested, setQcTouchTested] = useState(false);
+  const [qcBiometricsTested, setQcBiometricsTested] = useState(false);
+  const [qcWifiTested, setQcWifiTested] = useState(false);
+  const [qcChargingTested, setQcChargingTested] = useState(false);
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -337,6 +345,13 @@ function WorkspaceJobPanel({ job, onRefresh, onOpenPartLog }) {
       setRepairTime(job.repair_time_mins || (repMins > 0 ? repMins : ""));
       
       setResolutionNotes(job.resolution_notes || "");
+      
+      setQcMicTested(false);
+      setQcCameraTested(false);
+      setQcTouchTested(false);
+      setQcBiometricsTested(false);
+      setQcWifiTested(false);
+      setQcChargingTested(false);
     }
   }, [job]);
 
@@ -378,6 +393,11 @@ function WorkspaceJobPanel({ job, onRefresh, onOpenPartLog }) {
             setSavingStatus(false);
             return;
           }
+          if (!qcMicTested || !qcCameraTested || !qcTouchTested || !qcBiometricsTested || !qcWifiTested || !qcChargingTested) {
+            alert("Please complete the Quality Control checklist.");
+            setSavingStatus(false);
+            return;
+          }
           
           payload.actual_fault = actualFault;
           payload.identified_fault = identifiedFault;
@@ -385,6 +405,13 @@ function WorkspaceJobPanel({ job, onRefresh, onOpenPartLog }) {
           payload.diagnostic_time_mins = parseInt(diagnosticTime, 10);
           payload.repair_time_mins = parseInt(repairTime, 10);
           payload.resolution_notes = resolutionNotes;
+          
+          payload.qc_mic_tested = qcMicTested;
+          payload.qc_camera_tested = qcCameraTested;
+          payload.qc_touch_tested = qcTouchTested;
+          payload.qc_biometrics_tested = qcBiometricsTested;
+          payload.qc_wifi_tested = qcWifiTested;
+          payload.qc_charging_tested = qcChargingTested;
         }
         await api.patch(`/jobs/${job.id}/status`, payload);
       }
@@ -679,6 +706,38 @@ function WorkspaceJobPanel({ job, onRefresh, onOpenPartLog }) {
                         className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                         placeholder="Explain exactly what you did to fix the device..." />
                     </div>
+
+                    <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-800">
+                      <h5 className="text-[11px] font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wide mb-3">Quality Control (QC) Checklist *</h5>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mb-3">You must test and verify all the following before completing this job.</p>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
+                          <input type="checkbox" checked={qcMicTested} onChange={(e) => setQcMicTested(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" />
+                          <span>Mic & Speaker Tested</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
+                          <input type="checkbox" checked={qcCameraTested} onChange={(e) => setQcCameraTested(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" />
+                          <span>Cameras (Front & Rear) Tested</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
+                          <input type="checkbox" checked={qcTouchTested} onChange={(e) => setQcTouchTested(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" />
+                          <span>Touch & Display Tested</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
+                          <input type="checkbox" checked={qcBiometricsTested} onChange={(e) => setQcBiometricsTested(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" />
+                          <span>FaceID / Fingerprint Tested</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
+                          <input type="checkbox" checked={qcWifiTested} onChange={(e) => setQcWifiTested(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" />
+                          <span>Wi-Fi & Bluetooth Tested</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
+                          <input type="checkbox" checked={qcChargingTested} onChange={(e) => setQcChargingTested(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" />
+                          <span>Charging Port Tested</span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 )}
                 
@@ -691,8 +750,8 @@ function WorkspaceJobPanel({ job, onRefresh, onOpenPartLog }) {
                   </div>
                 )}
                 <div className="pt-2 max-w-4xl">
-                  <button type="submit" disabled={savingStatus}
-                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">
+                  <button type="submit" disabled={savingStatus || (newStatus === "completed" && (!qcMicTested || !qcCameraTested || !qcTouchTested || !qcBiometricsTested || !qcWifiTested || !qcChargingTested))}
+                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">
                     {savingStatus ? "Saving…" : "Update Job"}
                   </button>
                 </div>
