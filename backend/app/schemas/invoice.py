@@ -14,6 +14,7 @@ class JobPartCreate(BaseModel):
     quantity: int = 1
     unit_cost: Decimal | None = None  # auto-filled from batch for inventory parts
     override_price: Decimal | None = None
+    serial_number: str | None = None
 
 
 class ConsumeByBatchRequest(BaseModel):
@@ -23,6 +24,7 @@ class ConsumeByBatchRequest(BaseModel):
     job_id: UUID
     technician_id: UUID | None = None
     quantity: int = 1
+    serial_number: str | None = None
 
 
 class JobPartResponse(BaseModel):

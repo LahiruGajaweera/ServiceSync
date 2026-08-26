@@ -185,3 +185,19 @@ def get_device_models(db: Session) -> list[str]:
     """List of distinct device models in jobs."""
     rows = db.query(Job.device_model).distinct().filter(Job.device_model.is_not(None)).order_by(Job.device_model).all()
     return [r[0] for r in rows]
+
+def get_device_brands_and_models(db: Session) -> dict:
+    """Dictionary mapping brands to lists of their models."""
+    rows = (
+        db.query(Job.device_brand, Job.device_model)
+        .distinct()
+        .filter(Job.device_brand.is_not(None), Job.device_model.is_not(None))
+        .order_by(Job.device_brand, Job.device_model)
+        .all()
+    )
+    result = {}
+    for brand, model in rows:
+        if brand not in result:
+            result[brand] = []
+        result[brand].append(model)
+    return result

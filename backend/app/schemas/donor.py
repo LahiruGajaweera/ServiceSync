@@ -49,7 +49,12 @@ class DonorPartResponse(BaseModel):
     condition: str
     is_available: bool
     approval_status: str
+    sku: str | None = None
+    estimated_value: float | None = None
     extracted_date: datetime | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+class DonorPartApprove(BaseModel):
+    estimated_value: float

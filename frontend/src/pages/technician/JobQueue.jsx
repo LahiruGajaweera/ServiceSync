@@ -26,7 +26,7 @@ function Modal({ open, onClose, title, children }) {
   );
 }
 
-export default function JobQueue() {
+export default function JobQueue({ mode = "customer" }) {
   const [jobs, setJobs]             = useState([]);
   const [loading, setLoading]       = useState(true);
   const [statusFilter, setFilter]   = useState("");
@@ -44,18 +44,24 @@ export default function JobQueue() {
   const [partInfo, setPartInfo]     = useState("");
   const [savingPart, setSavingPart] = useState(false);
   const [partLoggedCounter, setPartLoggedCounter] = useState(0);
+  const [partSource, setPartSource] = useState("inventory");
+  const [donorPartId, setDonorPartId] = useState(null);
 
   const fetchJobs = async (status = statusFilter) => {
     setLoading(true);
     try {
       const { data } = await api.get("/jobs/mine", { params: status ? { status } : {} });
-      setJobs(data);
+      const filtered = data.filter(job => {
+        const isRefurbish = job.admin_alert && job.admin_alert.includes("Approved for Refurbishment");
+        return mode === "refurbish" ? isRefurbish : !isRefurbish;
+      });
+      setJobs(filtered);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchJobs(""); }, []);
+  useEffect(() => { fetchJobs(statusFilter); }, [mode]);
 
   const handleTabChange = (s) => { setFilter(s); fetchJobs(s); };
 
@@ -82,16 +88,23 @@ export default function JobQueue() {
   };
 
   const handleScan = async (code) => {
-    setPartError(""); setPartInfo("");
+    setPartError(""); setPartInfo(""); setPartSource("inventory"); setDonorPartId(null); setPartItemId(""); setPartBatch(null);
     try {
       const { data } = await api.get(`/inventory/scan/${encodeURIComponent(code)}`);
-      setPartItemId(data.item.id);
-      if (data.batch) {
-        setPartBatch({ id: data.batch.id, code: data.batch.batch_code });
-        setPartInfo(`Matched ${data.item.name} · batch ${data.batch.batch_code} (${data.batch.quantity_remaining} left)`);
+      if (data.donor_part) {
+        setPartSource("donor");
+        setDonorPartId(data.donor_part.id);
+        setPartInfo(`Matched Donor Part: ${data.donor_part.part_name} - Rs. ${data.donor_part.estimated_value.toFixed(2)}`);
       } else {
-        setPartBatch(null);
-        setPartInfo(`Matched ${data.item.name} · ${data.item.quantity} in stock (FIFO)`);
+        setPartSource("inventory");
+        setPartItemId(data.item.id);
+        if (data.batch) {
+          setPartBatch({ id: data.batch.id, code: data.batch.batch_code });
+          setPartInfo(`Matched ${data.item.name} · batch ${data.batch.batch_code} (${data.batch.quantity_remaining} left)`);
+        } else {
+          setPartBatch(null);
+          setPartInfo(`Matched ${data.item.name} · ${data.item.quantity} in stock (FIFO)`);
+        }
       }
     } catch (err) {
       setPartBatch(null);
@@ -104,12 +117,20 @@ export default function JobQueue() {
     setPartError("");
     setSavingPart(true);
     try {
-      await api.post(`/jobs/${partJob.id}/parts`, {
-        part_source: "inventory",
-        inventory_item_id: partItemId || null,
-        batch_id: partBatch?.id || null,
-        quantity: parseInt(partQty, 10),
-      });
+      if (partSource === "donor") {
+        await api.post(`/jobs/${partJob.id}/parts`, {
+          part_source: "donor",
+          donor_part_id: donorPartId,
+          quantity: parseInt(partQty, 10),
+        });
+      } else {
+        await api.post(`/jobs/${partJob.id}/parts`, {
+          part_source: "inventory",
+          inventory_item_id: partItemId || null,
+          batch_id: partBatch?.id || null,
+          quantity: parseInt(partQty, 10),
+        });
+      }
       setPartJob(null);
       setPartLoggedCounter((prev) => prev + 1);
     } catch (err) {
@@ -122,7 +143,9 @@ export default function JobQueue() {
   return (
     <div className="p-8">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">My Job Queue</h2>
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
+          {mode === "refurbish" ? "Store Refurbishments" : "Customer Job Queue"}
+        </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{jobs.length} job{jobs.length !== 1 ? "s" : ""} assigned to me or unassigned</p>
       </div>
 
@@ -283,9 +306,9 @@ export default function JobQueue() {
 
           <div>
             <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Inventory Part *</label>
-            <select required value={partItemId} onChange={(e) => { setPartItemId(e.target.value); setPartBatch(null); setPartInfo(""); }}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">— Select inventory item —</option>
+            <select required={partSource !== "donor"} disabled={partSource === "donor"} value={partItemId} onChange={(e) => { setPartItemId(e.target.value); setPartBatch(null); setPartInfo(""); setPartSource("inventory"); }}
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50">
+              <option value="">{partSource === "donor" ? "— Donor part selected —" : "— Select inventory item —"}</option>
               {invItems.map((i) => (
                 <option key={i.id} value={i.id}>{i.sku ? `${i.sku} · ` : ""}{i.name} (Stock: {i.quantity})</option>
               ))}
@@ -293,7 +316,7 @@ export default function JobQueue() {
             {partBatch && (
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Will deduct from batch <span className="font-mono">{partBatch.code}</span></p>
             )}
-            <p className="text-xs text-gray-400 mt-1">Cost is recorded automatically from the batch (FIFO).</p>
+            <p className="text-xs text-gray-400 mt-1">Cost is recorded automatically from the batch (FIFO) or Donor value.</p>
           </div>
 
           <div>

@@ -54,11 +54,11 @@ def _get_rainy_days_forecast(location: str = "Colombo") -> bool:
     return False
 
 
-def forecast_fault_trends(db: Session, months_back: int = 6, device_model: str = None, location: str = "Colombo") -> list[dict[str, Any]]:
+def forecast_fault_trends(db: Session, months_back: int = 6, device_brand: str = None, device_model: str = None, location: str = "Colombo") -> list[dict[str, Any]]:
     """
     Analyzes job fault categories over the last N months and forecasts
     the expected percentage change for the next month.
-    Optionally filters by device_model and applies weather for a specific location.
+    Optionally filters by device_brand, device_model, and applies weather for a specific location.
     """
     cutoff_date = datetime.now() - timedelta(days=months_back * 30)
     
@@ -68,6 +68,8 @@ def forecast_fault_trends(db: Session, months_back: int = 6, device_model: str =
         func.count(Job.id).label('count')
     ).filter(Job.received_date >= cutoff_date)
 
+    if device_brand:
+        query = query.filter(Job.device_brand == device_brand)
     if device_model:
         query = query.filter(Job.device_model == device_model)
 

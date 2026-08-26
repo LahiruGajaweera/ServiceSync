@@ -41,6 +41,9 @@ class JobPartUsed(Base):
     batch_id = Column(
         UUID(as_uuid=True), ForeignKey("inventory_batches.id"), nullable=True
     )
+    inventory_unit_id = Column(
+        UUID(as_uuid=True), ForeignKey("inventory_units.id"), nullable=True
+    )
     used_by_technician_id = Column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )

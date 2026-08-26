@@ -19,6 +19,7 @@ class InventoryItemCreate(BaseModel):
     unit_cost: Decimal | None = None
     unit_price: Decimal | None = None
     supplier: str | None = None
+    serial_numbers: list[str] | None = None
 
 
 class StockAdjustRequest(BaseModel):
@@ -36,6 +37,7 @@ class ReceiveStockRequest(BaseModel):
     quantity: int
     purchased_at: datetime | None = None
     new_selling_price: Decimal | None = None
+    serial_numbers: list[str] | None = None
 
 
 class InventoryItemUpdate(BaseModel):

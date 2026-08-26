@@ -10,6 +10,7 @@ from app.schemas.donor import (
     DonorDeviceResponse,
     DonorPartCreate,
     DonorPartResponse,
+    DonorPartApprove,
 )
 from app.services import donor_service
 from app.models.user import User
@@ -84,13 +85,22 @@ def list_pending_parts(
     return donor_service.list_pending_parts(db)
 
 
-@router.patch("/parts/{part_id}/approve", response_model=DonorPartResponse)
-def approve_donor_part(
-    part_id: UUID,
+@router.get("/parts/available", response_model=list[DonorPartResponse])
+def list_available_parts(
     db: Session = Depends(get_db),
     _=Depends(require_any_staff),
 ):
-    return donor_service.approve_donor_part(part_id, db)
+    return donor_service.list_available_parts(db)
+
+
+@router.patch("/parts/{part_id}/approve", response_model=DonorPartResponse)
+def approve_donor_part(
+    part_id: UUID,
+    data: DonorPartApprove,
+    db: Session = Depends(get_db),
+    _=Depends(require_any_staff),
+):
+    return donor_service.approve_donor_part(part_id, data, db)
 
 
 @router.post("/{device_id}/parts", response_model=DonorPartResponse, status_code=201)

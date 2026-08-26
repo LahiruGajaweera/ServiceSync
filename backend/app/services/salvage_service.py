@@ -343,30 +343,52 @@ def get_assessment(assessment_id: UUID, db: Session) -> SalvageAssessment:
     if not a:
         raise HTTPException(404, "Assessment not found")
     return a
-        
-    if data.status == "approved" and a.status != "approved":
-        job = db.query(Job).filter(Job.id == a.job_id).first()
-        if a.recommendation == "salvage_for_parts" and job:
-            from app.models.donor import DonorDevice
-            # Ensure donor device doesn't already exist
-            donor_exists = db.query(DonorDevice).filter(DonorDevice.source_job_id == job.id).first()
-            if not donor_exists:
-                new_donor = DonorDevice(
-                    brand=job.device_brand,
-                    model=job.device_model,
-                    imei=job.device_imei,
-                    condition="poor",
-                    source="unclaimed_job",
-                    source_job_id=job.id,
-                    status="available",
-                    assigned_technician_id=job.technician_id
-                )
-                db.add(new_donor)
+
+def update_status(assessment_id: UUID, data: SalvageStatusUpdate, db: Session) -> SalvageAssessment:
+    try:
+        a = db.query(SalvageAssessment).filter(SalvageAssessment.id == assessment_id).first()
+        if not a:
+            raise HTTPException(404, "Assessment not found")
+            
+        if data.status == "approved" and a.status != "approved":
+            job = db.query(Job).filter(Job.id == a.job_id).first()
+            if job:
+                from app.models.user import User
+                tech = None
+                if job.technician_id:
+                    tech = db.query(User).filter(User.id == job.technician_id, User.is_active == True, User.role == "technician").first()
                 
-    a.status = data.status
-    db.commit()
-    db.refresh(a)
-    return a
+                assigned_tech_id = tech.id if tech else None
+
+                if a.recommendation == "salvage_for_parts":
+                    from app.models.donor import DonorDevice
+                    # Ensure donor device doesn't already exist
+                    donor_exists = db.query(DonorDevice).filter(DonorDevice.source_job_id == job.id).first()
+                    if not donor_exists:
+                        new_donor = DonorDevice(
+                            brand=job.device_brand,
+                            model=job.device_model,
+                            imei=job.device_imei,
+                            condition="poor",
+                            source="unclaimed_job",
+                            source_job_id=job.id,
+                            status="available",
+                            assigned_technician_id=assigned_tech_id
+                        )
+                        db.add(new_donor)
+                elif a.recommendation == "refurbish":
+                    job.status = "pending"
+                    job.technician_id = assigned_tech_id
+                    job.admin_alert = "Approved for Refurbishment (Store Owned). Please complete repairs for resale."
+
+        a.status = data.status
+        db.commit()
+        db.refresh(a)
+        return a
+    except Exception as e:
+        db.rollback()
+        print(f"Update Status Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 def reassess(assessment_id: UUID, db: Session) -> dict:

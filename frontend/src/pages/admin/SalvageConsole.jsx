@@ -151,6 +151,8 @@ export default function SalvageConsole() {
   const [snoozeJob, setSnoozeJob]     = useState(null);
   const [snoozeDays, setSnoozeDays]   = useState("30");
   const [snoozeError, setSnoozeError] = useState("");
+  const [globalError, setGlobalError] = useState("");
+  const [globalSuccess, setGlobalSuccess] = useState("");
 
   const [loading, setLoading]         = useState(true);
   const [showCreate, setShowCreate]   = useState(false);
@@ -299,7 +301,7 @@ export default function SalvageConsole() {
       await api.post(`/salvage/${id}/reassess`);
       fetchAssessments();
     } catch (err) {
-      alert(err.response?.data?.detail || "Re-assessment failed");
+      setGlobalError(err.response?.data?.detail || "Re-assessment failed");
     }
   };
 
@@ -308,7 +310,10 @@ export default function SalvageConsole() {
       await api.patch(`/salvage/${id}/status`, { status });
       fetchAssessments();
     } catch (err) {
-      alert(err.response?.data?.detail || "Update failed");
+      console.error("Status Update Error:", err, err.response?.data);
+      const detail = err.response?.data?.detail;
+      const msg = typeof detail === 'string' ? detail : (detail ? JSON.stringify(detail) : err.message);
+      setGlobalError(`Update failed: ${msg}`);
     }
   };
 
@@ -323,8 +328,9 @@ export default function SalvageConsole() {
       await api.post("/salvage/batch-estimate", { job_ids: selectedBatch });
       setSelectedBatch([]);
       fetchAssessments();
+      setGlobalSuccess("Batch processing completed successfully");
     } catch (err) {
-      alert("Batch processing failed");
+      setGlobalError("Batch processing failed");
     } finally {
       setBatching(false);
     }
@@ -342,8 +348,9 @@ export default function SalvageConsole() {
       });
       setActualsModal(null);
       fetchAssessments();
+      setGlobalSuccess("Actuals recorded successfully");
     } catch (err) {
-      alert("Failed to save actuals");
+      setGlobalError("Failed to save actuals");
     } finally {
       setSaving(false);
     }
@@ -409,57 +416,100 @@ export default function SalvageConsole() {
         </button>
       </div>
 
+      {/* System Popup Dialog for Success/Error */}
+      {(globalError || globalSuccess) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-gray-100 dark:border-gray-700 transform transition-all">
+            <div className="flex flex-col items-center text-center">
+              {globalError ? (
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              )}
+              
+              <h3 className={`text-lg font-bold mb-2 ${globalError ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>
+                {globalError ? 'System Error' : 'Success'}
+              </h3>
+              
+              <p className="text-gray-600 dark:text-gray-300 text-sm mb-6">
+                {globalError || globalSuccess}
+              </p>
+              
+              <button
+                onClick={() => {
+                  setGlobalError("");
+                  setGlobalSuccess("");
+                }}
+                className={`w-full py-2.5 rounded-xl text-white font-medium transition-colors ${globalError ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {pendingUnclaimed.length > 0 && (
-        <div className="mb-8 bg-amber-50 rounded-xl border border-amber-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-3 border-b border-amber-100 bg-amber-100/50 flex justify-between items-center">
-            <h3 className="font-semibold text-amber-900">Pending Salvage (Unclaimed &gt; 1 Year)</h3>
+        <div className="mb-8 bg-amber-50 dark:bg-gray-800 rounded-xl border border-amber-100 dark:border-gray-700 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-amber-100 dark:border-gray-700 bg-amber-100/50 dark:bg-gray-800/80 flex justify-between items-center">
+            <h3 className="font-semibold text-amber-900 dark:text-amber-500">Pending Salvage (Unclaimed &gt; 1 Year)</h3>
             <div className="flex items-center gap-3">
               {selectedBatch.length > 0 && (
                 <button onClick={handleBatchAssess} disabled={batching} className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm transition-colors">
                   {batching ? "Processing..." : `Assess Selected (${selectedBatch.length})`}
                 </button>
               )}
-              <span className="text-xs font-bold bg-amber-200 text-amber-800 px-2 py-1 rounded-full">{pendingUnclaimed.length}</span>
+              <span className="text-xs font-bold bg-amber-200 dark:bg-amber-900/40 text-amber-800 dark:text-amber-400 px-2 py-1 rounded-full border border-transparent dark:border-amber-700/50">{pendingUnclaimed.length}</span>
             </div>
           </div>
-          <table className="w-full text-sm">
-            <thead className="bg-amber-50 border-b border-amber-100">
-              <tr>
-                <th className="px-5 py-2 w-10">
-                  <input type="checkbox" onChange={(e) => setSelectedBatch(e.target.checked ? pendingUnclaimed.map(p => p.job_id) : [])} checked={selectedBatch.length === pendingUnclaimed.length && pendingUnclaimed.length > 0} className="w-4 h-4 text-amber-600 rounded border-gray-300 dark:border-gray-600 focus:ring-amber-500" />
-                </th>
-                <th className="text-left px-5 py-2 text-xs font-semibold text-amber-800">Job ID</th>
-                <th className="text-left px-5 py-2 text-xs font-semibold text-amber-800">Device</th>
-                <th className="text-left px-5 py-2 text-xs font-semibold text-amber-800">Unclaimed Since</th>
-                <th className="text-right px-5 py-2 text-xs font-semibold text-amber-800">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-amber-100">
-              {pendingUnclaimed.map((p) => (
-                <tr key={p.job_id} className="hover:bg-amber-100/30 transition-colors">
-                  <td className="px-5 py-3">
-                    <input type="checkbox" checked={selectedBatch.includes(p.job_id)} onChange={() => toggleBatch(p.job_id)} className="w-4 h-4 text-amber-600 rounded border-gray-300 dark:border-gray-600 focus:ring-amber-500" />
-                  </td>
-                  <td className="px-5 py-3 font-mono font-semibold text-blue-700 text-xs">{p.job_public_id}</td>
-                  <td className="px-5 py-3 text-amber-900 font-medium">{p.device}</td>
-                  <td className="px-5 py-3 text-amber-700 text-xs">{new Date(p.unclaimed_since).toLocaleDateString()}</td>
-                  <td className="px-5 py-3 text-right">
-                    <button onClick={() => handleSnoozeClick(p)} className="text-xs font-bold text-amber-700 bg-amber-200 hover:bg-amber-300 px-3 py-1.5 rounded-lg shadow-sm transition-all mr-2">
-                      Extend Time
-                    </button>
-                    <button onClick={() => handleAssessPending(p)} className="text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 px-3 py-1.5 rounded-lg shadow-sm transition-all">
-                      Assess
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-amber-50 dark:bg-gray-900 border-b border-amber-100 dark:border-gray-700">
+                <tr>
+                  <th className="px-5 py-2 w-10">
+                    <input type="checkbox" onChange={(e) => setSelectedBatch(e.target.checked ? pendingUnclaimed.map(p => p.job_id) : [])} checked={selectedBatch.length === pendingUnclaimed.length && pendingUnclaimed.length > 0} className="w-4 h-4 text-amber-600 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 focus:ring-amber-500" />
+                  </th>
+                  <th className="text-left px-5 py-2 text-xs font-semibold text-amber-800 dark:text-gray-400 uppercase tracking-wide">Job ID</th>
+                  <th className="text-left px-5 py-2 text-xs font-semibold text-amber-800 dark:text-gray-400 uppercase tracking-wide">Device</th>
+                  <th className="text-left px-5 py-2 text-xs font-semibold text-amber-800 dark:text-gray-400 uppercase tracking-wide">Unclaimed Since</th>
+                  <th className="text-right px-5 py-2 text-xs font-semibold text-amber-800 dark:text-gray-400 uppercase tracking-wide">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-amber-100 dark:divide-gray-700">
+                {pendingUnclaimed.map((p) => (
+                  <tr key={p.job_id} className="hover:bg-amber-100/30 dark:hover:bg-gray-700/50 transition-colors">
+                    <td className="px-5 py-3">
+                      <input type="checkbox" checked={selectedBatch.includes(p.job_id)} onChange={() => toggleBatch(p.job_id)} className="w-4 h-4 text-amber-600 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 focus:ring-amber-500" />
+                    </td>
+                    <td className="px-5 py-3 font-mono font-semibold text-blue-700 dark:text-blue-400 text-xs">{p.job_public_id}</td>
+                    <td className="px-5 py-3 text-amber-900 dark:text-gray-200 font-medium">{p.device}</td>
+                    <td className="px-5 py-3 text-amber-700 dark:text-gray-400 text-xs">{new Date(p.unclaimed_since).toLocaleDateString()}</td>
+                    <td className="px-5 py-3 text-right whitespace-nowrap">
+                      <button onClick={() => handleSnoozeClick(p)} className="text-xs font-bold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 px-3 py-1.5 rounded-lg shadow-sm transition-all mr-2">
+                        Extend Time
+                      </button>
+                      <button onClick={() => handleAssessPending(p)} className="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg shadow-sm transition-all">
+                        Assess
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {/* Existing Assessments Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-x-auto">
         {loading ? (
           <div className="py-20 text-center text-gray-400 text-sm">Loading…</div>
         ) : assessments.length === 0 ? (
@@ -468,7 +518,7 @@ export default function SalvageConsole() {
             <p className="text-sm text-gray-400 mt-1">Create an assessment for an unclaimed or delivered device</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[900px]">
             <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
               <tr>
                 {["Job ID", "Device", "Market Price", "Refurbish Value", "Salvage Value", "Recommendation", "Status", "Profit/Loss", "Actions"].map((h) => (
@@ -522,7 +572,7 @@ export default function SalvageConsole() {
                     {a.status === "pending" ? (
                       <span className="text-xs text-gray-500 dark:text-gray-400 italic">Processing...</span>
                     ) : a.status === "assessed" ? (
-                      <div className="flex gap-2">
+                      <div className="flex flex-col items-start gap-2">
                         <button
                           onClick={() => handleStatusUpdate(a.id, "approved")}
                           className="text-green-600 hover:text-green-800 text-xs font-medium"
@@ -537,9 +587,9 @@ export default function SalvageConsole() {
                         </button>
                         <button
                           onClick={() => handleReassess(a.id)}
-                          className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                          className="text-blue-600 hover:text-blue-800 text-xs font-medium whitespace-nowrap"
                         >
-                          🔄 Re-assess
+                          Re-assess
                         </button>
                       </div>
                     ) : (
