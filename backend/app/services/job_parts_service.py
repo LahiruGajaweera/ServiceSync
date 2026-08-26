@@ -45,8 +45,8 @@ def add_part(job_id: UUID, data: JobPartCreate, db: Session, used_by: User | Non
 
         # FIFO deduction — a single request may span several purchase batches,
         # each with its own supplier/cost, so we log one row per batch chunk.
-        allocations = inventory_service.consume_inventory(
-            item, data.quantity, db, batch_id=data.batch_id
+        allocations, unit = inventory_service.consume_inventory(
+            item, data.quantity, db, batch_id=data.batch_id, serial_number=data.serial_number
         )
         for batch, chunk in allocations:
             final_price = data.override_price if data.override_price is not None else item.unit_price
@@ -55,6 +55,7 @@ def add_part(job_id: UUID, data: JobPartCreate, db: Session, used_by: User | Non
                 part_source="inventory",
                 inventory_item_id=item.id,
                 batch_id=batch.id,
+                inventory_unit_id=unit.id if unit else None,
                 used_by_technician_id=used_by_id,
                 quantity=chunk,
                 unit_cost=batch.unit_cost,
@@ -70,14 +71,14 @@ def add_part(job_id: UUID, data: JobPartCreate, db: Session, used_by: User | Non
         if not part.is_available:
             raise HTTPException(400, "Donor part is already used")
         part.is_available = False
-        final_price = data.override_price if data.override_price is not None else (data.unit_cost or 0)
+        final_price = data.override_price if data.override_price is not None else (part.estimated_value or 0)
         records.append(JobPartUsed(
             job_id=job_id,
             part_source="donor",
             donor_part_id=part.id,
             used_by_technician_id=used_by_id,
             quantity=data.quantity,
-            unit_cost=data.unit_cost or 0,
+            unit_cost=0,
             unit_price=final_price,
         ))
     else:
@@ -142,13 +143,16 @@ def consume_by_batch_code(
         )
 
     # Decrement this exact batch (FIFO helper, pinned to a single batch).
-    inventory_service.consume_inventory(item, data.quantity, db, batch_id=batch.id)
+    allocations, unit = inventory_service.consume_inventory(
+        item, data.quantity, db, batch_id=batch.id, serial_number=data.serial_number
+    )
 
     record = JobPartUsed(
         job_id=job.id,
         part_source="inventory",
         inventory_item_id=item.id,
         batch_id=batch.id,
+        inventory_unit_id=unit.id if unit else None,
         used_by_technician_id=technician.id if technician else None,
         quantity=data.quantity,
         unit_cost=batch.unit_cost,

@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models.donor import DonorDevice, DonorPart
-from app.schemas.donor import DonorDeviceCreate, DonorPartCreate
+from app.schemas.donor import DonorDeviceCreate, DonorPartCreate, DonorPartApprove
 
 
 def register_donor_device(data: DonorDeviceCreate, db: Session) -> DonorDevice:
@@ -76,13 +76,26 @@ def list_pending_parts(db: Session) -> list[DonorPart]:
     )
 
 
-def approve_donor_part(part_id: UUID, db: Session) -> DonorPart:
+def list_available_parts(db: Session) -> list[DonorPart]:
+    return (
+        db.query(DonorPart)
+        .filter(DonorPart.approval_status == "approved", DonorPart.is_available.is_(True))
+        .order_by(DonorPart.extracted_date.desc())
+        .all()
+    )
+
+
+def approve_donor_part(part_id: UUID, data: DonorPartApprove, db: Session) -> DonorPart:
     part = db.query(DonorPart).filter(DonorPart.id == part_id).first()
     if not part:
         raise HTTPException(404, "Donor part not found")
     if part.approval_status == "approved":
         return part
+    
     part.approval_status = "approved"
+    part.estimated_value = data.estimated_value
+    part.sku = f"DP-{str(part.id)[:6].upper()}"
+    
     db.commit()
     db.refresh(part)
     return part

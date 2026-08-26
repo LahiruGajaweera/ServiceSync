@@ -53,6 +53,14 @@ class JobStatusUpdate(BaseModel):
     diagnostic_time_mins: int | None = None
     repair_time_mins: int | None = None
     resolution_notes: str | None = None
+    
+    # QC Checklist
+    qc_mic_tested: bool | None = None
+    qc_camera_tested: bool | None = None
+    qc_touch_tested: bool | None = None
+    qc_biometrics_tested: bool | None = None
+    qc_wifi_tested: bool | None = None
+    qc_charging_tested: bool | None = None
 
 
 class JobRevertRequest(BaseModel):
@@ -115,6 +123,14 @@ class JobListItem(BaseModel):
     total_active_repair_seconds: int | None = 0
     total_away_seconds: int | None = 0
     current_timer_mode: str | None = None
+    
+    # QC Checklist
+    qc_mic_tested: bool | None = None
+    qc_camera_tested: bool | None = None
+    qc_touch_tested: bool | None = None
+    qc_biometrics_tested: bool | None = None
+    qc_wifi_tested: bool | None = None
+    qc_charging_tested: bool | None = None
 
     model_config = {"from_attributes": True}
     resolution_notes: str | None = None

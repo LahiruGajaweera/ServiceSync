@@ -692,13 +692,13 @@ export default function JobManagement() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowQuote(true)}
-            className="bg-white dark:bg-gray-800 border border-blue-600 text-blue-600 hover:bg-blue-50 text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+            className="bg-white dark:bg-gray-800 border border-blue-600 text-blue-600 hover:bg-blue-50 text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition-colors"
           >
             Quick Quote
           </button>
           <button
             onClick={() => { setShowCreate(true); setFormError(""); setForm(getEmptyForm()); setPhotos([]); setCustSearch(""); setCustResults([]); setShowNewCust(false); }}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition-colors"
           >
             + Register Job
           </button>
@@ -753,7 +753,19 @@ export default function JobManagement() {
                           setDetailJobId(job.id);
                         }
                       }}>
-                    <td className="px-4 py-3 font-mono font-semibold text-blue-600 whitespace-nowrap">{job.job_id}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-semibold text-blue-600">{job.job_id}</span>
+                        {job.rework_of_job_id && (
+                          <span
+                            className="bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800"
+                            title="Free Warranty Claim Job"
+                          >
+                            Warranty Claim
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-800 dark:text-gray-100">{job.customer_name}</p>
                       <p className="text-xs text-gray-400">{job.customer_phone}</p>

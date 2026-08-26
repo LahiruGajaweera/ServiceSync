@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.donor import DonorPart
-from app.models.inventory import InventoryBatch, InventoryItem, InventoryAdjustmentLog
+from app.models.inventory import InventoryBatch, InventoryItem, InventoryAdjustmentLog, InventoryUnit
 from app.schemas.inventory import (
     InventoryItemCreate,
     InventoryItemUpdate,
@@ -18,7 +18,10 @@ from app.schemas.inventory import (
 
 
 def _serialize_batch(b: InventoryBatch) -> dict:
-    return {c.name: getattr(b, c.name) for c in b.__table__.columns}
+    d = {c.name: getattr(b, c.name) for c in b.__table__.columns}
+    if hasattr(b, "units") and b.units:
+        d["units"] = [{"serial_number": u.serial_number, "status": u.status} for u in b.units]
+    return d
 
 
 def _add_is_low_stock(item: InventoryItem) -> dict:
@@ -81,12 +84,27 @@ def _add_batch(item, supplier, unit_cost, quantity, purchased_at, db) -> Invento
 
 # ── FIFO consumption (shared with job_parts_service) ──────────────────────────
 
-def consume_inventory(item: InventoryItem, qty: int, db: Session, batch_id: UUID | None = None):
+def consume_inventory(item: InventoryItem, qty: int, db: Session, batch_id: UUID | None = None, serial_number: str | None = None):
     """Deduct ``qty`` units from an item's batches.
 
-    Returns a list of ``(batch, chunk)`` allocations so the caller can record
-    exactly which supplier/price each consumed unit came from.
+    Returns a tuple: (list of ``(batch, chunk)`` allocations, ``InventoryUnit | None``)
+    so the caller can record exactly which supplier/price each consumed unit came from,
+    and link the specific unit if serialized.
     """
+    unit = None
+    if item.track_serial:
+        if not serial_number:
+            raise HTTPException(400, "Serial number is required for this item")
+        unit = db.query(InventoryUnit).filter(
+            InventoryUnit.serial_number == serial_number, 
+            InventoryUnit.inventory_item_id == item.id
+        ).first()
+        if not unit or unit.status != "in_stock":
+            raise HTTPException(400, f"Serial number {serial_number} is not in stock")
+        if qty != 1:
+            raise HTTPException(400, "Quantity must be 1 when consuming a serialized part")
+        
+        batch_id = unit.batch_id
     if batch_id:
         batch = next((b for b in item.batches if b.id == batch_id), None)
         if not batch:
@@ -95,7 +113,9 @@ def consume_inventory(item: InventoryItem, qty: int, db: Session, batch_id: UUID
             raise HTTPException(400, f"Batch {batch.batch_code} only has {batch.quantity_remaining} left")
         batch.quantity_remaining -= qty
         item.quantity = (item.quantity or 0) - qty
-        return [(batch, qty)]
+        if unit:
+            unit.status = "used"
+        return [(batch, qty)], unit
 
     batches = sorted(
         [b for b in item.batches if b.quantity_remaining > 0],
@@ -115,7 +135,7 @@ def consume_inventory(item: InventoryItem, qty: int, db: Session, batch_id: UUID
         remaining -= take
         allocations.append((b, take))
     item.quantity = (item.quantity or 0) - qty
-    return allocations
+    return allocations, None
 
 
 # ── CRUD ──────────────────────────────────────────────────────────────────────
@@ -126,6 +146,11 @@ def create_item(data: InventoryItemCreate, db: Session) -> dict:
     unit_cost = payload.pop("unit_cost", None)
     unit_price = payload.pop("unit_price", None)
     supplier = payload.get("supplier")
+    serial_numbers = payload.pop("serial_numbers", None)
+
+    if payload.get("track_serial") and qty and qty > 0:
+        if not serial_numbers or len(serial_numbers) != qty:
+            raise HTTPException(400, f"Expected {qty} serial numbers for tracked item")
 
     # Duplicate check
     existing = db.query(InventoryItem).filter(
@@ -143,7 +168,19 @@ def create_item(data: InventoryItemCreate, db: Session) -> dict:
     db.flush()  # assign id before creating its first batch
 
     if qty and qty > 0:
-        _add_batch(item, supplier, unit_cost or 0, qty, None, db)
+        batch = _add_batch(item, supplier, unit_cost or 0, qty, None, db)
+        db.flush()
+        if item.track_serial and serial_numbers:
+            for sn in serial_numbers:
+                # check for existing serial
+                if db.query(InventoryUnit).filter(InventoryUnit.serial_number == sn).first():
+                    raise HTTPException(400, f"Serial number {sn} already exists")
+                db.add(InventoryUnit(
+                    inventory_item_id=item.id,
+                    batch_id=batch.id,
+                    serial_number=sn,
+                    status="in_stock"
+                ))
 
     db.commit()
     db.refresh(item)
@@ -164,7 +201,24 @@ def receive_stock(item_id: UUID, data: ReceiveStockRequest, db: Session) -> dict
     if data.new_selling_price is not None:
         item.unit_price = data.new_selling_price
 
+    if item.track_serial:
+        if not data.serial_numbers or len(data.serial_numbers) != data.quantity:
+            raise HTTPException(400, f"Expected {data.quantity} serial numbers for tracked item")
+
     batch = _add_batch(item, data.supplier, data.unit_cost, data.quantity, data.purchased_at, db)
+    db.flush()
+    
+    if item.track_serial and data.serial_numbers:
+        for sn in data.serial_numbers:
+            if db.query(InventoryUnit).filter(InventoryUnit.serial_number == sn).first():
+                raise HTTPException(400, f"Serial number {sn} already exists")
+            db.add(InventoryUnit(
+                inventory_item_id=item.id,
+                batch_id=batch.id,
+                serial_number=sn,
+                status="in_stock"
+            ))
+
     db.commit()
     db.refresh(item)
     db.refresh(batch)
@@ -243,7 +297,7 @@ def adjust_stock(item_id: UUID, data: StockAdjustRequest, user_id: UUID, db: Ses
                 )
             )
         else:
-            allocations = consume_inventory(item, -data.delta, db)
+            allocations, _ = consume_inventory(item, -data.delta, db)
             for batch, qty in allocations:
                 logs_to_add.append(
                     InventoryAdjustmentLog(
@@ -372,6 +426,20 @@ def resolve_scan(code: str, db: Session) -> dict:
     if not code:
         raise HTTPException(400, "Empty scan code")
 
+    if code.startswith("DP-"):
+        donor_part = db.query(DonorPart).filter(DonorPart.sku == code).first()
+        if donor_part:
+            if not donor_part.is_available:
+                raise HTTPException(400, "This donor part has already been used.")
+            return {"donor_part": {
+                "id": str(donor_part.id),
+                "part_name": donor_part.part_name,
+                "sku": donor_part.sku,
+                "estimated_value": float(donor_part.estimated_value) if donor_part.estimated_value else 0.0,
+                "condition": donor_part.condition,
+                "is_available": donor_part.is_available
+            }}
+
     batch = db.query(InventoryBatch).filter(InventoryBatch.batch_code == code).first()
     if batch:
         item = db.query(InventoryItem).filter(InventoryItem.id == batch.inventory_item_id).first()
@@ -381,5 +449,5 @@ def resolve_scan(code: str, db: Session) -> dict:
     if item:
         return {"item": _add_is_low_stock(item), "batch": None}
 
-    raise HTTPException(404, f"No inventory part found for code '{code}'")
+    raise HTTPException(404, f"No inventory part or donor part found for code '{code}'")
 

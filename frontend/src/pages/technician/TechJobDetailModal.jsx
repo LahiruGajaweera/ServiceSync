@@ -34,6 +34,14 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
   const [repairTime, setRepairTime] = useState("");
   const [resolutionNotes, setResolutionNotes] = useState("");
   
+  // QC Checklist State
+  const [qcMicTested, setQcMicTested] = useState(false);
+  const [qcCameraTested, setQcCameraTested] = useState(false);
+  const [qcTouchTested, setQcTouchTested] = useState(false);
+  const [qcBiometricsTested, setQcBiometricsTested] = useState(false);
+  const [qcWifiTested, setQcWifiTested] = useState(false);
+  const [qcChargingTested, setQcChargingTested] = useState(false);
+  
   // Revert state
   const [revertMode, setRevertMode] = useState(false);
   const [revertTarget, setRevertTarget] = useState("pending");
@@ -79,6 +87,13 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
       setDiagnosticTime("");
       setRepairTime("");
       setResolutionNotes("");
+      
+      setQcMicTested(false);
+      setQcCameraTested(false);
+      setQcTouchTested(false);
+      setQcBiometricsTested(false);
+      setQcWifiTested(false);
+      setQcChargingTested(false);
     }
   }, [open, job]);
 
@@ -134,6 +149,11 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
             setSavingStatus(false);
             return;
           }
+          if (!qcMicTested || !qcCameraTested || !qcTouchTested || !qcBiometricsTested || !qcWifiTested || !qcChargingTested) {
+            alert("Please complete the Quality Control checklist.");
+            setSavingStatus(false);
+            return;
+          }
           
           payload.actual_fault = actualFault;
           payload.identified_fault = identifiedFault;
@@ -141,6 +161,13 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
           payload.diagnostic_time_mins = parseInt(diagnosticTime, 10);
           payload.repair_time_mins = parseInt(repairTime, 10);
           payload.resolution_notes = resolutionNotes;
+          
+          payload.qc_mic_tested = qcMicTested;
+          payload.qc_camera_tested = qcCameraTested;
+          payload.qc_touch_tested = qcTouchTested;
+          payload.qc_biometrics_tested = qcBiometricsTested;
+          payload.qc_wifi_tested = qcWifiTested;
+          payload.qc_charging_tested = qcChargingTested;
         }
         await api.patch(`/jobs/${job.id}/status`, payload);
       }
@@ -163,7 +190,23 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 text-2xl leading-none">&times;</button>
         </div>
 
-        {/* Scrollable Body */}        <div className="p-6 overflow-y-auto space-y-6">
+        {/* Scrollable Body */}
+        <div className="p-6 overflow-y-auto space-y-6">
+          {job.rework_of_job_id && (
+            <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-xl p-3.5 flex items-center justify-between">
+              <div>
+                <h4 className="text-purple-900 dark:text-purple-200 font-bold text-xs">
+                  Customer Warranty Claim (Rework)
+                </h4>
+                <p className="text-purple-700 dark:text-purple-300 text-[11px] mt-0.5">
+                  This is a free guarantee repair for a previous job.
+                </p>
+              </div>
+              <span className="text-[10px] bg-purple-200 dark:bg-purple-900 text-purple-800 dark:text-purple-200 font-bold px-2 py-0.5 rounded">
+                Free Warranty
+              </span>
+            </div>
+          )}
           
           {/* Job Info */}
           <div className="flex justify-between items-start">
@@ -411,6 +454,37 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
                         placeholder="Explain exactly what you did to fix the device..." />
                     </div>
 
+                    <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-800">
+                      <h5 className="text-[11px] font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wide mb-3">Quality Control (QC) Checklist *</h5>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mb-3">You must test and verify all the following before completing this job.</p>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
+                          <input type="checkbox" checked={qcMicTested} onChange={(e) => setQcMicTested(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" />
+                          <span>Mic & Speaker Tested</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
+                          <input type="checkbox" checked={qcCameraTested} onChange={(e) => setQcCameraTested(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" />
+                          <span>Cameras (Front & Rear) Tested</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
+                          <input type="checkbox" checked={qcTouchTested} onChange={(e) => setQcTouchTested(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" />
+                          <span>Touch & Display Tested</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
+                          <input type="checkbox" checked={qcBiometricsTested} onChange={(e) => setQcBiometricsTested(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" />
+                          <span>FaceID / Fingerprint Tested</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
+                          <input type="checkbox" checked={qcWifiTested} onChange={(e) => setQcWifiTested(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" />
+                          <span>Wi-Fi & Bluetooth Tested</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
+                          <input type="checkbox" checked={qcChargingTested} onChange={(e) => setQcChargingTested(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" />
+                          <span>Charging Port Tested</span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 )}
                 
@@ -423,8 +497,8 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
                   </div>
                 )}
                 <div className="flex gap-2">
-                  <button type="submit" disabled={savingStatus}
-                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white py-2 rounded-lg text-sm font-semibold">
+                  <button type="submit" disabled={savingStatus || (newStatus === "completed" && (!qcMicTested || !qcCameraTested || !qcTouchTested || !qcBiometricsTested || !qcWifiTested || !qcChargingTested))}
+                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-semibold transition-colors">
                     {savingStatus ? "Saving…" : "Update Status"}
                   </button>
                 </div>

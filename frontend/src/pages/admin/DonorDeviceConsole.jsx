@@ -71,6 +71,7 @@ export default function DonorDeviceConsole() {
 
   // Review device pending parts modal
   const [reviewGroup, setReviewGroup]   = useState(null);
+  const [partPrices, setPartPrices]     = useState({});
 
   // Add part modal
   const [addPartOpen, setAddPartOpen]   = useState(false);
@@ -120,33 +121,46 @@ export default function DonorDeviceConsole() {
     const printWin = window.open('', '_blank', 'width=300,height=300');
     
     try {
-      await Promise.all(group.map(p => api.patch(`/donors/parts/${p.id}/approve`)));
+      const responses = await Promise.all(group.map(p => 
+        api.patch(`/donors/parts/${p.id}/approve`, { estimated_value: parseFloat(partPrices[p.id]) || 0 })
+      ));
+      
+      const approvedParts = responses.map(r => r.data);
+      
       // Remove from pending list
       setPendingParts(prev => prev.filter(p => !group.find(gp => gp.id === p.id)));
       setReviewGroup(null);
+      setPartPrices({});
       
       const devId = group[0].donor_device_id;
       const dev = devices.find(d => d.id === devId) || { brand: "Unknown", model: "Device", id: devId, imei: "N/A" };
-      const partsSummary = group.map(p => `${p.part_name}(${p.condition.charAt(0).toUpperCase()})`).join(', ');
 
-      // Print label logic for the DEVICE
+      // Print label logic for EACH PART
+      const labelsHtml = approvedParts.map(p => `
+        <div class="label-page">
+          <div class="title">${dev.brand} ${dev.model}</div>
+          <div class="subtitle">${p.part_name}</div>
+          <img class="qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(p.sku)}" alt="QR Code" />
+          <div class="sku">${p.sku}</div>
+          <div class="price">Rs. ${p.estimated_value.toFixed(2)}</div>
+        </div>
+      `).join('');
+
       const labelContent = `
         <html>
           <head>
             <style>
-              body { margin: 0; padding: 10px; font-family: monospace; width: 50mm; text-align: center; }
-              .title { font-size: 14px; font-weight: bold; margin-bottom: 5px; }
-              .id { font-size: 10px; margin-bottom: 5px; word-break: break-all; }
-              .parts { font-size: 10px; border: 1px dashed #666; padding: 4px; margin-top: 5px; text-align: left; }
+              body { margin: 0; padding: 0; font-family: monospace; text-align: center; }
+              .label-page { padding: 10px; page-break-after: always; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; }
+              .title { font-size: 14px; font-weight: bold; margin-bottom: 2px; }
+              .subtitle { font-size: 12px; margin-bottom: 5px; }
+              .sku { font-size: 12px; margin-top: 5px; font-weight: bold; }
+              .price { font-size: 14px; font-weight: bold; margin-top: 2px; }
               .qr-code { margin: 5px auto; width: 80px; height: 80px; display: block; }
             </style>
           </head>
           <body>
-            <div class="title">${dev.brand} ${dev.model}</div>
-            <img class="qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(dev.id)}" alt="QR Code" />
-            <div class="id">ID: ${dev.id.substring(0,8).toUpperCase()}</div>
-            <div class="id">IMEI: ${dev.imei || 'N/A'}</div>
-            <div class="parts"><b>Contains:</b><br/>${partsSummary}</div>
+            ${labelsHtml}
           </body>
         </html>
       `;
@@ -406,7 +420,12 @@ export default function DonorDeviceConsole() {
                   const dev = devices.find(d => d.id === devId) || { brand: "Unknown", model: "Device", imei: "" };
                   
                   return (
-                  <tr key={devId} className="hover:bg-blue-50 cursor-pointer transition-colors" onClick={() => setReviewGroup(group)}>
+                  <tr key={devId} className="hover:bg-blue-50 cursor-pointer transition-colors" onClick={() => {
+                      const initialPrices = {};
+                      group.forEach(p => initialPrices[p.id] = "");
+                      setPartPrices(initialPrices);
+                      setReviewGroup(group);
+                  }}>
                     <td className="px-4 py-3 font-semibold text-gray-800 dark:text-gray-100">{dev.brand} {dev.model}</td>
                     <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 font-mono">
                       {dev.imei || "—"}
@@ -580,19 +599,35 @@ export default function DonorDeviceConsole() {
               <h4 className="font-semibold text-amber-800">{dev.brand} {dev.model}</h4>
               <p className="text-xs text-amber-700 mt-1">IMEI: <span className="font-mono">{dev.imei || "—"}</span></p>
               <p className="text-xs text-amber-600 mt-2">
-                A technician has marked the following parts as usable. Approving will print a single label for the device body.
+                A technician has marked the following parts as usable. Enter the estimated selling price for each part. Approving will print a QR label for each part.
               </p>
             </div>
             
             <div>
               <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Pending Parts ({reviewGroup.length})</h4>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                 {reviewGroup.map(p => (
-                  <div key={p.id} className="flex justify-between border border-gray-100 dark:border-gray-800 rounded-lg p-3 text-xs bg-white dark:bg-gray-800">
-                    <span className="font-medium text-gray-800 dark:text-gray-100">{p.part_name}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${CONDITION_BADGE[p.condition] ?? ""}`}>
-                      {p.condition}
-                    </span>
+                  <div key={p.id} className="flex items-center gap-3 border border-gray-100 dark:border-gray-800 rounded-lg p-3 text-xs bg-white dark:bg-gray-800">
+                    <div className="flex-1">
+                      <span className="font-medium text-gray-800 dark:text-gray-100">{p.part_name}</span>
+                      <div className="mt-1">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${CONDITION_BADGE[p.condition] ?? ""}`}>
+                          {p.condition}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500 font-medium text-[10px]">Rs.</span>
+                      <input 
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Price"
+                        value={partPrices[p.id] !== undefined ? partPrices[p.id] : ""}
+                        onChange={(e) => setPartPrices(prev => ({...prev, [p.id]: e.target.value}))}
+                        className="w-24 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>

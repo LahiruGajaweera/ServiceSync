@@ -12,10 +12,18 @@
         document.documentElement.classList.remove('dark');
       }
     </script>
-    <script type="module" crossorigin src="/assets/index-DuJdOnSq.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-myLuzFFa.css">
+    <script type="module" crossorigin src="/assets/index-CvV0Y3PD.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CulVoaks.css">
   </head>
   <body>
+    <script>
+      window.onerror = function(message, source, lineno, colno, error) {
+        document.body.innerHTML = '<div style="padding: 20px; color: red; font-family: monospace;"><h3>React Crashed:</h3>' + message + '<br><br>' + (error && error.stack ? error.stack.replace(/\n/g, '<br>') : '') + '</div>';
+      };
+      window.addEventListener('unhandledrejection', function(event) {
+        document.body.innerHTML = '<div style="padding: 20px; color: red; font-family: monospace;"><h3>Promise Rejected:</h3>' + event.reason + '</div>';
+      });
+    </script>
     <div id="root"></div>
   </body>
 </html>

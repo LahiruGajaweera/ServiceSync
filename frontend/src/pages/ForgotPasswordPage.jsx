@@ -170,12 +170,6 @@ export default function ForgotPasswordPage() {
                 <span className="font-medium text-gray-700 dark:text-gray-200">{otpInfo?.destination_masked}</span>.
               </p>
 
-              {otpInfo?.dev_otp && (
-                <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2.5 rounded-lg text-sm mb-4">
-                  Dev mode — your code is <span className="font-bold">{otpInfo.dev_otp}</span>
-                </div>
-              )}
-
               <form onSubmit={handleVerify} className="space-y-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">

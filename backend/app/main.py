@@ -24,6 +24,7 @@ async def lifespan(_: FastAPI):
     _seed_brands()
     _seed_models()
     _seed_specs()
+    _seed_settings()
     
     # Start background tasks
     bg_task = asyncio.create_task(background_task_runner())
@@ -51,13 +52,13 @@ def _run_migrations() -> None:
         "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS batch_id UUID REFERENCES inventory_batches(id)",
         "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS used_by_technician_id UUID REFERENCES users(id)",
         "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS unit_price NUMERIC(10, 2) NOT NULL DEFAULT 0",
-        # Optional estimated repair cost quoted at job intake (may be absent)
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS estimated_cost NUMERIC(10, 2)",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS final_warning_sent BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS reminder_83_sent BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS reminder_90_sent BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS reminder_425_sent BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS investigated BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS inventory_unit_id UUID REFERENCES inventory_units(id)",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS admin_alert TEXT",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS physical_condition VARCHAR(255)",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS salvage_delayed_until TIMESTAMP WITH TIME ZONE",
@@ -70,6 +71,14 @@ def _run_migrations() -> None:
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS diagnostic_time_mins INTEGER",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS repair_time_mins INTEGER",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS resolution_notes TEXT",
+        
+        # QC Checklist
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_mic_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_camera_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_touch_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_biometrics_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_wifi_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_charging_tested BOOLEAN NOT NULL DEFAULT FALSE",
     ]
     
     with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
@@ -239,6 +248,33 @@ def _seed_specs() -> None:
         db.close()
 
 
+def _seed_settings() -> None:
+    """Populate default system settings if missing (idempotent)."""
+    from app.core.database import SessionLocal
+    from app.models.setting import SystemSetting
+    from app.routers.settings import DEFAULT_SETTINGS
+
+    db = SessionLocal()
+    try:
+        existing = {s.key for s in db.query(SystemSetting).all()}
+        added = False
+        for key, info in DEFAULT_SETTINGS.items():
+            if key not in existing:
+                db.add(
+                    SystemSetting(
+                        key=key,
+                        value=info["value"],
+                        category=info["category"],
+                        description=info.get("description"),
+                    )
+                )
+                added = True
+        if added:
+            db.commit()
+    finally:
+        db.close()
+
+
 app = FastAPI(
     title="ServiceSync API",
     description="Smart Job & Inventory Management System for Phone Repair Shop",
@@ -248,6 +284,7 @@ app = FastAPI(
 
 import os
 os.makedirs("uploads/avatars", exist_ok=True)
+os.makedirs("uploads/logos", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.add_middleware(
@@ -259,7 +296,7 @@ app.add_middleware(
 )
 
 from app.routers import analytics, auth, customers, donors, inventory, invoices, jobs, notifications, salvage, scraper, users, chatbot  # noqa: E402
-from app.routers import admin, brands, models, part_specs, suppliers, admin_tasks  # noqa: E402
+from app.routers import admin, brands, models, part_specs, suppliers, admin_tasks, settings  # noqa: E402
 
 app.include_router(auth.router)
 app.include_router(admin.router)
@@ -279,6 +316,7 @@ app.include_router(models.router)
 app.include_router(part_specs.router)
 app.include_router(chatbot.router)
 app.include_router(admin_tasks.router)
+app.include_router(settings.router)
 
 
 @app.get("/health", tags=["System"])

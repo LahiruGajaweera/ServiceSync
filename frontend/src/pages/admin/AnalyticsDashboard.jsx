@@ -263,7 +263,11 @@ export default function AnalyticsDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v) => [`LKR ${Number(v).toLocaleString()}`, "Revenue"]} />
+                <Tooltip 
+                  formatter={(v) => [`LKR ${Number(v).toLocaleString()}`, "Revenue"]}
+                  contentStyle={{ backgroundColor: "rgba(30, 41, 59, 0.9)", border: "none", borderRadius: "8px", color: "#f8fafc" }}
+                  itemStyle={{ color: "#a855f7", fontWeight: 600 }}
+                />
                 <Bar dataKey="revenue" fill="#a855f7" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -290,7 +294,12 @@ export default function AnalyticsDashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(d) => d.slice(5)} interval="preserveStartEnd" />
                   <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-                  <Tooltip labelFormatter={(d) => `Date: ${d}`} formatter={(v) => [v, "Jobs"]} />
+                  <Tooltip 
+                    labelFormatter={(d) => `Date: ${d}`} 
+                    formatter={(v) => [v, "Jobs"]} 
+                    contentStyle={{ backgroundColor: "rgba(30, 41, 59, 0.9)", border: "none", borderRadius: "8px", color: "#f8fafc" }}
+                    itemStyle={{ color: "#3b82f6", fontWeight: 600 }}
+                  />
                   <Area type="monotone" dataKey="jobs" stroke="#3b82f6" strokeWidth={2} fill="url(#jobGrad)" dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -305,12 +314,16 @@ export default function AnalyticsDashboard() {
             <div className="flex items-center gap-6">
               <ResponsiveContainer width="55%" height={220}>
                 <PieChart>
-                  <Pie data={statusDist} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={85} innerRadius={45}>
+                  <Pie data={statusDist} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={85} innerRadius={45} stroke="none">
                     {statusDist.map((entry) => (
-                      <Cell key={entry.status} fill={STATUS_COLORS[entry.status] ?? "#94a3b8"} />
+                      <Cell key={entry.status} fill={STATUS_COLORS[entry.status] ?? "#94a3b8"} stroke="none" />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v, n) => [v, n.replace(/_/g, " ")]} />
+                  <Tooltip 
+                    formatter={(v, n) => [v, n.replace(/_/g, " ")]} 
+                    contentStyle={{ backgroundColor: "rgba(30, 41, 59, 0.9)", border: "none", borderRadius: "8px", color: "#f8fafc" }}
+                    itemStyle={{ color: "#f8fafc", fontWeight: 600 }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex flex-col gap-2">
@@ -417,8 +430,8 @@ export default function AnalyticsDashboard() {
                 <Tooltip 
                   formatter={(v) => [v, "Jobs"]} 
                   labelFormatter={(l) => l.replace(/_/g, " ")} 
-                  contentStyle={{ backgroundColor: "#1e293b", border: "none", borderRadius: "8px", color: "#f8fafc" }}
-                  itemStyle={{ color: "#38bdf8" }}
+                  contentStyle={{ backgroundColor: "rgba(30, 41, 59, 0.9)", border: "none", borderRadius: "8px", color: "#f8fafc" }}
+                  itemStyle={{ color: "#38bdf8", fontWeight: 600 }}
                 />
                 <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={22}>
                   {faultDist.map((_, i) => (

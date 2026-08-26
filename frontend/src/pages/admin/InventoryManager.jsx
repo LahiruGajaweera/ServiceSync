@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import QRCode from "qrcode";
 import api from "../../services/api";
 import BrandSelect from "../../components/BrandSelect";
@@ -32,45 +32,56 @@ const EMPTY_FORM = {
 
 const EMPTY_RECEIVE = { supplier: "", unit_cost: "", margin: "30", new_selling_price: "", quantity: "", purchased_at: new Date().toISOString().split("T")[0], update_selling_price: false };
 
-/** Open a printable QR label for a batch/part. The QR encodes the scannable code. */
-async function printLabel({ code, sku, name, supplier, qty, unitCost }) {
-  let qr = "";
-  try {
-    qr = await QRCode.toDataURL(code, { width: 220, margin: 1 });
-  } catch {
-    qr = "";
+/** Open a printable QR label for an array of labels. */
+async function printLabels(labels) {
+  const htmlParts = [];
+  for (const label of labels) {
+    let qr = "";
+    try {
+      qr = await QRCode.toDataURL(label.code, { width: 220, margin: 1 });
+    } catch {
+      qr = "";
+    }
+    htmlParts.push(`
+      <div class="label">
+        <div class="name">${label.name || ""}</div>
+        <div class="sku">${label.sku || ""}</div>
+        ${qr ? `<img class="qr" src="${qr}" width="160" height="160" alt="QR" />` : ""}
+        <div class="code">${label.code}</div>
+        <div class="meta">
+          ${label.supplier ? `Supplier: ${label.supplier}<br/>` : ""}
+          ${label.qty != null ? `Qty: ${label.qty}` : ""}${label.unitCost != null ? ` &nbsp;·&nbsp; LKR ${Number(label.unitCost).toLocaleString()}` : ""}
+        </div>
+      </div>
+    `);
   }
+
   const win = window.open("", "PrintLabel", "width=380,height=460");
   if (!win) {
     alert("Please allow pop-ups to print the label.");
     return;
   }
-  win.document.write(`<!doctype html><html><head><title>Label ${code}</title>
+  win.document.write(`<!doctype html><html><head><title>Print Labels</title>
     <meta charset="utf-8" />
     <style>
       * { box-sizing: border-box; }
       body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: #111827; margin: 0; padding: 16px; }
-      .label { width: 280px; margin: 0 auto; border: 1px solid #111827; border-radius: 10px; padding: 14px; text-align: center; }
+      .label { width: 280px; margin: 0 auto 20px; border: 1px solid #111827; border-radius: 10px; padding: 14px; text-align: center; page-break-after: always; }
       .name { font-size: 14px; font-weight: 800; margin-bottom: 2px; }
       .sku { font-size: 11px; color: #6b7280; letter-spacing: .5px; }
       .qr { margin: 10px auto 6px; }
       .code { font-size: 15px; font-weight: 800; letter-spacing: 1px; }
       .meta { font-size: 11px; color: #374151; margin-top: 6px; line-height: 1.5; }
+      @media print {
+        body { padding: 0; margin: 0; }
+        .label { border: none; margin: 0; width: 100%; height: 100vh; padding: 0; border-radius: 0; display: flex; flex-direction: column; justify-content: center; }
+      }
     </style></head><body>
-    <div class="label">
-      <div class="name">${name || ""}</div>
-      <div class="sku">${sku || ""}</div>
-      ${qr ? `<img class="qr" src="${qr}" width="160" height="160" alt="QR" />` : ""}
-      <div class="code">${code}</div>
-      <div class="meta">
-        ${supplier ? `Supplier: ${supplier}<br/>` : ""}
-        ${qty != null ? `Qty: ${qty}` : ""}${unitCost != null ? ` &nbsp;·&nbsp; LKR ${Number(unitCost).toLocaleString()}` : ""}
-      </div>
-    </div>
+    ${htmlParts.join("\\n")}
   </body></html>`);
   win.document.close();
   win.focus();
-  setTimeout(() => { win.print(); }, 300);
+  setTimeout(() => { win.print(); }, 500);
 }
 
 /** Build a consistent, traceable part name from its attributes:
@@ -130,14 +141,6 @@ function CatalogFormFields({ form, handleChange, setForm, showInitialStock, cate
         <SpecSelect value={form.spec} onChange={(v) => setForm((f) => ({ ...f, spec: v }))} placeholder="e.g. OLED, OEM, 5000MAH" />
       </div>
       <div>
-        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Type *</label>
-        <select name="part_type" value={form.part_type} onChange={handleChange}
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option value="factory_new">Factory New</option>
-          <option value="salvaged">Salvaged</option>
-        </select>
-      </div>
-      <div>
         <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Min Stock Threshold</label>
         <input name="min_stock_threshold" type="number" min="0" value={form.min_stock_threshold} onChange={handleChange}
           className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -180,7 +183,7 @@ function CatalogFormFields({ form, handleChange, setForm, showInitialStock, cate
         />
       </div>
 
-      {showInitialStock && (
+      {showInitialStock && !form.track_serial && (
         <>
           <div className="col-span-2 mt-1 border-t pt-3">
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Initial Stock & Pricing (optional)</p>
@@ -241,6 +244,8 @@ export default function InventoryManager() {
   const [loading, setLoading]       = useState(true);
   const [inventoryForecast, setInventoryForecast] = useState([]);
   const [search, setSearch]         = useState("");
+  const [sortConfig, setSortConfig] = useState({ key: "name", direction: "asc" });
+  const [filterType, setFilterType] = useState("all");
   const [showAddModal, setShowAdd]  = useState(false);
   const [editItem, setEditItem]     = useState(null);
   const [form, setForm]             = useState(EMPTY_FORM);
@@ -272,9 +277,13 @@ export default function InventoryManager() {
   const [adjustLogs, setAdjustLogs] = useState([]);
 
   // Tabs & Global Logs
-  const [activeTab, setActiveTab] = useState("catalog"); // "catalog" | "logs"
+  const [activeTab, setActiveTab] = useState("catalog"); // "catalog" | "logs" | "salvage"
   const [globalLogs, setGlobalLogs] = useState([]);
   const [globalLogsLoading, setGlobalLogsLoading] = useState(false);
+  
+  // Salvage Parts
+  const [salvagedParts, setSalvagedParts] = useState([]);
+  const [salvagedLoading, setSalvagedLoading] = useState(false);
 
   const fetchGlobalLogs = async () => {
     setGlobalLogsLoading(true);
@@ -288,11 +297,11 @@ export default function InventoryManager() {
     }
   };
 
-  const fetchAll = async (q = search) => {
+  const fetchAll = async () => {
     setLoading(true);
     try {
       const [itemsRes, lowRes, invRes] = await Promise.all([
-        api.get("/inventory/", { params: q ? { search: q } : {} }),
+        api.get("/inventory/"),
         api.get("/inventory/low-stock"),
         api.get("/analytics/predictions/inventory"),
       ]);
@@ -304,11 +313,63 @@ export default function InventoryManager() {
     }
   };
 
+  const fetchSalvagedParts = async () => {
+    setSalvagedLoading(true);
+    try {
+      const { data } = await api.get("/donors/parts/available");
+      setSalvagedParts(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSalvagedLoading(false);
+    }
+  };
+
+  const processedItems = useMemo(() => {
+    let result = [...items];
+    
+    // Search
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(item => 
+        (item.name || "").toLowerCase().includes(q) ||
+        (item.sku || "").toLowerCase().includes(q) ||
+        (item.category || "").toLowerCase().includes(q)
+      );
+    }
+    
+    // Filter
+    if (filterType === "low_stock") {
+      result = result.filter(item => item.is_low_stock);
+    } else if (filterType === "factory_new") {
+      result = result.filter(item => item.part_type === "factory_new");
+    } else if (filterType === "salvaged") {
+      result = result.filter(item => item.part_type === "salvaged");
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      let aVal = a[sortConfig.key];
+      let bVal = b[sortConfig.key];
+      
+      if (typeof aVal === "string") aVal = aVal.toLowerCase();
+      if (typeof bVal === "string") bVal = bVal.toLowerCase();
+      
+      if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [items, search, filterType, sortConfig]);
+
   useEffect(() => {
     if (activeTab === "catalog") {
-      fetchAll("");
+      fetchAll();
     } else if (activeTab === "logs") {
       fetchGlobalLogs();
+    } else if (activeTab === "salvage") {
+      fetchSalvagedParts();
     }
   }, [activeTab]);
 
@@ -389,7 +450,7 @@ export default function InventoryManager() {
       const { data: created } = await api.post("/inventory/", payload);
       setShowAdd(false);
       setForm(EMPTY_FORM);
-      await fetchAll(search);
+      await fetchAll();
       // If initial stock was entered, a first batch was created — offer its QR label.
       const firstBatch = created?.batches?.[0];
       if (firstBatch) {
@@ -397,6 +458,8 @@ export default function InventoryManager() {
           code: firstBatch.batch_code, sku: created.sku, name: created.name,
           supplier: firstBatch.supplier, qty: firstBatch.quantity_received, unitCost: firstBatch.unit_cost,
         });
+      } else if (created.track_serial) {
+        openReceive(created);
       }
     } catch (err) {
       const detail = err.response?.data?.detail;
@@ -440,7 +503,7 @@ export default function InventoryManager() {
       });
       setEditItem(null);
       setForm(EMPTY_FORM);
-      fetchAll(search);
+      fetchAll();
     } catch (err) {
       setFormError(err.response?.data?.detail || "Failed to update item");
     } finally {
@@ -450,7 +513,7 @@ export default function InventoryManager() {
 
   const openReceive = (item) => {
     setReceiveItem(item);
-    setReceiveForm({ supplier: item.supplier ?? "", unit_cost: "", margin: "30", new_selling_price: item.unit_price ?? "", quantity: "", purchased_at: new Date().toISOString().split("T")[0], update_selling_price: false });
+    setReceiveForm({ supplier: item.supplier ?? "", unit_cost: "", margin: "30", new_selling_price: item.unit_price ?? "", quantity: "", purchased_at: new Date().toISOString().split("T")[0], update_selling_price: false, serial_numbers: [] });
     setFormError("");
   };
 
@@ -468,14 +531,16 @@ export default function InventoryManager() {
         payload.new_selling_price = parseFloat(receiveForm.new_selling_price);
       }
       if (receiveForm.purchased_at) payload.purchased_at = new Date(receiveForm.purchased_at).toISOString();
+      if (receiveItem.track_serial) payload.serial_numbers = (receiveForm.serial_numbers || []).filter(s => s.trim());
       const { data: batch } = await api.post(`/inventory/${receiveItem.id}/receive`, payload);
       const item = receiveItem;
       setReceiveItem(null);
-      await fetchAll(search);
+      await fetchAll();
       setLabelPrompt({
         title: "Stock Received", action: "received",
         code: batch.batch_code, sku: item.sku, name: item.name,
         supplier: batch.supplier, qty: batch.quantity_received, unitCost: batch.unit_cost,
+        serialNumbers: payload.serial_numbers || [],
       });
     } catch (err) {
       setFormError(err.response?.data?.detail || "Failed to receive stock");
@@ -513,7 +578,7 @@ export default function InventoryManager() {
       setAdjustReason("recount");
       setAdjustNote("");
       setAdjustBatchId("");
-      fetchAll(search);
+      fetchAll();
     } catch (err) {
       alert(err.response?.data?.detail || "Failed to adjust stock");
     } finally {
@@ -562,6 +627,16 @@ export default function InventoryManager() {
           Inventory Catalog
         </button>
         <button
+          onClick={() => setActiveTab("salvage")}
+          className={`px-6 py-3 font-semibold text-sm transition-colors border-b-2 ${
+            activeTab === "salvage"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200 hover:border-gray-300 dark:border-gray-600"
+          }`}
+        >
+          Salvaged Parts
+        </button>
+        <button
           onClick={() => setActiveTab("logs")}
           className={`px-6 py-3 font-semibold text-sm transition-colors border-b-2 ${
             activeTab === "logs"
@@ -593,22 +668,45 @@ export default function InventoryManager() {
             </div>
           )}
 
-          {/* Search */}
-          <form onSubmit={(e) => { e.preventDefault(); fetchAll(search); }} className="mb-5 flex gap-2">
-            <input value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, SKU or category…"
-              className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <button type="submit" className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg text-sm font-medium">Search</button>
-            {search && (
-              <button type="button" onClick={() => { setSearch(""); fetchAll(""); }} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">Clear</button>
-            )}
-          </form>
+          {/* Controls Bar */}
+          <div className="mb-5 flex flex-wrap gap-3 items-center">
+            <div className="relative max-w-sm w-full">
+              <input value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name, SKU or category…"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg pl-10 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100" />
+              <svg className="w-4 h-4 absolute left-3 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              {search && (
+                <button type="button" onClick={() => setSearch("")} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+              )}
+            </div>
+            
+            <select value={filterType} onChange={(e) => setFilterType(e.target.value)}
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+              <option value="all">All Parts</option>
+              <option value="low_stock">Low Stock Only</option>
+              <option value="factory_new">Factory New</option>
+              <option value="salvaged">Salvaged</option>
+            </select>
+
+            <select value={`${sortConfig.key}-${sortConfig.direction}`} onChange={(e) => {
+              const [key, direction] = e.target.value.split('-');
+              setSortConfig({ key, direction });
+            }}
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+              <option value="name-asc">Name (A-Z)</option>
+              <option value="name-desc">Name (Z-A)</option>
+              <option value="quantity-desc">Stock (High to Low)</option>
+              <option value="quantity-asc">Stock (Low to High)</option>
+              <option value="unit_price-desc">Price (Highest)</option>
+              <option value="unit_price-asc">Price (Lowest)</option>
+            </select>
+          </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
         {loading ? (
           <div className="py-20 text-center text-gray-400 text-sm">Loading…</div>
-        ) : items.length === 0 ? (
+        ) : processedItems.length === 0 ? (
           <div className="py-20 text-center border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl mx-4 my-4">
             <p className="font-medium text-gray-500 dark:text-gray-400">No inventory items</p>
             <p className="text-sm text-gray-400 mt-1">Add your first spare part above</p>
@@ -623,7 +721,7 @@ export default function InventoryManager() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {items.map((item) => (
+              {processedItems.map((item) => (
                 <tr 
                   key={item.id} 
                   onClick={() => openItemDetails(item)}
@@ -657,6 +755,50 @@ export default function InventoryManager() {
         )}
       </div>
         </>
+      ) : activeTab === "salvage" ? (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
+          {salvagedLoading ? (
+            <div className="py-20 text-center text-gray-400 text-sm">Loading salvage parts…</div>
+          ) : salvagedParts.length === 0 ? (
+            <div className="py-20 text-center text-gray-400 text-sm">No available salvaged parts found.</div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                <tr>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">SKU</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Part Name</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Condition</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Selling Price</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Extracted Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                {salvagedParts.map((part) => (
+                  <tr key={part.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 transition-colors">
+                    <td className="px-4 py-3 font-mono text-xs text-gray-500 dark:text-gray-400 font-bold">{part.sku || "—"}</td>
+                    <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">{part.part_name}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${
+                        part.condition === "good" ? "bg-green-100 text-green-700" :
+                        part.condition === "fair" ? "bg-yellow-100 text-yellow-700" :
+                        part.condition === "poor" ? "bg-orange-100 text-orange-700" :
+                        "bg-red-100 text-red-700"
+                      }`}>
+                        {part.condition}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-blue-700 dark:text-blue-400">
+                      LKR {part.estimated_value ? Number(part.estimated_value).toLocaleString() : "0"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">
+                      {new Date(part.extracted_date).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
           {globalLogsLoading ? (
@@ -723,19 +865,29 @@ export default function InventoryManager() {
         </form>
       </Modal>
 
-      {/* QR label print prompt */}
       <Modal open={!!labelPrompt} onClose={() => setLabelPrompt(null)} title={labelPrompt?.title || "Part Added"}>
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-300">
             Batch <span className="font-mono font-semibold text-gray-800 dark:text-gray-100">{labelPrompt?.code}</span> was {labelPrompt?.action || "created"}.
-            Print a QR label for this batch?
+            {labelPrompt?.serialNumbers?.length > 0 ? " Print individual QR labels for each serial number?" : " Print a QR label for this batch?"}
           </p>
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={() => setLabelPrompt(null)}
               className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">Not now</button>
             <button type="button"
-              onClick={() => { const p = labelPrompt; setLabelPrompt(null); if (p) printLabel(p); }}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold transition-colors">Print Label</button>
+              onClick={() => { 
+                const p = labelPrompt; 
+                setLabelPrompt(null); 
+                if (p) {
+                   if (p.serialNumbers?.length > 0) {
+                      const labels = p.serialNumbers.map(sn => ({ ...p, code: sn, qty: 1 }));
+                      printLabels(labels);
+                   } else {
+                      printLabels([p]); 
+                   }
+                }
+              }}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold transition-colors">Print Label{labelPrompt?.serialNumbers?.length > 0 ? "s" : ""}</button>
           </div>
         </div>
       </Modal>
@@ -754,6 +906,45 @@ export default function InventoryManager() {
                 onChange={(e) => setReceiveForm((f) => ({ ...f, quantity: e.target.value }))}
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
+            {receiveItem?.track_serial && (
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2">
+                  Serial Numbers * 
+                  <span className="text-gray-400 font-normal ml-2">(Scan or type each one)</span>
+                </label>
+                {!receiveForm.quantity || parseInt(receiveForm.quantity, 10) <= 0 ? (
+                  <div className="text-sm text-amber-600 bg-amber-50 rounded-lg p-3 border border-amber-200">
+                    Please enter a valid Quantity first.
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {Array.from({ length: parseInt(receiveForm.quantity, 10) }).map((_, i) => (
+                      <input
+                        key={i}
+                        id={`serial-input-${i}`}
+                        required
+                        value={receiveForm.serial_numbers[i] || ""}
+                        onChange={(e) => {
+                          const newSerials = [...receiveForm.serial_numbers];
+                          newSerials[i] = e.target.value;
+                          setReceiveForm(f => ({ ...f, serial_numbers: newSerials }));
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            const nextInput = document.getElementById(`serial-input-${i + 1}`);
+                            if (nextInput) nextInput.focus();
+                          }
+                        }}
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                        placeholder={`Serial number ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
+                <p className="text-[11px] text-gray-500 mt-2">Must provide exactly {receiveForm.quantity || 0} serial numbers.</p>
+              </div>
+            )}
             <div>
               <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Unit Cost (LKR) *</label>
               <input type="number" step="0.01" min="0" required value={receiveForm.unit_cost}
@@ -823,8 +1014,8 @@ export default function InventoryManager() {
         {detailsItem && (
           <div className="space-y-6">
             {/* Action Bar */}
-            <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700 pb-4">
-              <button onClick={() => { setDetailsItem(null); openReceive(detailsItem); }} className="px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-sm font-semibold transition-colors">
+            <div className="grid grid-cols-2 gap-2 border-b border-gray-200 dark:border-gray-700 pb-4">
+              <button onClick={() => { setDetailsItem(null); openReceive(detailsItem); }} className="px-3 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-sm font-semibold transition-colors flex justify-center items-center">
                 Receive Stock
               </button>
               <button onClick={async () => {
@@ -839,16 +1030,16 @@ export default function InventoryManager() {
                   setAvailableBatches(data);
                 } catch(e) { setAvailableBatches([]); }
                 setShowStock(true);
-              }} className="px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-semibold transition-colors">
+              }} className="px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-semibold transition-colors flex justify-center items-center">
                 Adjust Stock
               </button>
-              <button onClick={() => { setDetailsItem(null); openLogs(detailsItem); }} className="px-3 py-1.5 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-lg text-sm font-semibold transition-colors">
+              <button onClick={() => { setDetailsItem(null); openLogs(detailsItem); }} className="px-3 py-2 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-lg text-sm font-semibold transition-colors flex justify-center items-center">
                 View Logs
               </button>
               <button onClick={() => {
                 setDetailsItem(null);
                 openEdit(detailsItem);
-              }} className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 rounded-lg text-sm font-semibold transition-colors">
+              }} className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 rounded-lg text-sm font-semibold transition-colors flex justify-center items-center">
                 Edit Part
               </button>
             </div>
@@ -870,6 +1061,15 @@ export default function InventoryManager() {
                           {b.supplier || "—"} · LKR {Number(b.unit_cost).toLocaleString()} ·
                           <span className="font-semibold text-gray-700 dark:text-gray-200"> {b.quantity_remaining}</span> / {b.quantity_received} left
                         </p>
+                        {b.units && b.units.length > 0 && (
+                          <div className="mt-1.5 flex flex-wrap gap-1">
+                            {b.units.map(u => (
+                              <span key={u.serial_number} className={`px-2 py-0.5 text-[10px] font-mono rounded border ${u.status === 'in_stock' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                                {u.serial_number}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <button
                         onClick={() => printLabel({ code: b.batch_code, sku: detailsItem.sku, name: detailsItem.name, supplier: b.supplier, qty: b.quantity_received, unitCost: b.unit_cost })}
