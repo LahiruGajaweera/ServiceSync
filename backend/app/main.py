@@ -24,6 +24,7 @@ async def lifespan(_: FastAPI):
     _seed_brands()
     _seed_models()
     _seed_specs()
+    _seed_settings()
     
     # Start background tasks
     bg_task = asyncio.create_task(background_task_runner())
@@ -247,6 +248,33 @@ def _seed_specs() -> None:
         db.close()
 
 
+def _seed_settings() -> None:
+    """Populate default system settings if missing (idempotent)."""
+    from app.core.database import SessionLocal
+    from app.models.setting import SystemSetting
+    from app.routers.settings import DEFAULT_SETTINGS
+
+    db = SessionLocal()
+    try:
+        existing = {s.key for s in db.query(SystemSetting).all()}
+        added = False
+        for key, info in DEFAULT_SETTINGS.items():
+            if key not in existing:
+                db.add(
+                    SystemSetting(
+                        key=key,
+                        value=info["value"],
+                        category=info["category"],
+                        description=info.get("description"),
+                    )
+                )
+                added = True
+        if added:
+            db.commit()
+    finally:
+        db.close()
+
+
 app = FastAPI(
     title="ServiceSync API",
     description="Smart Job & Inventory Management System for Phone Repair Shop",
@@ -256,6 +284,7 @@ app = FastAPI(
 
 import os
 os.makedirs("uploads/avatars", exist_ok=True)
+os.makedirs("uploads/logos", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.add_middleware(
@@ -267,7 +296,7 @@ app.add_middleware(
 )
 
 from app.routers import analytics, auth, customers, donors, inventory, invoices, jobs, notifications, salvage, scraper, users, chatbot  # noqa: E402
-from app.routers import admin, brands, models, part_specs, suppliers, admin_tasks  # noqa: E402
+from app.routers import admin, brands, models, part_specs, suppliers, admin_tasks, settings  # noqa: E402
 
 app.include_router(auth.router)
 app.include_router(admin.router)
@@ -287,6 +316,7 @@ app.include_router(models.router)
 app.include_router(part_specs.router)
 app.include_router(chatbot.router)
 app.include_router(admin_tasks.router)
+app.include_router(settings.router)
 
 
 @app.get("/health", tags=["System"])

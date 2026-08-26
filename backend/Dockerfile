@@ -6,6 +6,7 @@ WORKDIR /build
 COPY requirements.txt .
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
+RUN python -m pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ── Stage 2: runtime ──────────────────────────────────────────────────────────

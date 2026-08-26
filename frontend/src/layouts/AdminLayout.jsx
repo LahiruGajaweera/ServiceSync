@@ -12,6 +12,7 @@ const NAV = [
   { to: "/admin/donors",     label: "Donor Devices" },
   { to: "/admin/analytics",  label: "Analytics" },
   { to: "/admin/predictions",label: "AI Predictions" },
+  { to: "/admin/settings",   label: "Settings" },
 ];
 
 import ThemeToggle from "../components/ThemeToggle";
