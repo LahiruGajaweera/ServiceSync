@@ -4,9 +4,9 @@ import api from "../../services/api";
 function Modal({ open, onClose, title, children }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+      <div className="glass-panel bg-white/90 dark:bg-gray-800/90 rounded-3xl shadow-2xl w-full max-w-md animate-fade-in-up border border-white/50 dark:border-gray-700/50" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b dark:border-gray-700/50">
           <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">{title}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 text-xl leading-none">&times;</button>
         </div>
@@ -140,7 +140,7 @@ export default function TechnicianPanel() {
         </div>
         <button
           onClick={() => { setShowModal(true); setCreated(null); setFormError(""); setForm(EMPTY_FORM); }}
-          className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
+          className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl glass-button shadow-lg shadow-blue-500/30"
         >
           + Add Technician
         </button>
@@ -164,7 +164,7 @@ export default function TechnicianPanel() {
       {loading ? (
         <div className="py-20 text-center text-gray-400 text-sm">Loading…</div>
       ) : technicians.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm py-20 text-center border-2 border-dashed border-gray-200 dark:border-gray-700">
+        <div className="glass-panel rounded-2xl py-20 text-center border-2 border-dashed border-gray-200 dark:border-gray-700/50">
           <p className="font-medium text-gray-500 dark:text-gray-400">No technicians yet</p>
           <p className="text-sm text-gray-400 mt-1">Add your first technician using the button above</p>
         </div>
@@ -173,10 +173,10 @@ export default function TechnicianPanel() {
           {technicians.filter(t => activeTab === 'active' ? t.is_active : !t.is_active).map((t) => (
             <div 
               key={t.id} 
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow border border-transparent hover:border-gray-200 dark:border-gray-700"
+              className="glass-panel rounded-2xl p-6 flex items-start gap-4 cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-blue-200 dark:hover:border-blue-900/50"
               onClick={() => { setSelectedTechnician(t); setShowJobsList(false); }}
             >
-              <div className="w-11 h-11 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg shrink-0">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/50 dark:to-blue-800/50 flex items-center justify-center text-blue-700 dark:text-blue-300 font-bold text-xl shrink-0 shadow-inner">
                 {t.name.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">

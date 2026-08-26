@@ -7,12 +7,12 @@ import AutoSlidingAlerts from "../../components/AutoSlidingAlerts";
 
 function StatCard({ label, value, sub, color, subClassName = "text-gray-400" }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm px-5 py-4 flex flex-col justify-center min-h-[100px]">
-      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</p>
-      <div className="mt-1 flex items-baseline gap-2">
-        <span className={`text-3xl font-bold ${color}`}>{value}</span>
+    <div className="glass-panel rounded-2xl px-6 py-5 flex flex-col justify-center min-h-[110px] hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+      <p className="text-sm font-medium text-gray-500 dark:text-gray-300">{label}</p>
+      <div className="mt-2 flex items-baseline gap-2">
+        <span className={`text-4xl font-extrabold tracking-tight ${color} drop-shadow-sm`}>{value}</span>
       </div>
-      {sub && <p className={`text-xs mt-1.5 ${subClassName} line-clamp-1`} title={typeof sub === 'string' ? sub : ''}>{sub}</p>}
+      {sub && <p className={`text-xs mt-2 ${subClassName} line-clamp-1 opacity-90`} title={typeof sub === 'string' ? sub : ''}>{sub}</p>}
     </div>
   );
 }
@@ -20,9 +20,9 @@ function StatCard({ label, value, sub, color, subClassName = "text-gray-400" }) 
 function Modal({ open, onClose, title, children }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+      <div className="glass-panel bg-white/90 dark:bg-gray-800/90 rounded-3xl shadow-2xl w-full max-w-md animate-fade-in-up border border-white/50 dark:border-gray-700/50" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b dark:border-gray-700/50">
           <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">{title}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 text-xl leading-none">&times;</button>
         </div>
@@ -221,7 +221,7 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Recent Jobs */}
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+        <div className="lg:col-span-2 glass-panel rounded-2xl p-7">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-700 dark:text-gray-200">Recent Jobs</h3>
             <Link to="/admin/jobs" className="text-xs text-blue-600 hover:underline">View all →</Link>
@@ -266,7 +266,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+        <div className="glass-panel rounded-2xl p-7">
           <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-4">Quick Actions</h3>
           <div className="space-y-3">
             {[
@@ -278,8 +278,8 @@ export default function AdminDashboard() {
               <Link
                 key={action.label}
                 to={action.to}
-                className="w-full flex items-center px-4 py-3 rounded-lg bg-brand-50 hover:bg-brand-500
-                           text-brand-700 hover:text-white text-left transition-all shadow-sm hover:shadow-md text-sm group"
+                className="w-full flex items-center px-5 py-3.5 rounded-xl bg-gradient-to-r from-brand-50 to-brand-100 hover:from-brand-500 hover:to-brand-600 dark:from-gray-800/50 dark:to-gray-700/50 dark:hover:from-brand-600 dark:hover:to-brand-700
+                           text-brand-700 dark:text-brand-300 hover:text-white dark:hover:text-white text-left glass-button text-sm font-medium group"
               >
                 <span className="flex-1 font-medium">{action.label}</span>
                 <span className="opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-xs">→</span>

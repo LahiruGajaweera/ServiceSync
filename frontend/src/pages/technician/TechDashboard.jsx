@@ -16,9 +16,11 @@ const STATUS_OPTIONS = [
 
 function StatCard({ label, value, color }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-      <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
-      <p className={`text-3xl font-bold mt-1 ${color}`}>{value}</p>
+    <div className="glass-panel rounded-2xl px-6 py-5 flex flex-col justify-center min-h-[110px] hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+      <p className="text-sm font-medium text-gray-500 dark:text-gray-300">{label}</p>
+      <div className="mt-2 flex items-baseline gap-2">
+        <p className={`text-4xl font-extrabold tracking-tight ${color} drop-shadow-sm`}>{value}</p>
+      </div>
     </div>
   );
 }
@@ -26,9 +28,9 @@ function StatCard({ label, value, color }) {
 function Modal({ open, onClose, title, children }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+      <div className="glass-panel bg-white/90 dark:bg-gray-800/90 rounded-3xl shadow-2xl w-full max-w-md animate-fade-in-up border border-white/50 dark:border-gray-700/50" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b dark:border-gray-700/50">
           <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">{title}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 text-xl leading-none">&times;</button>
         </div>
@@ -184,7 +186,7 @@ export default function TechDashboard() {
         <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">My Dashboard</h2>
         <button
           onClick={() => { setShowPartsLookup(true); setLookupBrand(""); setLookupModel(""); }}
-          className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+          className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl glass-button shadow-lg shadow-blue-500/30"
         >
           Quick Parts Lookup
         </button>
@@ -249,7 +251,7 @@ export default function TechDashboard() {
         </div>
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-8">
+      <div className="glass-panel rounded-2xl p-7 mb-8">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-700 dark:text-gray-200">My Job Queue</h3>
           <Link to="/tech/jobs" className="text-xs text-blue-600 hover:underline">View all →</Link>
@@ -295,7 +297,7 @@ export default function TechDashboard() {
       </div>
 
       {/* My Donor Devices Queue */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+      <div className="glass-panel rounded-2xl p-7">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-700 dark:text-gray-200">My Claimed Donor Devices</h3>
         </div>

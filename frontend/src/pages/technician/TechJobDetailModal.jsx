@@ -181,11 +181,11 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+      <div className="glass-panel bg-white/90 dark:bg-gray-800/90 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-fade-in-up border border-white/50 dark:border-gray-700/50" onClick={(e) => e.stopPropagation()}>
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0 bg-gray-50 dark:bg-gray-900">
+        <div className="flex items-center justify-between px-6 py-4 border-b dark:border-gray-700/50 shrink-0 bg-gray-50/50 dark:bg-gray-900/50">
           <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Job Detail — {job.job_id}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 text-2xl leading-none">&times;</button>
         </div>
@@ -496,9 +496,9 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
                       placeholder="What did you do?" />
                   </div>
                 )}
-                <div className="flex gap-2">
+                <div className="flex gap-2 mt-4">
                   <button type="submit" disabled={savingStatus || (newStatus === "completed" && (!qcMicTested || !qcCameraTested || !qcTouchTested || !qcBiometricsTested || !qcWifiTested || !qcChargingTested))}
-                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-semibold transition-colors">
+                    className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 disabled:from-green-400 disabled:to-green-400 disabled:opacity-50 text-white py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-green-600/30 glass-button">
                     {savingStatus ? "Saving…" : "Update Status"}
                   </button>
                 </div>
