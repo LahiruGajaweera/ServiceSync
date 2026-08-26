@@ -18,6 +18,7 @@ export default function ConsumePartForm({ jobId, onConsumed }) {
   const { user } = useAuth();
   const [batches, setBatches] = useState([]);
   const [code, setCode] = useState("");
+  const [serialNumber, setSerialNumber] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -34,7 +35,7 @@ export default function ConsumePartForm({ jobId, onConsumed }) {
         for (const item of items) {
           for (const b of item.batches || []) {
             if (b.quantity_remaining > 0) {
-              flat.push({ ...b, item_name: item.name, sku: item.sku });
+              flat.push({ ...b, item_name: item.name, sku: item.sku, track_serial: item.track_serial });
             }
           }
         }
@@ -51,8 +52,10 @@ export default function ConsumePartForm({ jobId, onConsumed }) {
   // Live match for the typed/scanned code (case-insensitive, trimmed).
   const selected = useMemo(() => {
     const c = code.trim().toLowerCase();
-    return batches.find((b) => b.batch_code.toLowerCase() === c) || null;
-  }, [code, batches]);
+    const match = batches.find((b) => b.batch_code.toLowerCase() === c) || null;
+    if (match && match.track_serial && quantity !== 1) setQuantity(1);
+    return match;
+  }, [code, batches, quantity]);
 
   // Filtered suggestions for the dropdown as the user types.
   const suggestions = useMemo(() => {
@@ -74,15 +77,23 @@ export default function ConsumePartForm({ jobId, onConsumed }) {
     if (!batchCode) return setError("Enter or select a batch code.");
     if (!quantity || quantity < 1) return setError("Quantity must be at least 1.");
 
+    const payload = {
+      batch_code: batchCode,
+      job_id: jobId,
+      technician_id: user?.id ?? null,
+      quantity: Number(quantity),
+    };
+    if (selected?.track_serial) {
+      if (!serialNumber.trim()) return setError("Serial number is required for this part.");
+      payload.serial_number = serialNumber.trim();
+      payload.quantity = 1;
+    }
+
     setSaving(true);
     try {
-      const { data: line } = await api.post("/inventory/consume", {
-        batch_code: batchCode,
-        job_id: jobId,
-        technician_id: user?.id ?? null,
-        quantity: Number(quantity),
-      });
+      const { data: line } = await api.post("/inventory/consume", payload);
       setCode("");
+      setSerialNumber("");
       setQuantity(1);
       onConsumed?.(line);
     } catch (err) {
@@ -129,10 +140,28 @@ export default function ConsumePartForm({ jobId, onConsumed }) {
           type="number"
           min={1}
           value={quantity}
+          disabled={selected?.track_serial}
           onChange={(e) => setQuantity(e.target.value)}
-          className="w-32 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={`w-32 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${selected?.track_serial ? 'bg-gray-100 dark:bg-gray-800 text-gray-500' : ''}`}
         />
+        {selected?.track_serial && <span className="ml-3 text-xs text-purple-600 font-semibold">Quantity fixed to 1 for serialized parts.</span>}
       </div>
+
+      {selected?.track_serial && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+            Serial Number *
+          </label>
+          <input
+            type="text"
+            required
+            value={serialNumber}
+            onChange={(e) => setSerialNumber(e.target.value)}
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+            placeholder="Scan or type serial number..."
+          />
+        </div>
+      )}
 
       {/* Live preview of the resolved batch */}
       {selected && (

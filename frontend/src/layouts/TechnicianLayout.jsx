@@ -9,7 +9,8 @@ import DateTimeDisplay from "../components/DateTimeDisplay";
 const NAV = [
   { to: "/tech",      label: "My Dashboard", exact: true },
   { to: "/tech/workspace", label: "Active Workspace" },
-  { to: "/tech/jobs", label: "Job Queue" },
+  { to: "/tech/jobs", label: "Customer Repairs" },
+  { to: "/tech/refurbish", label: "Store Refurbishments" },
   { to: "/tech/donors", label: "Donor Devices" },
 ];
 

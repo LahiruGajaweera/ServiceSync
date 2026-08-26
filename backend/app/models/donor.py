@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Boolean, Column, Enum, ForeignKey, String, DateTime, func
+from sqlalchemy import Boolean, Column, Enum, ForeignKey, String, DateTime, func, Numeric
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.core.database import Base
 
@@ -45,5 +45,7 @@ class DonorPart(Base):
     )
     is_available = Column(Boolean, default=True, nullable=False)
     approval_status = Column(String(20), default="pending", nullable=False)
+    sku = Column(String(50), nullable=True, unique=True)
+    estimated_value = Column(Numeric(10, 2), nullable=True)
     extracted_date = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -77,7 +77,8 @@ export default function App() {
           >
             <Route index      element={<TechDashboard />} />
             <Route path="workspace" element={<TechWorkspace />} />
-            <Route path="jobs" element={<JobQueue />} />
+            <Route path="jobs" element={<JobQueue mode="customer" />} />
+            <Route path="refurbish" element={<JobQueue mode="refurbish" />} />
             <Route path="donors" element={<TechDonorDevices />} />
             <Route path="profile" element={<ProfilePage />} />
           </Route>

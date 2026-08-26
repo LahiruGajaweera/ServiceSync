@@ -1,16 +1,87 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from "recharts";
 import api from "../../services/api";
+
+function CustomSearchSelect({ value, onChange, options, placeholder }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!query) return options;
+    return options.filter(o => o.toLowerCase().includes(query.toLowerCase()));
+  }, [options, query]);
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      <button 
+        type="button" 
+        onClick={() => { setOpen(!open); setQuery(""); }}
+        className="flex items-center justify-between px-3 py-1.5 w-32 md:w-40 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
+      >
+        <span className="truncate">{value || placeholder}</span>
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+            <input 
+              type="text"
+              autoFocus
+              placeholder="Search..."
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              className="w-full px-2 py-1.5 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-brand-500"
+            />
+          </div>
+          <ul className="max-h-48 overflow-y-auto text-sm">
+            <li 
+              onClick={() => { onChange(""); setOpen(false); }}
+              className={`px-3 py-2 cursor-pointer hover:bg-brand-50 dark:hover:bg-gray-700 ${!value ? "font-bold text-brand-600" : "text-gray-700 dark:text-gray-200"}`}
+            >
+              {placeholder}
+            </li>
+            {filtered.map(opt => (
+              <li 
+                key={opt}
+                onClick={() => { onChange(opt); setOpen(false); }}
+                className={`px-3 py-2 cursor-pointer hover:bg-brand-50 dark:hover:bg-gray-700 ${value === opt ? "font-bold text-brand-600" : "text-gray-700 dark:text-gray-200"}`}
+              >
+                {opt}
+              </li>
+            ))}
+            {filtered.length === 0 && <li className="px-3 py-2 text-gray-400">No results</li>}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function PredictiveAnalytics() {
   const [faultTrends, setFaultTrends] = useState([]);
   const [deviceTrends, setDeviceTrends] = useState([]);
   const [criticalInventory, setCriticalInventory] = useState([]);
   const [techScores, setTechScores] = useState([]);
+  const [selectedBrand, setSelectedBrand] = useState("");
   const [selectedDevice, setSelectedDevice] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("Colombo");
   const [selectedFaultCategory, setSelectedFaultCategory] = useState("");
+  const [brands, setBrands] = useState([]);
+  const [models, setModels] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const faultCategories = [
     { value: "screen", label: "Screen" },
@@ -22,6 +93,34 @@ export default function PredictiveAnalytics() {
     { value: "water_damage", label: "Water Damage" },
     { value: "other", label: "Other" }
   ];
+
+  useEffect(() => {
+    const fetchBrands = async () => {
+      try {
+        const { data } = await api.get("/brands/");
+        setBrands(data.map(b => b.name));
+      } catch (e) {
+        console.error("Failed to load brands", e);
+      }
+    };
+    fetchBrands();
+  }, []);
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      if (!selectedBrand) {
+        setModels([]);
+        return;
+      }
+      try {
+        const { data } = await api.get("/models/", { params: { brand: selectedBrand } });
+        setModels(data.map(m => m.name));
+      } catch (e) {
+        console.error("Failed to load models", e);
+      }
+    };
+    fetchModels();
+  }, [selectedBrand]);
 
   useEffect(() => {
     const fetchDevices = async () => {
@@ -38,9 +137,10 @@ export default function PredictiveAnalytics() {
 
   useEffect(() => {
     const fetchAll = async () => {
-      setLoading(true);
+      if (!loading) setIsUpdating(true);
       try {
         const params = { location: selectedLocation };
+        if (selectedBrand) params.device_brand = selectedBrand;
         if (selectedDevice) params.device_model = selectedDevice;
 
         const [faultsRes, invRes, techRes] = await Promise.all([
@@ -60,10 +160,11 @@ export default function PredictiveAnalytics() {
         console.error("Failed to load analytics data", e);
       } finally {
         setLoading(false);
+        setIsUpdating(false);
       }
     };
     fetchAll();
-  }, [selectedDevice, selectedLocation]);
+  }, [selectedBrand, selectedDevice, selectedLocation]);
 
   return (
     <div className="p-6 space-y-8">
@@ -165,20 +266,28 @@ export default function PredictiveAnalytics() {
                 <option value="Kurunegala">Kurunegala</option>
                 <option value="Anuradhapura">Anuradhapura</option>
               </select>
-              <select
-                value={selectedDevice}
-                onChange={(e) => setSelectedDevice(e.target.value)}
-                className="px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
-              >
-                <option value="">All Models</option>
-                {deviceTrends.map((d) => (
-                  <option key={d.device_model} value={d.device_model}>{d.device_model}</option>
-                ))}
-              </select>
+              <div className="flex gap-2">
+                <CustomSearchSelect 
+                  value={selectedBrand}
+                  onChange={(val) => {
+                    setSelectedBrand(val);
+                    setSelectedDevice("");
+                  }}
+                  options={brands}
+                  placeholder="All Brands"
+                />
+
+                <CustomSearchSelect 
+                  value={selectedDevice}
+                  onChange={(val) => setSelectedDevice(val)}
+                  options={models}
+                  placeholder="All Models"
+                />
+              </div>
             </div>
           </div>
           
-          <div className="mt-6 flex flex-col gap-6">
+          <div className={`mt-6 flex flex-col gap-6 transition-opacity duration-300 ${isUpdating ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
             {loading ? (
               <div className="py-10 text-center text-gray-400 animate-pulse">Running AI Forecasts...</div>
             ) : faultTrends.length === 0 ? (
@@ -242,54 +351,7 @@ export default function PredictiveAnalytics() {
           </div>
         </section>
 
-        <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-4 text-sm uppercase tracking-wide">Technician Performance Leaderboard</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="text-gray-500 dark:text-gray-400 border-b dark:border-gray-700">
-                  <th className="pb-2">Technician</th>
-                  <th className="pb-2">Jobs Completed</th>
-                  <th className="pb-2">Score</th>
-                  <th className="pb-2">Rating</th>
-                </tr>
-              </thead>
-              <tbody>
-                {techScores.length === 0 ? (
-                  <tr><td colSpan="4" className="py-4 text-center text-gray-400">Not enough data for scoring</td></tr>
-                ) : (
-                  techScores.map((t, idx) => (
-                    <tr key={idx} className="border-b last:border-0 dark:border-gray-700">
-                      <td className="py-3 font-medium text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                        {idx === 0 && <span title="Top Performer">🥇</span>}
-                        {idx === 1 && <span title="Runner Up">🥈</span>}
-                        {t.name}
-                      </td>
-                      <td className="py-3 text-gray-700 dark:text-gray-200">{t.total_jobs_completed}</td>
-                      <td className="py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${t.performance_score}%` }}></div>
-                          </div>
-                          <span className="font-semibold text-gray-800 dark:text-gray-100">{t.performance_score.toFixed(1)}</span>
-                        </div>
-                      </td>
-                      <td className="py-3">
-                        {t.performance_score >= 80 ? (
-                          <span className="px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs font-bold rounded-full">Excellent</span>
-                        ) : t.performance_score >= 50 ? (
-                          <span className="px-2 py-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-xs font-bold rounded-full">Average</span>
-                        ) : (
-                          <span className="px-2 py-1 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-xs font-bold rounded-full">Needs Improvement</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
+
       </div>
     </div>
   );

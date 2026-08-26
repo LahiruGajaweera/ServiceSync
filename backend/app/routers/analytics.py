@@ -71,16 +71,24 @@ def get_device_models(
 ):
     return analytics_service.get_device_models(db)
 
+@router.get("/device-brands-models")
+def get_device_brands_and_models(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    return analytics_service.get_device_brands_and_models(db)
+
 
 @router.get("/predictions/faults")
 def predict_faults(
     months_back: int = 6,
+    device_brand: str = None,
     device_model: str = None,
     location: str = "Colombo",
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
-    return predictive_service.forecast_fault_trends(db, months_back=months_back, device_model=device_model, location=location)
+    return predictive_service.forecast_fault_trends(db, months_back=months_back, device_brand=device_brand, device_model=device_model, location=location)
 
 @router.get("/predictions/devices")
 def predict_devices(

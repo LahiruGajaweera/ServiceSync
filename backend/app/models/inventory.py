@@ -31,6 +31,11 @@ class InventoryItem(Base):
         cascade="all, delete-orphan",
         order_by="InventoryBatch.purchased_at",
     )
+    units = relationship(
+        "InventoryUnit",
+        back_populates="item",
+        cascade="all, delete-orphan",
+    )
 
 
 class InventoryBatch(Base):
@@ -51,6 +56,32 @@ class InventoryBatch(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     item = relationship("InventoryItem", back_populates="batches")
+    units = relationship("InventoryUnit", back_populates="batch", cascade="all, delete-orphan")
+
+
+class InventoryUnit(Base):
+    """An individual physical unit with a unique serial number."""
+
+    __tablename__ = "inventory_units"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    inventory_item_id = Column(
+        UUID(as_uuid=True), ForeignKey("inventory_items.id"), nullable=False, index=True
+    )
+    batch_id = Column(
+        UUID(as_uuid=True), ForeignKey("inventory_batches.id"), nullable=False, index=True
+    )
+    serial_number = Column(String(100), unique=True, nullable=False, index=True)
+    status = Column(
+        Enum("in_stock", "used", "returned", "lost", name="unit_status"),
+        nullable=False,
+        default="in_stock",
+    )
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    item = relationship("InventoryItem", back_populates="units")
+    batch = relationship("InventoryBatch", back_populates="units")
 
 
 class InventoryAdjustmentLog(Base):
