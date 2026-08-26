@@ -65,6 +65,58 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
   // Revert request handling
   const [processingRevert, setProcessingRevert] = useState(false);
 
+  // Warranty Claim modal
+  const [showWarrantyModal, setShowWarrantyModal] = useState(false);
+  const [warrantyFault, setWarrantyFault]         = useState("");
+  const [warrantyTechId, setWarrantyTechId]       = useState("");
+  const [warrantyNotes, setWarrantyNotes]         = useState("");
+  const [technicians, setTechnicians]             = useState([]);
+  const [savingWarranty, setSavingWarranty]       = useState(false);
+  const [warrantyError, setWarrantyError]         = useState("");
+
+  const openWarrantyModal = async () => {
+    setWarrantyFault(job?.fault_description || "");
+    setWarrantyTechId(job?.technician_id || "");
+    setWarrantyNotes("");
+    setWarrantyError("");
+    try {
+      const { data } = await api.get("/users/", { params: { role: "technician" } });
+      setTechnicians(data);
+    } catch {
+      setTechnicians([]);
+    }
+    setShowWarrantyModal(true);
+  };
+
+  const handleCreateWarrantyClaim = async (e) => {
+    e.preventDefault();
+    setWarrantyError("");
+    setSavingWarranty(true);
+    try {
+      const payload = {
+        customer_id: job.customer_id,
+        technician_id: warrantyTechId || null,
+        rework_of_job_id: job.id,
+        device_brand: job.device_brand,
+        device_model: job.device_model,
+        device_imei: job.device_imei,
+        fault_category: job.fault_category,
+        fault_description: warrantyFault.trim() || job.fault_description,
+        estimated_cost: 0,
+        notes: warrantyNotes ? `[Warranty Claim for ${job.job_id}] ${warrantyNotes}` : `[Warranty Claim for ${job.job_id}]`,
+      };
+      await api.post("/jobs/", payload);
+      setShowWarrantyModal(false);
+      alert(`Warranty Claim registered successfully for Job #${job.job_id}!`);
+      onDone?.();
+      onClose();
+    } catch (err) {
+      setWarrantyError(err.response?.data?.detail || "Failed to register Warranty Claim");
+    } finally {
+      setSavingWarranty(false);
+    }
+  };
+
   const handleApproveRevert = async () => {
     setProcessingRevert(true);
     try {
@@ -277,14 +329,53 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
         </div>
       )}
 
+      {/* Warranty Rework Banner if this job is a warranty claim */}
+      {job.rework_of_job_id && (
+        <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-xl p-4 mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">🛡️</span>
+            <div>
+              <h3 className="text-purple-900 dark:text-purple-200 font-bold text-sm">
+                Warranty Claim / Free Rework Job
+              </h3>
+              <p className="text-purple-700 dark:text-purple-300 text-xs">
+                This repair is a free warranty claim linked to an original repair job.
+              </p>
+            </div>
+          </div>
+          <span className="text-xs bg-purple-200 dark:bg-purple-900 text-purple-800 dark:text-purple-200 font-mono font-bold px-3 py-1 rounded-lg">
+            Free Warranty
+          </span>
+        </div>
+      )}
+
       {/* Job Header */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Job ID</p>
-            <p className="text-2xl font-bold font-mono text-blue-600">{job.job_id}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-2xl font-bold font-mono text-blue-600">{job.job_id}</p>
+              {job.rework_of_job_id && (
+                <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2.5 py-0.5 rounded-full border border-purple-200">
+                  🛡️ Warranty Rework
+                </span>
+              )}
+            </div>
           </div>
-          <JobStatusBadge status={job.status} />
+          <div className="flex items-center gap-2">
+            <JobStatusBadge status={job.status} />
+            {(job.status === "completed" || job.status === "delivered") && (
+              <button
+                type="button"
+                onClick={openWarrantyModal}
+                className="bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition-colors flex items-center gap-1.5"
+                title="Create a free Warranty Claim / Rework Job for this customer"
+              >
+                <span>🛡️ Claim Warranty</span>
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-6 text-sm">
@@ -701,6 +792,84 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
             <button type="submit"
               className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-semibold">
               Confirm Payment
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Create Warranty Claim Modal */}
+      <Modal open={showWarrantyModal} onClose={() => setShowWarrantyModal(false)} title="🛡️ Create Customer Warranty Claim (Rework)">
+        <form onSubmit={handleCreateWarrantyClaim} className="space-y-4">
+          <div className="bg-purple-50 dark:bg-purple-950/40 p-3 rounded-xl border border-purple-200 dark:border-purple-800 text-xs text-purple-900 dark:text-purple-200">
+            <p className="font-bold mb-0.5">Free Guarantee Repair for Job #{job?.job_id}</p>
+            <p>Customer: <strong>{job?.customer_name}</strong> ({job?.device_brand} {job?.device_model})</p>
+          </div>
+
+          {warrantyError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs font-medium">
+              {warrantyError}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">
+              New Issue / Claim Reason <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              required
+              rows={3}
+              value={warrantyFault}
+              onChange={(e) => setWarrantyFault(e.target.value)}
+              placeholder="Describe the defect or reason for warranty claim (e.g. Touch stopped working after 2 days)..."
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">
+              Assign Technician for Warranty Repair
+            </label>
+            <select
+              value={warrantyTechId}
+              onChange={(e) => setWarrantyTechId(e.target.value)}
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="">-- Assign Later --</option>
+              {technicians.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} ({t.email})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">
+              Additional Internal Notes (Optional)
+            </label>
+            <input
+              type="text"
+              value={warrantyNotes}
+              onChange={(e) => setWarrantyNotes(e.target.value)}
+              placeholder="e.g. Free replacement under 30-day screen warranty"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowWarrantyModal(false)}
+              className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={savingWarranty}
+              className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white py-2 rounded-lg text-sm font-semibold shadow-sm"
+            >
+              {savingWarranty ? "Registering Claim…" : "Register Warranty Job"}
             </button>
           </div>
         </form>

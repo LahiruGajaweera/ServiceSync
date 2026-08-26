@@ -166,17 +166,24 @@ def auto_resume_timer(job_id: UUID, data: AutoResumeRequest, current_user: User,
     return _job_dict(job, customer.name if customer else None, customer.phone_number if customer else None, tech.name if tech else None)
 
 def create_job(data: JobCreate, created_by: User, db: Session, background_tasks: BackgroundTasks = None) -> dict:
+    original_job_code = None
+    if data.rework_of_job_id:
+        parent_job = db.query(Job).filter(Job.id == data.rework_of_job_id).first()
+        if parent_job:
+            original_job_code = parent_job.job_id
+
     job = Job(
         job_id=_generate_job_id(db),
         customer_id=data.customer_id,
         technician_id=data.technician_id,
+        rework_of_job_id=data.rework_of_job_id,
         device_brand=data.device_brand,
         device_model=data.device_model,
         device_imei=data.device_imei,
         fault_category=data.fault_category,
         fault_description=data.fault_description,
         estimated_completion_date=data.estimated_completion_date,
-        estimated_cost=data.estimated_cost,
+        estimated_cost=data.estimated_cost if not data.rework_of_job_id else 0,
         investigated=data.investigated,
         notes=data.notes,
         physical_condition=data.physical_condition,
@@ -185,11 +192,12 @@ def create_job(data: JobCreate, created_by: User, db: Session, background_tasks:
     db.add(job)
     db.flush()  # populate job.id before inserting history
 
+    history_note = f"Warranty Claim registered (Rework of #{original_job_code})" if original_job_code else "Job registered"
     history = JobStatusHistory(
         job_id=job.id,
         status="pending",
         changed_by=created_by.id,
-        notes="Job registered",
+        notes=history_note,
     )
     db.add(history)
     db.commit()
