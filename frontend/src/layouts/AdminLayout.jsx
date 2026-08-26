@@ -37,23 +37,26 @@ export default function AdminLayout() {
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-800 overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-60 shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+      <aside className="w-64 shrink-0 bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700/50 flex flex-col z-20">
         {/* Brand */}
-        <div className="px-5 py-5 border-b border-gray-200 dark:border-gray-700">
-          <p className="text-lg font-extrabold text-blue-600 tracking-tight">ServiceSync</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Admin Panel</p>
+        <div className="px-6 py-6 border-b border-gray-100 dark:border-gray-700/50">
+          <p className="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+            <span className="bg-blue-600 text-white rounded-lg w-8 h-8 flex items-center justify-center text-lg">S</span>
+            ServiceSync
+          </p>
+          <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold tracking-wide uppercase mt-1.5 ml-10">Admin Panel</p>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 py-3 overflow-y-auto">
+        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
           {NAV.map((item) => (
             <Link
               key={item.to}
               to={item.to}
-              className={`flex items-center px-5 py-2.5 text-sm transition-colors border-l-2 ${
+              className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
                 isActive(item)
-                  ? "border-blue-500 bg-blue-50 text-blue-700 font-medium"
-                  : "border-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 hover:text-gray-900 dark:text-white"
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/25"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
               {item.label}
@@ -75,9 +78,9 @@ export default function AdminLayout() {
       </aside>
 
       {/* Page content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900">
         {/* Top Header */}
-        <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6 shrink-0">
+        <header className="h-16 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between px-8 shrink-0 z-10 sticky top-0">
           <DateTimeDisplay />
           <div className="flex items-center gap-2">
             <AdminTasksWidget />
