@@ -692,13 +692,13 @@ export default function JobManagement() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowQuote(true)}
-            className="bg-white dark:bg-gray-800 border border-blue-600 text-blue-600 hover:bg-blue-50 text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+            className="bg-white dark:bg-gray-800 border border-blue-600 text-blue-600 hover:bg-blue-50 text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition-colors"
           >
             Quick Quote
           </button>
           <button
             onClick={() => { setShowCreate(true); setFormError(""); setForm(getEmptyForm()); setPhotos([]); setCustSearch(""); setCustResults([]); setShowNewCust(false); }}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition-colors"
           >
             + Register Job
           </button>

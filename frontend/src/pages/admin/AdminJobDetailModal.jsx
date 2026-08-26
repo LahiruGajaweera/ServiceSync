@@ -313,14 +313,14 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
               <button 
                 onClick={handleRejectRevert}
                 disabled={processingRevert}
-                className="bg-white dark:bg-gray-800 text-amber-700 border border-amber-300 hover:bg-amber-100 px-4 py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
+                className="bg-white dark:bg-gray-800 text-amber-700 border border-amber-300 hover:bg-amber-100 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50"
               >
                 Reject
               </button>
               <button 
                 onClick={handleApproveRevert}
                 disabled={processingRevert}
-                className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors disabled:opacity-50"
+                className="bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-sm transition-colors disabled:opacity-50"
               >
                 Approve Revert
               </button>
@@ -552,7 +552,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
                     placeholder="Reason for change..." />
                 </div>
                 <button type="submit" disabled={savingStatus || !newStatus}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-2 rounded-lg text-sm font-semibold transition-colors">
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-2 px-3.5 rounded-xl text-xs font-bold shadow-sm transition-colors">
                   {savingStatus ? "Updating…" : "Update Status"}
                 </button>
               </form>
@@ -568,7 +568,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
                 <button
                   onClick={() => { setInvError(""); setLaborCost(job.labor_cost || ""); setTaxRate("0"); setShowInvoice(true); }}
                   disabled={job.status !== "ready_for_pickup"}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold py-2 rounded-lg transition-colors"
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-xs font-bold py-2 px-3.5 rounded-xl shadow-sm transition-colors"
                 >
                   Generate Invoice
                 </button>
@@ -597,7 +597,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
                 {invoice.payment_status !== "paid" && (
                   <button
                     onClick={() => { setPayMethod("cash"); setShowPay(true); }}
-                    className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 rounded-lg transition-colors"
+                    className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-2 px-3.5 rounded-xl shadow-sm transition-colors"
                   >
                     Mark as Paid
                   </button>
