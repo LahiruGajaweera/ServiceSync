@@ -22,6 +22,7 @@ import TechnicianPanel     from "./pages/admin/TechnicianPanel";
 import InvoiceManager      from "./pages/admin/InvoiceManager";
 import SalvageConsole      from "./pages/admin/SalvageConsole";
 import DonorDeviceConsole  from "./pages/admin/DonorDeviceConsole";
+import SettingsManager     from "./pages/admin/SettingsManager";
 
 // Technician pages
 import TechDashboard from "./pages/technician/TechDashboard";
@@ -63,6 +64,7 @@ export default function App() {
             <Route path="analytics"   element={<AnalyticsDashboard />} />
             <Route path="predictions" element={<PredictiveAnalytics />} />
             <Route path="donors"      element={<DonorDeviceConsole />} />
+            <Route path="settings"    element={<SettingsManager />} />
             <Route path="profile"     element={<ProfilePage />} />
           </Route>
 
