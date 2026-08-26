@@ -55,6 +55,12 @@ def _job_dict(job: Job, customer_name=None, customer_phone=None, technician_name
         "total_diagnostic_seconds": job.total_diagnostic_seconds,
         "total_active_repair_seconds": job.total_active_repair_seconds,
         "current_timer_mode": job.current_timer_mode,
+        "qc_mic_tested": job.qc_mic_tested,
+        "qc_camera_tested": job.qc_camera_tested,
+        "qc_touch_tested": job.qc_touch_tested,
+        "qc_biometrics_tested": job.qc_biometrics_tested,
+        "qc_wifi_tested": job.qc_wifi_tested,
+        "qc_charging_tested": job.qc_charging_tested,
     }
 
 
@@ -327,6 +333,13 @@ def update_status(job_id: UUID, data: JobStatusUpdate, changed_by: User, db: Ses
             job.repair_time_mins = data.repair_time_mins
         if data.resolution_notes is not None:
             job.resolution_notes = data.resolution_notes
+            
+        if data.qc_mic_tested is not None: job.qc_mic_tested = data.qc_mic_tested
+        if data.qc_camera_tested is not None: job.qc_camera_tested = data.qc_camera_tested
+        if data.qc_touch_tested is not None: job.qc_touch_tested = data.qc_touch_tested
+        if data.qc_biometrics_tested is not None: job.qc_biometrics_tested = data.qc_biometrics_tested
+        if data.qc_wifi_tested is not None: job.qc_wifi_tested = data.qc_wifi_tested
+        if data.qc_charging_tested is not None: job.qc_charging_tested = data.qc_charging_tested
 
     history = JobStatusHistory(
         job_id=job.id,
