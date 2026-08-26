@@ -4,8 +4,7 @@
 
 @layer base {
   body {
-    @apply transition-colors duration-200 antialiased text-gray-800 bg-gray-50;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    @apply transition-colors duration-200;
   }
   .dark body {
     @apply bg-gray-900 text-gray-100;
@@ -53,11 +52,5 @@
 .dark input, 
 .dark select, 
 .dark textarea {
-  @apply bg-gray-800 text-gray-100 border-gray-600 focus:border-blue-500 focus:ring-blue-500/20 !important;
-}
-
-input, 
-select, 
-textarea {
-  @apply focus:ring-blue-500/20 shadow-sm transition-shadow !important;
+  @apply bg-gray-700 text-gray-100 border-gray-600 !important;
 }

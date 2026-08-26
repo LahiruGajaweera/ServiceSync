@@ -12,7 +12,6 @@ const NAV = [
   { to: "/admin/donors",     label: "Donor Devices" },
   { to: "/admin/analytics",  label: "Analytics" },
   { to: "/admin/predictions",label: "AI Predictions" },
-  { to: "/admin/settings",   label: "Settings" },
 ];
 
 import ThemeToggle from "../components/ThemeToggle";
@@ -38,26 +37,23 @@ export default function AdminLayout() {
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-800 overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 shrink-0 bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700/50 flex flex-col z-20">
+      <aside className="w-60 shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
         {/* Brand */}
-        <div className="px-6 py-6 border-b border-gray-100 dark:border-gray-700/50">
-          <p className="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-            <span className="bg-blue-600 text-white rounded-lg w-8 h-8 flex items-center justify-center text-lg">S</span>
-            ServiceSync
-          </p>
-          <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold tracking-wide uppercase mt-1.5 ml-10">Admin Panel</p>
+        <div className="px-5 py-5 border-b border-gray-200 dark:border-gray-700">
+          <p className="text-lg font-extrabold text-blue-600 tracking-tight">ServiceSync</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Admin Panel</p>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+        <nav className="flex-1 py-3 overflow-y-auto">
           {NAV.map((item) => (
             <Link
               key={item.to}
               to={item.to}
-              className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
+              className={`flex items-center px-5 py-2.5 text-sm transition-colors border-l-2 ${
                 isActive(item)
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/25"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white"
+                  ? "border-blue-500 bg-blue-50 text-blue-700 font-medium"
+                  : "border-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 hover:text-gray-900 dark:text-white"
               }`}
             >
               {item.label}
@@ -65,18 +61,24 @@ export default function AdminLayout() {
           ))}
         </nav>
 
+        {/* User footer */}
+        <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-700">
+          <p className="text-xs font-medium text-gray-800 dark:text-gray-100 truncate">{user?.name}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{user?.email}</p>
+          <button
+            onClick={handleLogout}
+            className="mt-3 w-full text-xs bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 py-1.5 rounded transition-colors font-medium"
+          >
+            Sign Out
+          </button>
+        </div>
       </aside>
 
       {/* Page content */}
-      <main className="flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900">
+      <main className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="h-16 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between px-8 shrink-0 z-10 sticky top-0">
-          <div className="flex items-center gap-4">
-            <DateTimeDisplay />
-            <div className="hidden sm:block border-l border-gray-200 dark:border-gray-700/50 pl-4">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Welcome, <span className="font-bold text-blue-600 dark:text-blue-400">{user?.name}</span></p>
-            </div>
-          </div>
+        <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6 shrink-0">
+          <DateTimeDisplay />
           <div className="flex items-center gap-2">
             <AdminTasksWidget />
             <ThemeToggle />
@@ -91,16 +93,6 @@ export default function AdminLayout() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </Link>
-            <button
-              onClick={handleLogout}
-              className="ml-1 relative p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors rounded-full hover:bg-red-50 dark:hover:bg-red-900/30"
-              aria-label="Sign Out"
-              title="Sign Out"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </button>
           </div>
         </header>
 

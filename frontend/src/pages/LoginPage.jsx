@@ -61,38 +61,23 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex w-full bg-white dark:bg-gray-900">
-      {/* Left Column - Image & Branding (Hidden on mobile) */}
-      <div 
-        className="hidden lg:flex w-1/2 relative flex-col justify-between p-12 bg-cover bg-center"
-        style={{ backgroundImage: `url(${bgImage})` }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/80 to-black/90 z-0"></div>
-        <div className="relative z-10">
-          <h1 className="text-5xl font-extrabold text-white tracking-tight drop-shadow-lg mb-4">ServiceSync</h1>
-          <p className="text-blue-100 mt-2 text-lg font-medium">
-            Smart Repair Shop Management System
-          </p>
-        </div>
-        <div className="relative z-10 text-blue-100/60 text-sm">
-          &copy; {new Date().getFullYear()} ServiceSync. All rights reserved.
-        </div>
-      </div>
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat relative"
+      style={{ backgroundImage: `url(${bgImage})` }}
+    >
+      {/* Dark frosted overlay to make the image visible while ensuring white text pops */}
+      <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm z-0"></div>
 
-      {/* Right Column - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 relative">
-        <div className="w-full max-w-md relative z-10 animate-fade-in">
-          {/* Mobile Logo (Visible only on mobile) */}
-          <div className="lg:hidden text-center mb-8">
-            <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-2">ServiceSync</h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Smart Repair Shop Management System</p>
-          </div>
+      <div className="w-full max-w-md relative z-10">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <h1 className="text-5xl font-extrabold text-white tracking-tight drop-shadow-lg">ServiceSync</h1>
+          <p className="text-gray-200 mt-3 text-base font-medium drop-shadow-md bg-black/30 border border-white/10 inline-block px-5 py-1.5 rounded-full backdrop-blur-sm">Smart Repair Shop Management System</p>
+        </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] p-8 border border-gray-100 dark:border-gray-700">
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Welcome Back</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Please enter your details to sign in.</p>
-            </div>
+        {/* Card */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6">Staff Sign In</h2>
 
           {success && (
             <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-6 flex items-start gap-2">
@@ -153,23 +138,22 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800
-                         disabled:bg-blue-400 text-white font-semibold py-3 rounded-lg
-                         transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm"
+                         disabled:bg-blue-400 text-white font-semibold py-2.5 rounded-lg
+                         transition-colors text-sm"
             >
               {loading ? "Signing in…" : "Sign In"}
             </button>
           </form>
         </div>
 
-        <div className="text-center mt-8">
-          <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+        <div className="text-center mt-6">
+          <p className="text-sm text-gray-200 font-medium bg-black/40 py-2 px-6 rounded-full inline-block shadow-lg border border-white/10 backdrop-blur-md">
             Customer?{" "}
-            <a href="/track" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-bold ml-1 transition-colors underline-offset-4 hover:underline">
-              Track your repair &rarr;
+            <a href="/track" className="text-blue-300 hover:text-white hover:underline font-bold ml-1 transition-colors">
+              Track your repair →
             </a>
           </p>
         </div>
-      </div>
       </div>
       <ChatbotWidget />
     </div>

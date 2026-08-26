@@ -7,12 +7,12 @@ import AutoSlidingAlerts from "../../components/AutoSlidingAlerts";
 
 function StatCard({ label, value, sub, color, subClassName = "text-gray-400" }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-[0_2px_10px_rgb(0,0,0,0.2)] border border-gray-100 dark:border-gray-700/50 px-6 py-5 flex flex-col justify-center min-h-[110px] relative overflow-hidden group transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-default">
-      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 relative z-10">{label}</p>
-      <div className="mt-1.5 flex items-baseline gap-2 relative z-10">
-        <span className={`text-3xl font-extrabold tracking-tight ${color}`}>{value}</span>
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm px-5 py-4 flex flex-col justify-center min-h-[100px]">
+      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</p>
+      <div className="mt-1 flex items-baseline gap-2">
+        <span className={`text-3xl font-bold ${color}`}>{value}</span>
       </div>
-      {sub && <p className={`text-xs mt-1.5 font-medium ${subClassName} line-clamp-1 relative z-10`} title={typeof sub === 'string' ? sub : ''}>{sub}</p>}
+      {sub && <p className={`text-xs mt-1.5 ${subClassName} line-clamp-1`} title={typeof sub === 'string' ? sub : ''}>{sub}</p>}
     </div>
   );
 }
@@ -221,7 +221,7 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Recent Jobs */}
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-[0_2px_10px_rgb(0,0,0,0.2)] border border-gray-100 dark:border-gray-700/50 p-6 sm:p-8">
+        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-700 dark:text-gray-200">Recent Jobs</h3>
             <Link to="/admin/jobs" className="text-xs text-blue-600 hover:underline">View all →</Link>
@@ -266,7 +266,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-[0_2px_10px_rgb(0,0,0,0.2)] border border-gray-100 dark:border-gray-700/50 p-6 sm:p-8">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-4">Quick Actions</h3>
           <div className="space-y-3">
             {[
@@ -278,11 +278,11 @@ export default function AdminDashboard() {
               <Link
                 key={action.label}
                 to={action.to}
-                className="w-full flex items-center px-5 py-3.5 rounded-xl bg-gray-50 dark:bg-gray-700/30 hover:bg-blue-50 dark:hover:bg-blue-900/20
-                           text-gray-700 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-400 text-left transition-all border border-transparent hover:border-blue-100 dark:hover:border-blue-800/30 shadow-sm text-sm font-medium group"
+                className="w-full flex items-center px-4 py-3 rounded-lg bg-brand-50 hover:bg-brand-500
+                           text-brand-700 hover:text-white text-left transition-all shadow-sm hover:shadow-md text-sm group"
               >
-                <span className="flex-1">{action.label}</span>
-                <span className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-blue-500">→</span>
+                <span className="flex-1 font-medium">{action.label}</span>
+                <span className="opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-xs">→</span>
               </Link>
             ))}
           </div>
