@@ -194,16 +194,13 @@ export default function TechJobDetailModal({ open, job, onClose, onDone, onOpenP
         <div className="p-6 overflow-y-auto space-y-6">
           {job.rework_of_job_id && (
             <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-xl p-3.5 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span>🛡️</span>
-                <div>
-                  <h4 className="text-purple-900 dark:text-purple-200 font-bold text-xs">
-                    Customer Warranty Claim (Rework)
-                  </h4>
-                  <p className="text-purple-700 dark:text-purple-300 text-[11px]">
-                    This is a free guarantee repair for a previous job.
-                  </p>
-                </div>
+              <div>
+                <h4 className="text-purple-900 dark:text-purple-200 font-bold text-xs">
+                  Customer Warranty Claim (Rework)
+                </h4>
+                <p className="text-purple-700 dark:text-purple-300 text-[11px] mt-0.5">
+                  This is a free guarantee repair for a previous job.
+                </p>
               </div>
               <span className="text-[10px] bg-purple-200 dark:bg-purple-900 text-purple-800 dark:text-purple-200 font-bold px-2 py-0.5 rounded">
                 Free Warranty

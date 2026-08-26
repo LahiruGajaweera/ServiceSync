@@ -332,16 +332,13 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
       {/* Warranty Rework Banner if this job is a warranty claim */}
       {job.rework_of_job_id && (
         <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-xl p-4 mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-xl">🛡️</span>
-            <div>
-              <h3 className="text-purple-900 dark:text-purple-200 font-bold text-sm">
-                Warranty Claim / Free Rework Job
-              </h3>
-              <p className="text-purple-700 dark:text-purple-300 text-xs">
-                This repair is a free warranty claim linked to an original repair job.
-              </p>
-            </div>
+          <div>
+            <h3 className="text-purple-900 dark:text-purple-200 font-bold text-sm">
+              Warranty Claim / Free Rework Job
+            </h3>
+            <p className="text-purple-700 dark:text-purple-300 text-xs mt-0.5">
+              This repair is a free warranty claim linked to an original repair job.
+            </p>
           </div>
           <span className="text-xs bg-purple-200 dark:bg-purple-900 text-purple-800 dark:text-purple-200 font-mono font-bold px-3 py-1 rounded-lg">
             Free Warranty
@@ -358,7 +355,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
               <p className="text-2xl font-bold font-mono text-blue-600">{job.job_id}</p>
               {job.rework_of_job_id && (
                 <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2.5 py-0.5 rounded-full border border-purple-200">
-                  🛡️ Warranty Rework
+                  Warranty Rework
                 </span>
               )}
             </div>
@@ -369,10 +366,10 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
               <button
                 type="button"
                 onClick={openWarrantyModal}
-                className="bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition-colors flex items-center gap-1.5"
+                className="bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition-colors"
                 title="Create a free Warranty Claim / Rework Job for this customer"
               >
-                <span>🛡️ Claim Warranty</span>
+                Claim Warranty
               </button>
             )}
           </div>
@@ -798,7 +795,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
       </Modal>
 
       {/* Create Warranty Claim Modal */}
-      <Modal open={showWarrantyModal} onClose={() => setShowWarrantyModal(false)} title="🛡️ Create Customer Warranty Claim (Rework)">
+      <Modal open={showWarrantyModal} onClose={() => setShowWarrantyModal(false)} title="Create Customer Warranty Claim (Rework)">
         <form onSubmit={handleCreateWarrantyClaim} className="space-y-4">
           <div className="bg-purple-50 dark:bg-purple-950/40 p-3 rounded-xl border border-purple-200 dark:border-purple-800 text-xs text-purple-900 dark:text-purple-200">
             <p className="font-bold mb-0.5">Free Guarantee Repair for Job #{job?.job_id}</p>

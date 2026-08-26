@@ -761,7 +761,7 @@ export default function JobManagement() {
                             className="bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800"
                             title="Free Warranty Claim Job"
                           >
-                            🛡️ Warranty Claim
+                            Warranty Claim
                           </span>
                         )}
                       </div>
