@@ -10,6 +10,7 @@ from app.models.otp import AdminSetupOtp, PasswordResetOtp
 from app.models.brand import Brand
 from app.models.phone_model import PhoneModel
 from app.models.part_spec import PartSpec
+from app.models.setting import SystemSetting
 
 __all__ = [
     "User",
@@ -30,4 +31,5 @@ __all__ = [
     "Brand",
     "PhoneModel",
     "PartSpec",
+    "SystemSetting",
 ]
