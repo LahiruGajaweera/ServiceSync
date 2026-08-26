@@ -35,9 +35,9 @@ export default function AdminLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-800 overflow-hidden">
+    <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-60 shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+      <aside className="w-60 shrink-0 bg-white/60 dark:bg-gray-900/50 backdrop-blur-xl border-r border-white/30 dark:border-gray-800/50 flex flex-col shadow-2xl z-20">
         {/* Brand */}
         <div className="px-5 py-5 border-b border-gray-200 dark:border-gray-700">
           <p className="text-lg font-extrabold text-blue-600 tracking-tight">ServiceSync</p>
@@ -50,10 +50,10 @@ export default function AdminLayout() {
             <Link
               key={item.to}
               to={item.to}
-              className={`flex items-center px-5 py-2.5 text-sm transition-colors border-l-2 ${
+              className={`flex items-center mx-3 my-1 px-4 py-2.5 text-sm rounded-xl transition-all duration-300 ${
                 isActive(item)
-                  ? "border-blue-500 bg-blue-50 text-blue-700 font-medium"
-                  : "border-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 hover:text-gray-900 dark:text-white"
+                  ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold shadow-md shadow-blue-500/20"
+                  : "text-gray-600 dark:text-gray-300 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-gray-800/50 dark:hover:text-blue-400"
               }`}
             >
               {item.label}
@@ -77,7 +77,7 @@ export default function AdminLayout() {
       {/* Page content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6 shrink-0">
+        <header className="h-14 bg-white/60 dark:bg-gray-900/50 backdrop-blur-xl border-b border-white/30 dark:border-gray-800/50 flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
           <DateTimeDisplay />
           <div className="flex items-center gap-2">
             <AdminTasksWidget />

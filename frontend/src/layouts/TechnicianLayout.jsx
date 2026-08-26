@@ -44,9 +44,9 @@ export default function TechnicianLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-800 overflow-hidden">
+    <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-60 shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
+      <aside className="w-60 shrink-0 bg-white/60 dark:bg-gray-900/50 backdrop-blur-xl border-r border-white/30 dark:border-gray-800/50 flex flex-col shadow-2xl z-20">
         <div className="px-5 py-5 border-b border-gray-200 dark:border-gray-700">
           <p className="text-lg font-extrabold text-green-600 tracking-tight">ServiceSync</p>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Technician Panel</p>
@@ -57,10 +57,10 @@ export default function TechnicianLayout() {
             <div key={item.to}>
               <Link
                 to={item.to}
-                className={`flex items-center px-5 py-2.5 text-sm transition-colors border-l-2 ${
+                className={`flex items-center mx-3 my-1 px-4 py-2.5 text-sm rounded-xl transition-all duration-300 ${
                   isActive(item) && (!item.exact || location.pathname === item.to)
-                    ? "border-green-500 bg-green-50 text-green-700 font-medium"
-                    : "border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                    ? "bg-gradient-to-r from-green-600 to-green-500 text-white font-semibold shadow-md shadow-green-500/20"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-green-50 hover:text-green-700 dark:hover:bg-gray-800/50 dark:hover:text-green-400"
                 }`}
               >
                 {item.label}
@@ -95,7 +95,7 @@ export default function TechnicianLayout() {
       </aside>
 
       <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6 shrink-0">
+        <header className="h-14 bg-white/60 dark:bg-gray-900/50 backdrop-blur-xl border-b border-white/30 dark:border-gray-800/50 flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
           <div className="flex items-center gap-4">
             <DateTimeDisplay />
             <div className="hidden sm:block border-l border-gray-200 dark:border-gray-700 pl-4">
