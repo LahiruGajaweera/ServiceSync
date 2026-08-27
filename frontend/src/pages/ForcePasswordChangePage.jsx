@@ -29,7 +29,9 @@ export default function ForcePasswordChangePage() {
       const updated = await updatePassword(form.password);
       navigate(updated.role === "admin" ? "/admin" : "/tech", { replace: true });
     } catch (err) {
-      setError(err.response?.data?.detail || "Could not update password. Try again.");
+      const detail = err.response?.data?.detail;
+      const errorMsg = Array.isArray(detail) ? detail.map((d) => d.msg).join(" ") : detail || "Could not update password. Try again.";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
