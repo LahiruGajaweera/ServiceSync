@@ -394,15 +394,18 @@ def request_update_password_otp(user: User, db: Session) -> dict:
     }
 
 
-def update_password(user: User, new_password: str, otp_id: str, code: str, db: Session) -> dict:
+def update_password(user: User, new_password: str, otp_id: str | None, code: str | None, db: Session) -> dict:
     """Set a new password for the authenticated user and clear the temp flag."""
-    otp = _load_valid_reset_otp(otp_id, code, db)
-    if otp.user_id != user.id:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Invalid OTP for this user")
+    if not user.is_temporary_password:
+        if not otp_id or not code:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "OTP is required to update your password")
+        otp = _load_valid_reset_otp(otp_id, code, db)
+        if otp.user_id != user.id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Invalid OTP for this user")
+        otp.consumed = True
         
     user.password_hash = hash_password(new_password)
     user.is_temporary_password = False
-    otp.consumed = True
     db.commit()
     db.refresh(user)
     return _token_payload(user)
