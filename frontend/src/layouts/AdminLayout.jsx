@@ -61,24 +61,19 @@ export default function AdminLayout() {
           ))}
         </nav>
 
-        {/* User footer */}
-        <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-700">
-          <p className="text-xs font-medium text-gray-800 dark:text-gray-100 truncate">{user?.name}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{user?.email}</p>
-          <button
-            onClick={handleLogout}
-            className="mt-3 w-full text-xs bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 py-1.5 rounded transition-colors font-medium"
-          >
-            Sign Out
-          </button>
-        </div>
+
       </aside>
 
       {/* Page content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
         <header className="h-14 bg-white/60 dark:bg-gray-900/50 backdrop-blur-xl border-b border-white/30 dark:border-gray-800/50 flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
-          <DateTimeDisplay />
+          <div className="flex items-center gap-4">
+            <DateTimeDisplay />
+            <div className="hidden sm:block border-l border-gray-200 dark:border-gray-700 pl-4">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Welcome, <span className="font-bold text-blue-600 dark:text-blue-400">{user?.name}</span></p>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <AdminTasksWidget />
             <ThemeToggle />
@@ -93,6 +88,16 @@ export default function AdminLayout() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </Link>
+            <button
+              onClick={handleLogout}
+              className="ml-1 relative p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors rounded-full hover:bg-red-50 dark:hover:bg-red-900/30"
+              aria-label="Sign Out"
+              title="Sign Out"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
           </div>
         </header>
 
