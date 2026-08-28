@@ -86,7 +86,11 @@ export default function TechnicianPanel() {
     setFormError("");
     setSaving(true);
     try {
-      const { data } = await api.post("/admin/technicians", form);
+      const payload = { ...form };
+      if (!payload.email || payload.email.trim() === "") {
+        delete payload.email;
+      }
+      const { data } = await api.post("/admin/technicians", payload);
       setForm(EMPTY_FORM);
       setCreated({
         name: data.user.name,
@@ -95,7 +99,17 @@ export default function TechnicianPanel() {
       });
       fetchTechnicians();
     } catch (err) {
-      setFormError(err.response?.data?.detail || "Failed to add technician");
+      let errorMsg = "Failed to add technician";
+      if (err.response?.data?.detail) {
+        if (Array.isArray(err.response.data.detail)) {
+          errorMsg = err.response.data.detail.map(e => `${e.loc.join('.')}: ${e.msg}`).join(", ");
+        } else if (typeof err.response.data.detail === "string") {
+          errorMsg = err.response.data.detail;
+        } else {
+          errorMsg = JSON.stringify(err.response.data.detail);
+        }
+      }
+      setFormError(errorMsg);
     } finally {
       setSaving(false);
     }
@@ -245,11 +259,11 @@ export default function TechnicianPanel() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Email *</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Email</label>
             <input
-              name="email" type="email" required value={form.email} onChange={handleChange}
+              name="email" type="email" value={form.email} onChange={handleChange}
               className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="tech@servicesync.lk"
+              placeholder="tech@servicesync.lk (optional)"
             />
           </div>
           <div>

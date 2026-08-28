@@ -328,8 +328,8 @@ def create_technician(data: TechnicianCreate, db: Session) -> dict:
 
     The technician must change it on first login (``is_temporary_password``).
     """
-    email = data.email.strip().lower()
-    if db.query(User).filter(User.email == email).first():
+    email = data.email.strip().lower() if data.email else None
+    if email and db.query(User).filter(User.email == email).first():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "A user with this email already exists")
 
     phone = normalize_phone(data.phone_number)
