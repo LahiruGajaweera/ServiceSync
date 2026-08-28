@@ -5,6 +5,7 @@ import api from "../services/api";
 import ThemeToggle from "../components/ThemeToggle";
 import RevertNotifications from "../components/RevertNotifications";
 import DateTimeDisplay from "../components/DateTimeDisplay";
+import LogoutConfirmModal from "../components/LogoutConfirmModal";
 
 const NAV = [
   { to: "/tech",      label: "My Dashboard", exact: true },
@@ -19,6 +20,7 @@ export default function TechnicianLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeJobs, setActiveJobs] = useState([]);
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchActiveJobs = () => {
@@ -116,7 +118,7 @@ export default function TechnicianLayout() {
               </svg>
             </Link>
             <button
-              onClick={handleLogout}
+              onClick={() => setLogoutModalOpen(true)}
               className="ml-1 relative p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors rounded-full hover:bg-red-50 dark:hover:bg-red-900/30"
               aria-label="Sign Out"
               title="Sign Out"
@@ -127,6 +129,13 @@ export default function TechnicianLayout() {
             </button>
           </div>
         </header>
+
+        <LogoutConfirmModal 
+          open={logoutModalOpen} 
+          onCancel={() => setLogoutModalOpen(false)} 
+          onConfirm={handleLogout} 
+        />
+
         <div className="flex-1 overflow-y-auto">
           <Outlet />
         </div>

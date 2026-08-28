@@ -12,3 +12,13 @@ __pycache__/
 # Virtual environment
 venv/
 .venv/
+
+# Database
+*.db
+*.sqlite3
+
+# Uploads
+backend/uploads/
+
+# Build artifacts
+frontend/dist/

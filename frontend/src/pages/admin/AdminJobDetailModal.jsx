@@ -366,7 +366,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
               <button
                 type="button"
                 onClick={openWarrantyModal}
-                className="bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition-colors"
+                className="bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm transition-colors"
                 title="Create a free Warranty Claim / Rework Job for this customer"
               >
                 Claim Warranty
