@@ -216,14 +216,9 @@ export default function TechnicianPanel() {
               </p>
               <p className="text-xs text-green-700 mt-1">
                 {created.sms_sent
-                  ? "The temporary password was sent to their phone via SMS. However, you can also copy it below:"
-                  : "SMS delivery failed or is not configured. Please share the temporary password below with the technician:"}
+                  ? "The temporary password was sent to their phone via SMS."
+                  : "SMS is not configured — share the temporary password below with the technician."}
               </p>
-              <div className="mt-3 p-3 bg-white border border-green-200 rounded text-center">
-                <span className="font-mono font-bold text-lg text-gray-800 tracking-wider">
-                  {created.temporary_password}
-                </span>
-              </div>
             </div>
 
             <button
