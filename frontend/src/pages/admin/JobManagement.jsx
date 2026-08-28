@@ -541,6 +541,7 @@ export default function JobManagement() {
   const [newCust, setNewCust]           = useState({ name: "", phone_number: "", email: "", address: "" });
   const [custError, setCustError]       = useState("");
   const [creatingCust, setCreatingCust] = useState(false);
+  const [searchQuery, setSearchQuery]   = useState("");
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -681,27 +682,53 @@ export default function JobManagement() {
     }
   };
 
+  const filteredJobs = jobs.filter(job => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      job.job_id?.toLowerCase().includes(q) ||
+      job.customer?.name?.toLowerCase().includes(q) ||
+      job.device_model?.toLowerCase().includes(q) ||
+      job.fault_category?.toLowerCase().includes(q) ||
+      job.rework_of_job_id?.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="p-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Job Management</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{jobs.length} jobs {statusFilter ? `(${statusFilter.replace(/_/g, " ")})` : "total"}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{filteredJobs.length} jobs {statusFilter ? `(${statusFilter.replace(/_/g, " ")})` : "total"}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowQuote(true)}
-            className="bg-white dark:bg-gray-800 border border-blue-600 text-blue-600 hover:bg-blue-50 text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition-colors"
-          >
-            Quick Quote
-          </button>
-          <button
-            onClick={() => { setShowCreate(true); setFormError(""); setForm(getEmptyForm()); setPhotos([]); setCustSearch(""); setCustResults([]); setShowNewCust(false); }}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition-colors"
-          >
-            + Register Job
-          </button>
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search jobs..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            />
+            <svg className="w-4 h-4 text-gray-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <div className="flex items-center gap-2 border-l border-gray-200 dark:border-gray-700 pl-4">
+            <button
+              onClick={() => setShowQuote(true)}
+              className="bg-white dark:bg-gray-800 border border-blue-600 text-blue-600 hover:bg-blue-50 text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition-colors"
+            >
+              Quick Quote
+            </button>
+            <button
+              onClick={() => { setShowCreate(true); setFormError(""); setForm(getEmptyForm()); setPhotos([]); setCustSearch(""); setCustResults([]); setShowNewCust(false); }}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition-colors"
+            >
+              + Register Job
+            </button>
+          </div>
         </div>
       </div>
 
@@ -726,11 +753,11 @@ export default function JobManagement() {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="py-20 text-center text-gray-400 text-sm">Loading…</div>
-        ) : jobs.length === 0 ? (
+        ) : filteredJobs.length === 0 ? (
           <div className="py-20 text-center border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl mx-4 my-4">
             <p className="font-medium text-gray-500 dark:text-gray-400">No jobs found</p>
             <p className="text-sm text-gray-400 mt-1">
-              {statusFilter ? `No jobs with status "${statusFilter.replace(/_/g, " ")}"` : "Register the first job above"}
+              {searchQuery ? `No jobs match your search "${searchQuery}"` : statusFilter ? `No jobs with status "${statusFilter.replace(/_/g, " ")}"` : "Register the first job above"}
             </p>
           </div>
         ) : (
@@ -744,7 +771,7 @@ export default function JobManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {jobs.map((job) => (
+                {filteredJobs.map((job) => (
                   <tr key={job.id} 
                       className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 transition-colors cursor-pointer"
                       onClick={(e) => {

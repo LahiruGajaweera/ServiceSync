@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -18,11 +19,13 @@ import ThemeToggle from "../components/ThemeToggle";
 import RevertNotifications from "../components/RevertNotifications";
 import AdminTasksWidget from "../components/AdminTasksWidget";
 import DateTimeDisplay from "../components/DateTimeDisplay";
+import LogoutConfirmModal from "../components/LogoutConfirmModal";
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
 
   const isActive = (item) =>
     item.exact
@@ -89,7 +92,7 @@ export default function AdminLayout() {
               </svg>
             </Link>
             <button
-              onClick={handleLogout}
+              onClick={() => setLogoutModalOpen(true)}
               className="ml-1 relative p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors rounded-full hover:bg-red-50 dark:hover:bg-red-900/30"
               aria-label="Sign Out"
               title="Sign Out"
@@ -100,6 +103,12 @@ export default function AdminLayout() {
             </button>
           </div>
         </header>
+
+        <LogoutConfirmModal 
+          open={logoutModalOpen} 
+          onCancel={() => setLogoutModalOpen(false)} 
+          onConfirm={handleLogout} 
+        />
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto">

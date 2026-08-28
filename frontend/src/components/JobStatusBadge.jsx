@@ -24,7 +24,7 @@ export default function JobStatusBadge({ status }) {
   const style = STATUS_STYLES[status] ?? "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400";
   const label = STATUS_LABELS[status] ?? status;
   return (
-    <span className={`inline-flex whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-semibold ${style}`}>
+    <span className={`inline-flex whitespace-nowrap px-3 py-1 rounded-full text-xs font-semibold ${style}`}>
       {label}
     </span>
   );
