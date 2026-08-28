@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr
@@ -15,7 +16,7 @@ class TechnicianCreate(BaseModel):
     """Admin-issued technician account. Password is auto-generated server-side."""
 
     name: str
-    email: EmailStr
+    email: Optional[EmailStr] = None
     phone_number: str
     specializations: str | None = None
 
