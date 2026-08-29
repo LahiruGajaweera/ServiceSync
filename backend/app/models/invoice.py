@@ -10,6 +10,7 @@ class Invoice(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), unique=True, nullable=False)
     subtotal = Column(Numeric(10, 2), nullable=False, default=0)
+    discount_amount = Column(Numeric(10, 2), nullable=False, default=0)
     tax_amount = Column(Numeric(10, 2), nullable=False, default=0)
     total_amount = Column(Numeric(10, 2), nullable=False, default=0)
     payment_status = Column(

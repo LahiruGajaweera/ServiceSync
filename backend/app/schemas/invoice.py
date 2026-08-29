@@ -50,6 +50,7 @@ class JobPartResponse(BaseModel):
 class InvoiceCreate(BaseModel):
     job_id: UUID
     labor_cost: Decimal = Decimal("0.00")
+    discount_amount: Decimal = Decimal("0.00")
     tax_rate: Decimal = Decimal("0.00")
 
 
@@ -61,6 +62,7 @@ class InvoiceResponse(BaseModel):
     id: UUID
     job_id: UUID
     subtotal: Decimal
+    discount_amount: Decimal
     tax_amount: Decimal
     total_amount: Decimal
     payment_status: str

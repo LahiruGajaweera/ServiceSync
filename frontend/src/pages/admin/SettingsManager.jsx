@@ -16,7 +16,8 @@ export default function SettingsManager() {
   });
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState("idle"); // idle, saving, saved
+  const initialLoad = useRef(true);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: '' }
   const logoInputRef = useRef(null);
@@ -47,19 +48,28 @@ export default function SettingsManager() {
     setSettings((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      const res = await api.put("/settings", { settings });
-      setSettings((prev) => ({ ...prev, ...res.data }));
-      showToast("success", "System settings updated successfully!");
-    } catch (err) {
-      showToast("error", err.response?.data?.detail || "Failed to save settings.");
-    } finally {
-      setSaving(false);
+  useEffect(() => {
+    if (initialLoad.current) {
+      if (!loading && settings.shop_name) {
+        initialLoad.current = false;
+      }
+      return;
     }
-  };
+
+    setSaveStatus("saving");
+    const timer = setTimeout(async () => {
+      try {
+        await api.put("/settings", { settings });
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus("idle"), 3000);
+      } catch (err) {
+        showToast("error", err.response?.data?.detail || "Failed to auto-save settings.");
+        setSaveStatus("idle");
+      }
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [settings, loading]);
 
   const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -84,10 +94,11 @@ export default function SettingsManager() {
   };
 
   const tabs = [
-    { id: "general", label: "Shop Details", icon: "🏢" },
-    { id: "branding", label: "Branding & Logo", icon: "🖼️" },
-    { id: "financial", label: "Currency Settings", icon: "💰" },
-    { id: "warranty", label: "Warranty & Repair", icon: "🛡️" },
+    { id: "general", label: "Shop Details" },
+    { id: "branding", label: "Branding & Logo" },
+    { id: "financial", label: "Currency Settings" },
+    { id: "warranty", label: "Warranty & Repair" },
+    { id: "promotions", label: "Offers & Promotions" },
   ];
 
   const inputCls =
@@ -127,25 +138,11 @@ export default function SettingsManager() {
             Configure shop identity, invoice templates, currency symbol, and default repair warranties.
           </p>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-blue-400 text-white text-sm font-semibold px-6 py-2.5 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
-        >
-          {saving ? (
-            <>
-              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-              </svg>
-              <span>Saving Changes…</span>
-            </>
-          ) : (
-            <>
-              <span>💾 Save All Settings</span>
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-2 text-sm font-medium px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
+          {saveStatus === "saving" && <><span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span><span className="text-blue-600 dark:text-blue-400">Saving changes...</span></>}
+          {saveStatus === "saved" && <><span className="text-green-500">✓</span><span className="text-green-600 dark:text-green-400">Saved</span></>}
+          {saveStatus === "idle" && <span className="text-gray-500 dark:text-gray-400">Changes auto-save instantly</span>}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -160,14 +157,13 @@ export default function SettingsManager() {
                 : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
             }`}
           >
-            <span>{tab.icon}</span>
             <span>{tab.label}</span>
           </button>
         ))}
       </div>
 
       {/* Form Content */}
-      <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Settings Panel */}
         <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm space-y-6">
           {/* TAB 1: General Shop Details */}
@@ -463,94 +459,212 @@ export default function SettingsManager() {
               </div>
             </div>
           )}
-        </div>
 
-        {/* Live Receipt Preview Card */}
-        <div className="bg-gradient-to-br from-slate-900 to-blue-950 text-white rounded-2xl p-6 shadow-xl border border-blue-900/50 space-y-5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between border-b border-blue-800/60 pb-3">
-              <span className="text-xs uppercase font-bold tracking-widest text-blue-300">
-                📄 Live Receipt Preview
-              </span>
-              <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded border border-blue-400/30">
-                Realtime
-              </span>
-            </div>
-
-            <div className="mt-4 space-y-3 text-xs">
-              <div className="flex items-center gap-3">
-                {settings.shop_logo_url ? (
-                  <img
-                    src={`http://localhost:8000${settings.shop_logo_url}`}
-                    alt="Logo"
-                    className="w-10 h-10 object-contain rounded bg-white p-0.5"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded bg-blue-600/40 border border-blue-400/40 flex items-center justify-center font-bold text-white">
-                    {settings.shop_name ? settings.shop_name.charAt(0) : "S"}
-                  </div>
-                )}
-                <div>
-                  <h3 className="font-bold text-sm text-white tracking-tight">
-                    {settings.shop_name || "Shop Name"}
-                  </h3>
-                  <p className="text-blue-300 text-[11px]">{settings.shop_address || "Address"}</p>
-                </div>
+          {/* TAB 5: Promotions */}
+          {activeTab === "promotions" && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <span>🏷️</span> Seasonal Offers & Discounts
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Configure automated discounts per repair category. Margin protection ensures you never lose money on parts.
+                </p>
               </div>
 
-              <div className="bg-blue-900/40 p-3 rounded-xl border border-blue-800/40 space-y-1">
-                <div className="flex justify-between text-blue-200">
-                  <span>Tel: {settings.shop_phone || "N/A"}</span>
-                  <span>Email: {settings.shop_email || "N/A"}</span>
-                </div>
-              </div>
+              {(() => {
+                let promo = { active: false, min_margin_percent: 10, offers: {} };
+                try {
+                  if (settings.promotional_offers) {
+                    promo = JSON.parse(settings.promotional_offers);
+                  }
+                } catch (e) {}
 
-              {/* Category Warranties Badges in Receipt Preview */}
-              <div className="bg-slate-900/90 p-3 rounded-xl border border-blue-800/50 space-y-2">
-                <span className="font-bold text-[10px] text-emerald-400 uppercase tracking-wider flex items-center gap-1">
-                  <span>🛡️</span> Category Warranty Periods:
-                </span>
-                <div className="grid grid-cols-2 gap-1.5 text-[10px]">
-                  {(() => {
-                    let catMap = {};
-                    try {
-                      catMap = JSON.parse(settings.category_warranties || "{}");
-                    } catch {
-                      catMap = {};
-                    }
-                    const defaults = {
-                      "Display & Touch": "30",
-                      "Battery Replacement": "90",
-                      "Charging Port": "14",
-                      "Motherboard IC": "7",
-                    };
-                    const merged = { ...defaults, ...catMap };
-                    return Object.entries(merged).map(([catName, days]) => (
-                      <div
-                        key={catName}
-                        className="bg-emerald-950/40 border border-emerald-500/20 px-2 py-1 rounded flex justify-between items-center text-emerald-200"
-                      >
-                        <span className="truncate pr-1 font-medium">{catName}:</span>
-                        <span className="font-bold text-emerald-300 shrink-0">
-                          {days === "0" ? "No Warranty" : `${days} Days`}
-                        </span>
+                const updatePromo = (newPromo) => {
+                  setSettings(prev => ({ ...prev, promotional_offers: JSON.stringify(newPromo) }));
+                };
+
+                const faultCategories = [
+                  "screen", "battery", "charging_port", "camera", "speaker", "software", "water_damage", "other"
+                ];
+
+                return (
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-4 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50">
+                      <div className="flex-1">
+                        <label className="flex items-center gap-2 text-sm font-bold text-blue-900 dark:text-blue-100 cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={promo.active}
+                            onChange={(e) => updatePromo({ ...promo, active: e.target.checked })}
+                            className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300"
+                          />
+                          Enable Automated Promotional Offers
+                        </label>
+                        <p className="text-xs text-blue-700 dark:text-blue-300 ml-6 mt-1">If unchecked, no automated discounts will be applied to invoices.</p>
                       </div>
-                    ));
-                  })()}
+                    </div>
+
+                    <div className={`space-y-5 transition-opacity duration-300 ${!promo.active ? 'opacity-40 pointer-events-none grayscale-[0.5]' : 'opacity-100'}`}>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div>
+                          <div className="font-bold text-sm text-gray-900 dark:text-white">Margin Protection</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Minimum profit margin percentage to keep on parts.</div>
+                        </div>
+                        <div className="mt-3 sm:mt-0 flex items-center gap-2">
+                          <div className="relative inline-flex items-center">
+                            <input type="number" min="0" max="100" value={promo.min_margin_percent || 0} onChange={(e) => updatePromo({ ...promo, min_margin_percent: Number(e.target.value) })} className="w-24 pl-3 pr-8 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-right focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
+                            <span className="absolute right-3 text-gray-400 font-bold">%</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800/50 shadow-sm">
+                        <div>
+                          <div className="font-bold text-sm text-blue-900 dark:text-blue-100">Bulk Apply to All Categories</div>
+                          <div className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">Set the exact same discount for every repair category at once.</div>
+                        </div>
+                        <div className="mt-3 sm:mt-0 flex gap-2 items-center flex-wrap sm:flex-nowrap">
+                          <select id="bulkType" className="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="none">No Discount</option>
+                            <option value="fixed">Fixed Off</option>
+                            <option value="percentage">% Off</option>
+                          </select>
+                          <input id="bulkValue" type="number" min="0" placeholder="Value" className="w-24 text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2 text-right bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                          <button type="button" onClick={() => {
+                             const type = document.getElementById('bulkType').value;
+                             const val = Number(document.getElementById('bulkValue').value);
+                             const newOffers = {};
+                             if (type !== "none") {
+                               faultCategories.forEach(cat => { newOffers[cat] = { type, value: val }; });
+                             }
+                             updatePromo({ ...promo, offers: newOffers });
+                           }} className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-sm whitespace-nowrap transition-colors">
+                            Apply All
+                          </button>
+                        </div>
+                      </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {faultCategories.map(cat => {
+                        const offer = promo.offers[cat] || { type: "none", value: 0 };
+                        
+                        const handleOfferChange = (key, val) => {
+                          const newOffers = { ...promo.offers };
+                          if (val === "none") {
+                            delete newOffers[cat];
+                          } else {
+                            newOffers[cat] = { ...offer, [key]: val };
+                            // Reset value when changing types if needed
+                            if (key === "type") newOffers[cat].value = 0; 
+                          }
+                          updatePromo({ ...promo, offers: newOffers });
+                        };
+
+                        return (
+                          <div key={cat} className="flex flex-col xl:flex-row xl:items-center justify-between p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl gap-3 shadow-sm hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
+                             <div className="font-semibold text-sm text-gray-800 dark:text-gray-200 capitalize">{cat.replace("_", " ")}</div>
+                             <div className="flex gap-2 w-full xl:w-auto">
+                               <select 
+                                 value={offer.type} 
+                                 onChange={(e) => handleOfferChange("type", e.target.value)}
+                                 className="flex-1 xl:flex-none text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                               >
+                                 <option value="none">No Discount</option>
+                                 <option value="fixed">Fixed Off</option>
+                                 <option value="percentage">% Off</option>
+                               </select>
+                               {offer.type !== "none" && (
+                                 <input 
+                                   type="number" min="0" value={offer.value} onChange={(e) => handleOfferChange("value", Number(e.target.value))}
+                                   className="w-24 text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 text-right bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                   placeholder="Value"
+                                 />
+                               )}
+                             </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+
+        {/* Live Thermal Receipt Preview Card */}
+        <div className="bg-gray-100 dark:bg-gray-900/60 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center">
+          <div className="w-full max-w-[320px] bg-white text-black font-sans shadow-lg p-5 border-t-8 border-gray-800 rounded-b-md relative">
+            
+            {/* Mock zig-zag bottom for receipt effect */}
+            <div className="absolute -bottom-2 left-0 right-0 h-4 bg-[length:10px_10px] bg-repeat-x" 
+                 style={{ backgroundImage: "linear-gradient(-45deg, transparent 75%, white 75%), linear-gradient(45deg, transparent 75%, white 75%)", backgroundPosition: "0 0, 0 0" }}>
+            </div>
+
+            <div className="text-center">
+              {settings.shop_logo_url && (
+                <img
+                  src={`http://localhost:8000${settings.shop_logo_url}`}
+                  alt="Logo"
+                  className="w-14 h-14 mx-auto object-contain mb-3 grayscale"
+                />
+              )}
+              <div className="font-extrabold text-xl leading-tight tracking-tight">{settings.shop_name || "Shop Name"}</div>
+              <div className="text-xs text-gray-500 mt-1">{settings.shop_address || "Shop Address"}</div>
+              <div className="text-xs text-gray-500">{settings.shop_phone || "Contact Number"}</div>
+            </div>
+
+            <hr className="border-t border-dashed border-gray-400 my-4" />
+
+            <div className="text-center">
+              <div className="text-[10px] text-gray-500 uppercase tracking-wide">Repair Job / Receipt</div>
+              <div className="font-bold text-xl tracking-widest my-0.5 text-gray-400">[JOB ID]</div>
+              <div className="text-[10px] text-gray-400">[DATE & TIME]</div>
+            </div>
+
+            <hr className="border-t border-dashed border-gray-400 my-4" />
+
+            <table className="w-full text-xs text-gray-400">
+              <tbody>
+                <tr><td className="py-0.5 w-2/5">Customer</td><td className="py-0.5 font-bold text-right">[Customer Name]</td></tr>
+                <tr><td className="py-0.5">Phone</td><td className="py-0.5 font-bold text-right">[Phone Number]</td></tr>
+                <tr><td className="py-0.5">Device</td><td className="py-0.5 font-bold text-right">[Device Brand & Model]</td></tr>
+                <tr><td className="py-0.5">Fault</td><td className="py-0.5 font-bold text-right">[Fault Category]</td></tr>
+                <tr><td className="py-0.5">Est. Cost</td><td className="py-0.5 font-bold text-right">{settings.currency_symbol || "LKR"} [Amount]</td></tr>
+              </tbody>
+            </table>
+
+            <hr className="border-t border-dashed border-gray-400 my-4" />
+            
+            <div className="text-center">
+              <div className="w-24 h-24 mx-auto border-4 border-black p-1 flex items-center justify-center mb-1">
+                <div className="grid grid-cols-3 grid-rows-3 gap-0.5 w-full h-full bg-black p-0.5">
+                  <div className="bg-white"></div><div className="bg-white"></div><div className="bg-white"></div>
+                  <div className="bg-white"></div><div className="bg-black"></div><div className="bg-white"></div>
+                  <div className="bg-white"></div><div className="bg-white"></div><div className="bg-white"></div>
                 </div>
               </div>
+              <div className="text-[10px] font-bold text-blue-600 mt-1">Scan to track your repair</div>
+            </div>
 
-              <div className="text-[11px] text-gray-300 italic bg-slate-800/60 p-3 rounded-lg border border-slate-700/60">
-                "{settings.invoice_footer_note || "Footer message will appear here."}"
-              </div>
+            <hr className="border-t border-dashed border-gray-400 my-4" />
+
+            <div className="text-center text-[11px] text-gray-600 mt-4 leading-snug">
+              "{settings.invoice_footer_note || "Footer message will appear here."}"
+            </div>
+            
+            <div className="text-center text-[9px] text-gray-400 mt-4 pt-3 font-semibold">
+              <span className="text-gray-500">Policy:</span> Devices not collected within 90 days will be considered abandoned.
             </div>
           </div>
-
-          <div className="pt-4 border-t border-blue-900/60 text-[11px] text-blue-300 text-center">
-            Changes saved here apply immediately across all modules.
+          
+          <div className="mt-8 text-[11px] font-medium text-gray-500 dark:text-gray-400 text-center flex items-center gap-1.5">
+            <span>🖨️</span> WYSIWYG 80mm POS Thermal Receipt format
           </div>
         </div>
-      </form>
+      </div>
     </div>
   );
 }
