@@ -368,6 +368,7 @@ function RevertApprovalModal({ open, job, onClose, onDone }) {
 
 // ─── Invoice / Repair Receipt with QR ─────────────────────────────────────────
 
+// Shop fallbacks if settings fail
 const SHOP = {
   name: "ServiceSync",
   tagline: "Phone Repair Service",
@@ -380,12 +381,15 @@ const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("en-LK", { year: "num
 
 function InvoiceReceipt({ job, onClose }) {
   const [qr, setQr] = useState("");
+  const [settings, setSettings] = useState({});
   const trackUrl = `${window.location.origin}/track/${job.job_id}`;
 
   useEffect(() => {
     QRCode.toDataURL(trackUrl, { width: 220, margin: 1 })
       .then(setQr)
       .catch(() => setQr(""));
+      
+    api.get("/settings").then(({ data }) => setSettings(data)).catch(() => {});
   }, [trackUrl]);
 
   const handlePrint = () => {
@@ -398,10 +402,11 @@ function InvoiceReceipt({ job, onClose }) {
       <meta charset="utf-8" />
       <style>
         * { box-sizing: border-box; }
-        body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: #1f2937; margin: 0; padding: 24px; }
-        .wrap { max-width: 360px; margin: 0 auto; }
+        @page { margin: 0; }
+        body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: #1f2937; margin: 0 auto; padding: 15px; width: 80mm; }
+        .wrap { width: 100%; max-width: 100%; margin: 0 auto; }
         .center { text-align: center; }
-        .brand { font-size: 22px; font-weight: 800; color: #2563eb; letter-spacing: -.5px; }
+        .brand { font-size: 22px; font-weight: 800; color: #000; letter-spacing: -.5px; }
         .muted { color: #6b7280; font-size: 12px; }
         .divider { border: none; border-top: 1px dashed #d1d5db; margin: 14px 0; }
         .jobid { font-size: 20px; font-weight: 800; letter-spacing: 1px; margin: 4px 0; }
@@ -416,10 +421,9 @@ function InvoiceReceipt({ job, onClose }) {
       </style></head><body>
       <div class="wrap">
         <div class="center">
-          <div class="brand">${SHOP.name}</div>
-          <div class="muted">${SHOP.tagline}</div>
-          <div class="muted">${SHOP.address}</div>
-          <div class="muted">${SHOP.phone}</div>
+          <div class="brand">${settings.shop_name || SHOP.name}</div>
+          <div class="muted">${settings.shop_address || SHOP.address}</div>
+          <div class="muted">${settings.shop_phone || SHOP.phone}</div>
         </div>
         <hr class="divider" />
         <div class="center">
@@ -446,7 +450,7 @@ function InvoiceReceipt({ job, onClose }) {
         </div>
         <hr class="divider" />
         <div class="center foot">
-          Thank you for choosing ${SHOP.name}!<br/>Keep this receipt to collect your device.
+          ${settings.invoice_footer_note ? settings.invoice_footer_note.replace(/\n/g, '<br/>') : `Thank you for choosing ${settings.shop_name || SHOP.name}!<br/>Keep this receipt to collect your device.`}
           <br/><br/>
           <strong style="color: #4b5563;">Policy:</strong> Devices not collected within 90 days of completion will be considered abandoned and the shop holds no responsibility for loss or damage thereafter.
         </div>

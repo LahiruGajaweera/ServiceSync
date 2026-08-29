@@ -11,6 +11,9 @@ from app.models.job import Job
 from app.schemas.invoice import InvoiceCreate, MarkPaidRequest
 
 
+from app.models.setting import SystemSetting
+import json
+
 def create_invoice(data: InvoiceCreate, db: Session) -> Invoice:
     job = db.query(Job).filter(Job.id == data.job_id).first()
     if not job:
@@ -19,8 +22,22 @@ def create_invoice(data: InvoiceCreate, db: Session) -> Invoice:
         raise HTTPException(400, "Invoice already exists for this job")
 
     parts = db.query(JobPartUsed).filter(JobPartUsed.job_id == data.job_id).all()
-    parts_total = sum(Decimal(str(p.unit_cost)) * p.quantity for p in parts)
-    subtotal = parts_total + data.labor_cost
+    
+    # Cost price for margin protection
+    total_cost_price = sum(Decimal(str(p.unit_cost)) * p.quantity for p in parts)
+    
+    # Selling price (what customer was charged for parts)
+    parts_selling_total = sum(Decimal(str(p.unit_price)) * p.quantity for p in parts)
+    
+    # The base total bill before discounts
+    base_subtotal = parts_selling_total + data.labor_cost
+    
+    # Use the discount calculated and verified by the frontend
+    discount_amount = data.discount_amount
+            
+    # Apply discount
+    subtotal = base_subtotal - discount_amount
+    
     tax_amount = (subtotal * data.tax_rate / Decimal("100")).quantize(Decimal("0.01"))
     total_amount = subtotal + tax_amount
 
@@ -28,7 +45,8 @@ def create_invoice(data: InvoiceCreate, db: Session) -> Invoice:
 
     invoice = Invoice(
         job_id=data.job_id,
-        subtotal=subtotal,
+        subtotal=base_subtotal, # Save the original subtotal
+        discount_amount=discount_amount, # Save the discount
         tax_amount=tax_amount,
         total_amount=total_amount,
         payment_status="unpaid",

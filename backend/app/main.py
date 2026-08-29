@@ -59,6 +59,8 @@ def _run_migrations() -> None:
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS reminder_425_sent BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS investigated BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS inventory_unit_id UUID REFERENCES inventory_units(id)",
+        # Invoices features
+        "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS discount_amount NUMERIC(10, 2) NOT NULL DEFAULT 0",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS admin_alert TEXT",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS physical_condition VARCHAR(255)",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS salvage_delayed_until TIMESTAMP WITH TIME ZONE",
