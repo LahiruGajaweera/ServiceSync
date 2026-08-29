@@ -55,7 +55,8 @@ class InvoiceCreate(BaseModel):
 
 
 class MarkPaidRequest(BaseModel):
-    payment_method: Literal["cash", "card", "transfer"]
+    payment_method: Literal["cash", "card", "transfer", "payhere"]
+    payment_reference: str | None = None
 
 
 class InvoiceResponse(BaseModel):
@@ -67,6 +68,7 @@ class InvoiceResponse(BaseModel):
     total_amount: Decimal
     payment_status: str
     payment_method: str | None
+    payment_reference: str | None
     qr_code_data: str | None
     paid_at: datetime | None
     created_at: datetime | None

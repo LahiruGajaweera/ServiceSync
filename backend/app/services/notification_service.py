@@ -98,9 +98,9 @@ def notify_job_created(job_id: UUID) -> None:
                 try:
                     _send_sms(customer.phone_number, sms_body)
                     sent_sms = True
-                except Exception:
-                    pass
-            log_notification(job.id, customer.id, "sms", sms_body, db, status="sent" if sent_sms else "sent")
+                except Exception as e:
+                    print(f"SMS Failed for job {job.job_id}: {e}")
+            log_notification(job.id, customer.id, "sms", sms_body, db, status="sent" if sent_sms else "failed")
             if not sent_sms:
                 print(f"[SMS Dev Mode] Job Created Sent to {customer.phone_number}: {sms_body}")
 
@@ -144,9 +144,9 @@ def notify_ready_for_pickup(job_id: UUID) -> None:
                 try:
                     _send_sms(customer.phone_number, message)
                     sent_sms = True
-                except Exception:
-                    pass
-            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "sent")
+                except Exception as e:
+                    print(f"SMS Failed for job {job.job_id}: {e}")
+            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "failed")
             if not sent_sms:
                  print(f"[SMS Dev Mode] Ready for Pickup Sent to {customer.phone_number}: {message}")
                  
@@ -191,9 +191,9 @@ def notify_unclaimed(job_id: UUID) -> None:
                 try:
                     _send_sms(customer.phone_number, message)
                     sent_sms = True
-                except Exception:
-                    pass
-            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "sent")
+                except Exception as e:
+                    print(f"SMS Failed for job {job.job_id}: {e}")
+            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "failed")
             if not sent_sms:
                  print(f"[SMS Dev Mode] Unclaimed Sent to {customer.phone_number}: {message}")
     finally:
@@ -234,9 +234,9 @@ def notify_job_reminder(job_id: UUID, message: str) -> None:
                 try:
                     _send_sms(customer.phone_number, full_message)
                     sent_sms = True
-                except Exception:
-                    pass
-            log_notification(job.id, customer.id, "sms", full_message, db, status="sent" if sent_sms else "sent")
+                except Exception as e:
+                    print(f"SMS Failed for job {job.job_id}: {e}")
+            log_notification(job.id, customer.id, "sms", full_message, db, status="sent" if sent_sms else "failed")
             if not sent_sms:
                  print(f"[SMS Dev Mode] Reminder Sent to {customer.phone_number}: {full_message}")
     finally:
@@ -280,9 +280,9 @@ def notify_in_progress(job_id: UUID) -> None:
                 try:
                     _send_sms(customer.phone_number, message)
                     sent_sms = True
-                except Exception:
-                    pass
-            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "sent")
+                except Exception as e:
+                    print(f"SMS Failed for job {job.job_id}: {e}")
+            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "failed")
             if not sent_sms:
                  print(f"[SMS Dev Mode] In Progress Sent to {customer.phone_number}: {message}")
                  
@@ -327,9 +327,9 @@ def notify_completed(job_id: UUID) -> None:
                 try:
                     _send_sms(customer.phone_number, message)
                     sent_sms = True
-                except Exception:
-                    pass
-            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "sent")
+                except Exception as e:
+                    print(f"SMS Failed for job {job.job_id}: {e}")
+            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "failed")
             if not sent_sms:
                  print(f"[SMS Dev Mode] Completed Sent to {customer.phone_number}: {message}")
                  
@@ -373,9 +373,9 @@ def notify_delivered(job_id: UUID) -> None:
                 try:
                     _send_sms(customer.phone_number, message)
                     sent_sms = True
-                except Exception:
-                    pass
-            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "sent")
+                except Exception as e:
+                    print(f"SMS Failed for job {job.job_id}: {e}")
+            log_notification(job.id, customer.id, "sms", message, db, status="sent" if sent_sms else "failed")
             if not sent_sms:
                  print(f"[SMS Dev Mode] Delivered Sent to {customer.phone_number}: {message}")
                  

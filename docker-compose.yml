@@ -49,6 +49,9 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
       SMTP_TLS: ${SMTP_TLS:-true}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      PAYHERE_MERCHANT_ID: ${PAYHERE_MERCHANT_ID:-}
+      PAYHERE_SECRET: ${PAYHERE_SECRET:-}
+      PAYHERE_ENV: ${PAYHERE_ENV:-sandbox}
     ports:
       - "8000:8000"
     depends_on:

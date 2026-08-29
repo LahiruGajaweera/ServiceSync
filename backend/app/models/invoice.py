@@ -19,6 +19,7 @@ class Invoice(Base):
         default="unpaid",
     )
     payment_method = Column(String(50), nullable=True)
+    payment_reference = Column(String(255), nullable=True)
     qr_code_data = Column(Text, nullable=True)
     paid_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
