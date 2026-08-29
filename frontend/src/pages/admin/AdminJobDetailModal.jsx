@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
 import JobStatusBadge from "../../components/JobStatusBadge";
+import QRCode from "qrcode";
 
 function Modal({ open, onClose, title, children }) {
   if (!open) return null;
@@ -80,6 +81,18 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
   const [newStatus, setNewStatus] = useState("");
   const [statusNotes, setStatusNotes] = useState("");
   const [savingStatus, setSavingStatus] = useState(false);
+
+  // QR Code for PayHere
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
+
+  useEffect(() => {
+    if (showPay && payMethod === "payhere" && invoice?.id) {
+      const paymentLink = `${window.location.origin}/pay/${invoice.id}`;
+      QRCode.toDataURL(paymentLink, { width: 160, margin: 1, color: { dark: '#3730a3', light: '#ffffff' } })
+        .then(url => setQrCodeUrl(url))
+        .catch(err => console.error(err));
+    }
+  }, [showPay, payMethod, invoice]);
 
   // Revert request handling
   const [processingRevert, setProcessingRevert] = useState(false);
@@ -166,6 +179,10 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
   const fetchAll = async () => {
     if (!open || !jobId) return;
     setLoading(true);
+    setJob(null);
+    setParts([]);
+    setHistory([]);
+    setInvoice(null);
     try {
       const [jobRes, partsRes, historyRes, invoiceRes, settingsRes] = await Promise.allSettled([
         api.get(`/jobs/${jobId}`),
@@ -264,7 +281,9 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
         tax_rate: 0,
       });
       setShowInvoice(false);
-      fetchAll();
+      await fetchAll();
+      setPayMethod("payhere");
+      setShowPay(true);
     } catch (err) {
       setInvError(err.response?.data?.detail || "Failed to generate invoice");
     } finally {
@@ -275,15 +294,9 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
   const handlePrintFinalBill = async () => {
     try {
       const { data: settings } = await api.get("/settings");
-      const win = window.open("", "PrintFinalInvoice", "width=440,height=680");
-      if (!win) {
-        alert("Please allow pop-ups to print the invoice.");
-        return;
-      }
-      
       const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("en-LK", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—");
       
-      win.document.write(`<!doctype html><html><head><title>Final Invoice ${job.job_id}</title>
+      const htmlContent = `<!doctype html><html><head><title>Final Invoice ${job.job_id}</title>
       <meta charset="utf-8" />
       <style>
         * { box-sizing: border-box; }
@@ -336,10 +349,22 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
           ${settings.invoice_footer_note ? settings.invoice_footer_note.replace(/\n/g, '<br/>') : "Thank you for choosing ServiceSync!"}
         </div>
       </div>
-      </body></html>`);
-      win.document.close();
-      win.focus();
-      setTimeout(() => { win.print(); }, 350);
+      </body></html>`;
+      
+      // Use a hidden iframe to bypass popup blockers
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      
+      iframe.contentWindow.document.open();
+      iframe.contentWindow.document.write(htmlContent);
+      iframe.contentWindow.document.close();
+      
+      setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => { document.body.removeChild(iframe); }, 2000);
+      }, 500);
     } catch (err) {
       console.error(err);
       alert("Failed to print invoice.");
@@ -348,6 +373,10 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
 
   const handleMarkPaid = async (e) => {
     e.preventDefault();
+    if (payMethod === "payhere") {
+      return handlePayHerePayment();
+    }
+    
     try {
       await api.patch(`/invoices/${invoice.id}/pay`, { payment_method: payMethod, payment_reference: paymentRef });
       // Automatically set job to delivered upon payment
@@ -360,6 +389,78 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
       handlePrintFinalBill();
     } catch (err) {
       alert(err.response?.data?.detail || "Failed to process payment and delivery");
+    }
+  };
+
+  const handlePayHerePayment = async () => {
+    try {
+      const res = await api.get(`/payments/hash?order_id=${invoice.id}&amount=${invoice.total_amount}`);
+      const hashData = res.data;
+
+      const payment = {
+        sandbox: true,
+        merchant_id: hashData.merchant_id,
+        return_url: window.location.origin,
+        cancel_url: window.location.origin,
+        notify_url: "https://sandbox.payhere.lk", // dummy for frontend
+        order_id: hashData.order_id,
+        items: `ServiceSync Invoice ${job.job_id}`,
+        amount: hashData.amount,
+        currency: hashData.currency,
+        hash: hashData.hash,
+        first_name: job.customer_name || "Customer",
+        last_name: "",
+        email: "customer@servicesync.lk",
+        phone: job.customer_phone || "",
+        address: "Sri Lanka",
+        city: "Colombo",
+        country: "Sri Lanka",
+      };
+
+      window.payhere.onCompleted = async function onCompleted(orderId) {
+        alert("Payment Success via PayHere!");
+        
+        // Since we are running locally, the PayHere webhook cannot reach localhost.
+        // We manually trigger the payment success API call here.
+        try {
+          await api.patch(`/invoices/${invoice.id}/pay`, { payment_method: "payhere", payment_reference: orderId });
+          if (job.status !== "delivered") {
+             await api.patch(`/jobs/${jobId}/status`, { status: "delivered", notes: "Automatically marked as delivered upon PayHere payment." });
+          }
+        } catch (err) {
+          console.error("Failed to update status locally", err);
+        }
+
+        setShowPay(false);
+        fetchAll();
+        onDone?.();
+        handlePrintFinalBill();
+      };
+      window.payhere.onDismissed = function onDismissed() {};
+      window.payhere.onError = function onError(error) {
+        alert("Payment Error: " + error);
+      };
+
+      window.payhere.startPayment(payment);
+    } catch (err) {
+      alert(err.response?.data?.detail || "Failed to initiate PayHere payment");
+    }
+  };
+
+  const [sendingSms, setSendingSms] = useState(false);
+  const handleSendSmsLink = async () => {
+    try {
+      setSendingSms(true);
+      const formData = new FormData();
+      formData.append("order_id", invoice.id);
+      formData.append("phone_number", job.customer_phone || "");
+      const res = await api.post(`/payments/send-link`, formData);
+      alert(res.data.message + "\\n\\nPreview:\\n" + res.data.preview);
+      setShowPay(false);
+    } catch (err) {
+      alert(err.response?.data?.detail || "Failed to send SMS link");
+    } finally {
+      setSendingSms(false);
     }
   };
 
@@ -1051,6 +1152,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
               <option value="cash">Cash</option>
               <option value="card">Card</option>
               <option value="transfer">Bank Transfer</option>
+              <option value="payhere">PayHere (Online/QR)</option>
             </select>
           </div>
           {payMethod === "transfer" && (
@@ -1069,15 +1171,48 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
             </div>
           )}
+          {payMethod === "payhere" && (
+            <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl p-4 flex flex-col items-center justify-center gap-3">
+              <p className="text-sm font-semibold text-indigo-900 dark:text-indigo-300 text-center">Scan to Pay on Mobile</p>
+              {qrCodeUrl ? (
+                <div className="bg-white p-2 rounded-xl shadow-sm border border-indigo-100">
+                   <img src={qrCodeUrl} alt="Payment QR" className="w-32 h-32 object-contain" />
+                </div>
+              ) : (
+                <div className="w-32 h-32 bg-white flex items-center justify-center rounded-xl border border-indigo-100"><span className="text-xs text-gray-400">Loading QR...</span></div>
+              )}
+              <p className="text-xs text-indigo-700 dark:text-indigo-400 text-center px-4">Customer can scan this QR with their camera to securely pay on their own device.</p>
+              
+              <a href={`/pay/${invoice.id}`} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs font-bold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-full border border-blue-200 dark:border-blue-800 transition-colors cursor-pointer">
+                <span className="flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                  Test Mode: Open Customer Link
+                </span>
+              </a>
+            </div>
+          )}
           <div className="flex gap-3">
             <button type="button" onClick={() => setShowPay(false)}
               className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">
               Cancel
             </button>
-            <button type="submit"
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-semibold">
-              Pay & Deliver
-            </button>
+            {payMethod === "payhere" ? (
+              <>
+                <button type="button" onClick={handleSendSmsLink} disabled={sendingSms}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-semibold">
+                  {sendingSms ? "Sending..." : "Send SMS Link"}
+                </button>
+                <button type="submit"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-semibold">
+                  Show PayHere Screen
+                </button>
+              </>
+            ) : (
+              <button type="submit"
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-semibold">
+                Pay & Deliver
+              </button>
+            )}
           </div>
         </form>
       </Modal>

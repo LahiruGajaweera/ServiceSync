@@ -100,6 +100,7 @@ def mark_paid(invoice_id: UUID, data: MarkPaidRequest, db: Session) -> Invoice:
         raise HTTPException(404, "Invoice not found")
     inv.payment_status = "paid"
     inv.payment_method = data.payment_method
+    inv.payment_reference = data.payment_reference
     inv.paid_at = datetime.now(timezone.utc)
     inv.qr_code_data = inv.qr_code_data.replace("STATUS:UNPAID", "STATUS:PAID") if inv.qr_code_data else inv.qr_code_data
     db.commit()

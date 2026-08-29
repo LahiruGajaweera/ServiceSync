@@ -32,6 +32,7 @@ import TechDonorDevices from "./pages/technician/TechDonorDevices";
 
 // Shared pages
 import ProfilePage from "./pages/ProfilePage";
+import CustomerPaymentPage from "./pages/CustomerPaymentPage";
 
 export default function App() {
   return (
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/set-password" element={<ForcePasswordChangePage />} />
           <Route path="/track" element={<TrackingPage />} />
           <Route path="/track/:jobId" element={<TrackingPage />} />
+          <Route path="/pay/:invoiceId" element={<CustomerPaymentPage />} />
 
           {/* ── Admin (role: admin) ─────────────────────────────── */}
           <Route
