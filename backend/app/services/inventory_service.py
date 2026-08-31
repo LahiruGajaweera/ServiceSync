@@ -14,6 +14,7 @@ from app.schemas.inventory import (
     InventoryItemUpdate,
     ReceiveStockRequest,
     StockAdjustRequest,
+    UnitStatusUpdateRequest,
 )
 
 
@@ -450,4 +451,55 @@ def resolve_scan(code: str, db: Session) -> dict:
         return {"item": _add_is_low_stock(item), "batch": None}
 
     raise HTTPException(404, f"No inventory part or donor part found for code '{code}'")
+
+def update_unit_status(serial_number: str, data: UnitStatusUpdateRequest, user_id: UUID, db: Session) -> dict:
+    unit = db.query(InventoryUnit).filter(InventoryUnit.serial_number == serial_number).first()
+    if not unit:
+        raise HTTPException(404, "Serial number not found")
+        
+    old_status = unit.status
+    new_status = data.status
+    
+    if old_status == new_status:
+        return {"success": True, "message": f"Unit is already {new_status}"}
+
+    unit.status = new_status
+    
+    # If transitioning from in_stock to lost/damaged, deduct from inventory
+    if old_status == "in_stock" and new_status in ["lost", "returned"]:
+        if unit.batch:
+            unit.batch.quantity_remaining = max(0, unit.batch.quantity_remaining - 1)
+        if unit.item:
+            unit.item.quantity = max(0, (unit.item.quantity or 0) - 1)
+            
+        log = InventoryAdjustmentLog(
+            inventory_item_id=unit.inventory_item_id,
+            user_id=user_id,
+            batch_id=unit.batch_id,
+            delta=-1,
+            reason=data.reason,
+            note=f"Serial {serial_number}: {data.note or ''}"
+        )
+        db.add(log)
+    
+    # If transitioning from lost/damaged to in_stock, add to inventory
+    elif old_status in ["lost", "returned"] and new_status == "in_stock":
+        if unit.batch:
+            unit.batch.quantity_remaining += 1
+        if unit.item:
+            unit.item.quantity = (unit.item.quantity or 0) + 1
+            
+        log = InventoryAdjustmentLog(
+            inventory_item_id=unit.inventory_item_id,
+            user_id=user_id,
+            batch_id=unit.batch_id,
+            delta=1,
+            reason="Recovered from " + old_status,
+            note=f"Serial {serial_number}: {data.note or ''}"
+        )
+        db.add(log)
+
+    db.commit()
+    return {"success": True, "message": f"Serial {serial_number} marked as {new_status}"}
+
 

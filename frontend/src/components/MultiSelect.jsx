@@ -24,6 +24,7 @@ export default function MultiSelect({
   addNoun = "item",
   onAddNew,
   disabled = false,
+  dropup = false,
 }) {
   const [options, setOptions] = useState([]);
   const [query, setQuery] = useState("");
@@ -140,14 +141,14 @@ export default function MultiSelect({
         className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 dark:bg-gray-800 disabled:text-gray-400 disabled:cursor-not-allowed"
       />
       {!disabled && open && (filtered.length > 0 || canAdd) && (
-        <ul className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg text-sm">
+        <ul className={`absolute z-20 w-full max-h-56 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg text-sm ${dropup ? "bottom-full mb-1" : "mt-1"}`}>
           {filtered.map((o) => (
             <li key={o}>
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => add(o)}
-                className="w-full text-left px-3 py-2 hover:bg-blue-50 text-gray-700 dark:text-gray-200"
+                className="w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-colors"
               >
                 {o}
               </button>
@@ -160,7 +161,7 @@ export default function MultiSelect({
                 disabled={saving}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={handleAddNew}
-                className="w-full text-left px-3 py-2 text-blue-600 hover:bg-blue-50 font-medium disabled:text-blue-300"
+                className="w-full text-left px-3 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 font-medium disabled:text-blue-300 dark:disabled:text-blue-800 transition-colors"
               >
                 {saving ? "Saving…" : `+ Add "${q}" as a new ${addNoun}`}
               </button>

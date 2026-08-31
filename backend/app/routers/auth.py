@@ -12,6 +12,7 @@ from app.schemas.auth import (
     OtpRequestResponse,
     OtpVerifyRequest,
     ResetPasswordRequest,
+    SetupCompleteRequest,
     SetupStatusResponse,
     TokenResponse,
     UpdatePasswordRequest,
@@ -32,9 +33,14 @@ def request_setup_otp(request: OtpRequest, db: Session = Depends(get_db)):
     return auth_service.request_admin_otp(request, db)
 
 
-@router.post("/setup/verify-otp", response_model=TokenResponse, status_code=201)
+@router.post("/setup/verify-otp", status_code=200)
 def verify_setup_otp(request: OtpVerifyRequest, db: Session = Depends(get_db)):
     return auth_service.verify_admin_otp(request.otp_id, request.code, db)
+
+
+@router.post("/setup/complete", response_model=TokenResponse, status_code=201)
+def complete_setup(request: SetupCompleteRequest, db: Session = Depends(get_db)):
+    return auth_service.complete_admin_setup(request.otp_id, request.password, db)
 
 
 @router.post("/login", response_model=TokenResponse)

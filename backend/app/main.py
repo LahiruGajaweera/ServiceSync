@@ -49,6 +49,7 @@ def _run_migrations() -> None:
         "ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS track_serial BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE inventory_items ALTER COLUMN unit_price SET DEFAULT 0",
         "CREATE UNIQUE INDEX IF NOT EXISTS ix_inventory_items_sku ON inventory_items (sku)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_inventory_items_sku ON inventory_items (sku)",
         "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS batch_id UUID REFERENCES inventory_batches(id)",
         "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS used_by_technician_id UUID REFERENCES users(id)",
         "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS unit_price NUMERIC(10, 2) NOT NULL DEFAULT 0",

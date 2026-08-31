@@ -4,6 +4,16 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @layer base {
   body {
     @apply transition-colors duration-300 font-sans antialiased text-gray-800 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen bg-fixed;

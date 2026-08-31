@@ -2,7 +2,9 @@ from datetime import datetime
 from typing import Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
+
+from app.schemas.auth import normalize_phone
 
 
 class UserCreate(BaseModel):
@@ -19,6 +21,10 @@ class TechnicianCreate(BaseModel):
     email: Optional[EmailStr] = None
     phone_number: str
     specializations: str | None = None
+
+    @field_validator("phone_number", mode="before")
+    def validate_phone(cls, v: str) -> str:
+        return normalize_phone(v)
 
 
 class UserUpdate(BaseModel):

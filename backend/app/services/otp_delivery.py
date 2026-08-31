@@ -15,8 +15,9 @@ def _sms_configured() -> bool:
 
 
 def _send_sms(destination: str, message: str) -> None:
-    # Text.lk expects the number without a leading "+" (e.g. 94710000000).
-    recipient = destination.lstrip("+")
+    # Text.lk expects the number without a leading "+" and in 947XXXXXXXX format.
+    # Convert from 07XXXXXXXX to 947XXXXXXXX if necessary.
+    recipient = "94" + destination[1:] if destination.startswith("0") else destination.lstrip("+")
     response = httpx.post(
         settings.TEXTLK_API_URL,
         headers={

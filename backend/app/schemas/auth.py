@@ -6,15 +6,13 @@ from pydantic import BaseModel, field_validator, model_validator
 
 
 def normalize_phone(raw: str) -> str:
-    """Normalise a Sri Lankan phone number to +94XXXXXXXXX form."""
+    """Normalise a Sri Lankan phone number to strictly 07XXXXXXXX format."""
+    if not raw:
+        raise ValueError("Phone number cannot be empty")
     digits = re.sub(r"[\s\-()]", "", raw.strip())
-    if digits.startswith("+94") and len(digits) == 12 and digits[3:].isdigit():
+    if digits.startswith("07") and len(digits) == 10 and digits.isdigit():
         return digits
-    if digits.startswith("94") and len(digits) == 11 and digits.isdigit():
-        return "+" + digits
-    if digits.startswith("0") and len(digits) == 10 and digits.isdigit():
-        return "+94" + digits[1:]
-    raise ValueError("Enter a valid phone number (e.g. 0712345678 or +94712345678)")
+    raise ValueError("Enter a valid phone number (e.g. 0712345678)")
 
 
 class LoginRequest(BaseModel):
@@ -26,7 +24,6 @@ class OtpRequest(BaseModel):
     """Step 1 of first-admin setup: collect details and choose a channel."""
 
     name: str
-    password: str
     channel: Literal["email", "phone"]
     destination: str
 
@@ -36,13 +33,6 @@ class OtpRequest(BaseModel):
         if not v or not v.strip():
             raise ValueError("Name is required")
         return v.strip()
-
-    @field_validator("password")
-    @classmethod
-    def _password(cls, v: str) -> str:
-        if len(v) < 6:
-            raise ValueError("Password must be at least 6 characters")
-        return v
 
     @model_validator(mode="after")
     def _check_destination(self):
@@ -76,6 +66,18 @@ class OtpVerifyRequest(BaseModel):
         v = v.strip()
         if not v.isdigit() or len(v) != 6:
             raise ValueError("Enter the 6-digit verification code")
+        return v
+
+
+class SetupCompleteRequest(BaseModel):
+    otp_id: str
+    password: str
+
+    @field_validator("password")
+    @classmethod
+    def _password(cls, v: str) -> str:
+        if len(v) < 6:
+            raise ValueError("Password must be at least 6 characters")
         return v
 
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import bgImage from "../repair-bg.png";
 
 const inputCls =
   "w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm " +
@@ -9,11 +10,11 @@ const inputCls =
   "placeholder:text-gray-400 transition";
 
 export default function SetupPage() {
-  const { requestSetupOtp, verifySetupOtp } = useAuth();
+  const { requestSetupOtp, verifySetupOtp, completeSetup } = useAuth();
   const navigate = useNavigate();
 
   const [checking, setChecking] = useState(true);
-  const [step, setStep] = useState("details"); // "details" | "verify"
+  const [step, setStep] = useState("details"); // "details" | "verify" | "password"
   const [channel, setChannel] = useState("email");
   const [form, setForm] = useState({
     name: "",
@@ -68,19 +69,10 @@ export default function SetupPage() {
       setError(channel === "email" ? "Enter your email address." : "Enter your phone number.");
       return;
     }
-    if (form.password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
-    if (form.password !== form.confirm) {
-      setError("Passwords do not match.");
-      return;
-    }
     setBusy(true);
     try {
       const data = await requestSetupOtp({
         name: form.name.trim(),
-        password: form.password,
         channel,
         destination,
       });
@@ -109,10 +101,32 @@ export default function SetupPage() {
     }
     setBusy(true);
     try {
-      const user = await verifySetupOtp(otpInfo.otp_id, code.trim());
-      navigate(user.role === "admin" ? "/admin" : "/tech", { replace: true });
+      await verifySetupOtp(otpInfo.otp_id, code.trim());
+      setStep("password");
     } catch (err) {
       setError(parseErr(err, "Verification failed."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+    if (form.password !== form.confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const user = await completeSetup(otpInfo.otp_id, form.password);
+      navigate(user.role === "admin" ? "/admin" : "/tech", { replace: true });
+    } catch (err) {
+      setError(parseErr(err, "Failed to create account."));
     } finally {
       setBusy(false);
     }
@@ -127,11 +141,17 @@ export default function SetupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat relative"
+      style={{ backgroundImage: `url(${bgImage})` }}
+    >
+      {/* Dark frosted overlay to make the image visible while ensuring white text pops */}
+      <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm z-0"></div>
+
+      <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-extrabold text-blue-600 tracking-tight">ServiceSync</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">Smart Repair Shop Management System</p>
+          <h1 className="text-5xl font-extrabold text-white tracking-tight drop-shadow-lg">ServiceSync</h1>
+          <p className="text-gray-200 mt-3 text-base font-medium drop-shadow-md bg-black/30 border border-white/10 inline-block px-5 py-1.5 rounded-full backdrop-blur-sm">Smart Repair Shop Management System</p>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
@@ -181,22 +201,10 @@ export default function SetupPage() {
                 ) : (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Phone Number</label>
-                    <input name="phone_number" required value={form.phone_number} onChange={handleChange}
-                      placeholder="07XXXXXXXX or +94XXXXXXXXX" className={inputCls} />
+                    <input name="phone_number" required value={form.phone_number} onChange={handleChange} type="tel"
+                      placeholder="07XXXXXXXX" className={inputCls} />
                   </div>
                 )}
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Password</label>
-                  <input name="password" type="password" required value={form.password} onChange={handleChange}
-                    placeholder="At least 6 characters" className={inputCls} />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Confirm Password</label>
-                  <input name="confirm" type="password" required value={form.confirm} onChange={handleChange}
-                    placeholder="Re-enter password" className={inputCls} />
-                </div>
 
                 {error && (
                   <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
@@ -210,7 +218,7 @@ export default function SetupPage() {
                 </button>
               </form>
             </>
-          ) : (
+          ) : step === "verify" ? (
             <>
               <button type="button" onClick={() => { setStep("details"); setError(""); }}
                 className="text-sm text-blue-500 hover:underline mb-3">
@@ -247,12 +255,48 @@ export default function SetupPage() {
 
                 <button type="submit" disabled={busy}
                   className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-blue-400 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">
-                  {busy ? "Verifying…" : "Verify & Create Account"}
+                  {busy ? "Verifying…" : "Verify"}
                 </button>
 
                 <button type="button" disabled={busy} onClick={sendOtp}
                   className="w-full text-blue-500 hover:underline text-sm">
                   Resend code
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <button type="button" onClick={() => { setStep("details"); setError(""); }}
+                className="text-sm text-blue-500 hover:underline mb-3">
+                ← Start Over
+              </button>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Create a Password</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-6">
+                Your contact details have been verified. Now set a secure password for your admin account.
+              </p>
+
+              <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Password</label>
+                  <input name="password" type="password" required autoFocus value={form.password} onChange={handleChange}
+                    placeholder="At least 6 characters" className={inputCls} />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Confirm Password</label>
+                  <input name="confirm" type="password" required value={form.confirm} onChange={handleChange}
+                    placeholder="Re-enter password" className={inputCls} />
+                </div>
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <button type="submit" disabled={busy}
+                  className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-blue-400 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">
+                  {busy ? "Creating Account…" : "Complete Setup"}
                 </button>
               </form>
             </>
