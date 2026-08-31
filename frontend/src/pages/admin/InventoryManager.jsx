@@ -8,12 +8,13 @@ import MultiSelect from "../../components/MultiSelect";
 import SupplierSelect from "../../components/SupplierSelect";
 import AlertCard from "../../components/AlertCard";
 import AutoSlidingAlerts from "../../components/AutoSlidingAlerts";
-function Modal({ open, onClose, title, children }) {
+function Modal({ open, onClose, title, children, size = "md" }) {
   if (!open) return null;
+  const sizeClass = size === "lg" ? "max-w-2xl" : "max-w-md";
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white dark:bg-gray-800">
+      <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full ${sizeClass} max-h-[90vh] overflow-y-auto hide-scrollbar`}>
+        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white dark:bg-gray-800 z-10">
           <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">{title}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 text-xl leading-none">&times;</button>
         </div>
@@ -27,10 +28,10 @@ const EMPTY_FORM = {
   name: "", brand: "", model: "", category: "", spec: "", part_type: "factory_new",
   min_stock_threshold: "2", supplier: "", track_serial: false,
   compatible_brands: [], compatible_models: [],
-  quantity: "", unit_cost: "", margin: "30", unit_price: "",
+  quantity: "", unit_cost: "", margin: "0", unit_price: "",
 };
 
-const EMPTY_RECEIVE = { supplier: "", unit_cost: "", margin: "30", new_selling_price: "", quantity: "", purchased_at: new Date().toISOString().split("T")[0], update_selling_price: false };
+const EMPTY_RECEIVE = { supplier: "", unit_cost: "", margin: "0", new_selling_price: "", quantity: "", purchased_at: new Date().toISOString().split("T")[0], update_selling_price: false };
 
 /** Open a printable QR label for an array of labels. */
 async function printLabels(labels) {
@@ -93,6 +94,19 @@ function buildPartName(form) {
     .join(" ");
 }
 
+function parseLogNote(note) {
+  if (!note) return { serial: "—", text: "—" };
+  const match = note.match(/^Serial (.*?):\s*(.*)$/);
+  if (match) {
+    return { serial: match[1], text: match[2] || "—" };
+  }
+  const match2 = note.match(/^Serial (.*?)$/);
+  if (match2) {
+    return { serial: match2[1], text: "—" };
+  }
+  return { serial: "—", text: note };
+}
+
 function CatalogFormFields({ form, handleChange, setForm, showInitialStock, categories = [] }) {
   const generatedName = buildPartName(form);
   return (
@@ -140,18 +154,79 @@ function CatalogFormFields({ form, handleChange, setForm, showInitialStock, cate
         <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Spec / Identifier</label>
         <SpecSelect value={form.spec} onChange={(v) => setForm((f) => ({ ...f, spec: v }))} placeholder="e.g. OLED, OEM, 5000MAH" />
       </div>
-      <div>
-        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Min Stock Threshold</label>
-        <input name="min_stock_threshold" type="number" min="0" value={form.min_stock_threshold} onChange={handleChange}
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+
+      <div className="col-span-2 mt-1 border-t pt-3">
+        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          {showInitialStock ? "Initial Stock & Pricing (optional)" : "Inventory & Pricing Settings"}
+        </p>
+        {showInitialStock && (
+          <p className="text-xs text-gray-400">Creates the first purchase batch and sets the base selling price.</p>
+        )}
       </div>
-      <div className="flex items-end pb-2">
+
+      <div className="col-span-2 flex items-center pb-2">
         <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
           <input name="track_serial" type="checkbox" checked={form.track_serial} onChange={handleChange}
-            className="rounded border-gray-300 dark:border-gray-600" />
+            className="rounded border-gray-300 dark:border-gray-600" disabled={!showInitialStock && form.track_serial} />
           Track each unit (serial)
         </label>
       </div>
+
+      {showInitialStock && (
+        <>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Quantity</label>
+            <input name="quantity" type="number" min="0" value={form.quantity} onChange={handleChange}
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Unit Cost (LKR)</label>
+            <input name="unit_cost" type="number" step="0.01" min="0" value={form.unit_cost} onChange={(e) => {
+              const cost = parseFloat(e.target.value) || 0;
+              const margin = parseFloat(form.margin) || 0;
+              const price = (cost * (1 + margin / 100)).toFixed(2);
+              setForm((f) => ({ ...f, unit_cost: e.target.value, unit_price: price }));
+            }} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </>
+      )}
+
+      <div className={`col-span-2 grid gap-4 ${showInitialStock ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Min Stock Threshold</label>
+          <input name="min_stock_threshold" type="number" min="0" value={form.min_stock_threshold} onChange={handleChange}
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        
+        {showInitialStock && (
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Margin %</label>
+            <select name="margin" value={form.margin} onChange={(e) => {
+              const margin = parseFloat(e.target.value) || 0;
+              const cost = parseFloat(form.unit_cost) || 0;
+              const price = (cost * (1 + margin / 100)).toFixed(2);
+              setForm((f) => ({ ...f, margin: e.target.value, unit_price: price }));
+            }} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="10">10%</option>
+              <option value="20">20%</option>
+              <option value="30">30%</option>
+              <option value="50">50%</option>
+              <option value="100">100%</option>
+              <option value="0">Custom</option>
+            </select>
+          </div>
+        )}
+
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Selling Price (LKR) *</label>
+          <input name="unit_price" type="number" step="0.01" min="0" required value={form.unit_price} onChange={(e) => {
+            handleChange(e);
+            setForm((f) => ({ ...f, margin: "0" }));
+          }}
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50 dark:bg-blue-900/30" />
+        </div>
+      </div>
+
       <div className="col-span-2 mt-1 border-t pt-3">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Compatibility</p>
         <p className="text-[11px] text-gray-400">Separate from the name — the full set of devices this part fits (used for smart-reuse suggestions). Pick from the registry to avoid typos; the selected brand &amp; model above are added automatically.</p>
@@ -183,46 +258,10 @@ function CatalogFormFields({ form, handleChange, setForm, showInitialStock, cate
         />
       </div>
 
-      {showInitialStock && !form.track_serial && (
+      {showInitialStock && (
         <>
           <div className="col-span-2 mt-1 border-t pt-3">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Initial Stock & Pricing (optional)</p>
-            <p className="text-xs text-gray-400">Creates the first purchase batch and sets the base selling price.</p>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Quantity</label>
-            <input name="quantity" type="number" min="0" value={form.quantity} onChange={handleChange}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Unit Cost (LKR)</label>
-            <input name="unit_cost" type="number" step="0.01" min="0" value={form.unit_cost} onChange={(e) => {
-              const cost = parseFloat(e.target.value) || 0;
-              const margin = parseFloat(form.margin) || 0;
-              const price = (cost * (1 + margin / 100)).toFixed(2);
-              setForm((f) => ({ ...f, unit_cost: e.target.value, unit_price: price }));
-            }} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Margin %</label>
-            <select name="margin" value={form.margin} onChange={(e) => {
-              const margin = parseFloat(e.target.value) || 0;
-              const cost = parseFloat(form.unit_cost) || 0;
-              const price = (cost * (1 + margin / 100)).toFixed(2);
-              setForm((f) => ({ ...f, margin: e.target.value, unit_price: price }));
-            }} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="10">10%</option>
-              <option value="20">20%</option>
-              <option value="30">30%</option>
-              <option value="50">50%</option>
-              <option value="100">100%</option>
-              <option value="0">Custom (0%)</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Selling Price (LKR)</label>
-            <input name="unit_price" type="number" step="0.01" min="0" value={form.unit_price} onChange={handleChange}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50" />
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Supplier Info</p>
           </div>
           <div className="col-span-2">
             <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Supplier</label>
@@ -261,6 +300,7 @@ export default function InventoryManager() {
   const [detailsItem, setDetailsItem] = useState(null);
   const [batches, setBatches] = useState([]);
   const [batchLoading, setBatchLoading] = useState(false);
+  const [expandedBatchId, setExpandedBatchId] = useState(null);
 
   // Adjust stock
   const [showStockModal, setShowStock] = useState(false);
@@ -270,6 +310,13 @@ export default function InventoryManager() {
   const [adjustNote, setAdjustNote] = useState("");
   const [adjustBatchId, setAdjustBatchId] = useState("");
   const [availableBatches, setAvailableBatches] = useState([]);
+
+  // Serial Unit Adjust
+  const [unitToAdjust, setUnitToAdjust] = useState(null);
+  const [unitAdjustSerialNumber, setUnitAdjustSerialNumber] = useState("");
+  const [unitAdjustStatus, setUnitAdjustStatus] = useState("lost");
+  const [unitAdjustReason, setUnitAdjustReason] = useState("recount");
+  const [unitAdjustNote, setUnitAdjustNote] = useState("");
 
   // Adjustment Logs
   const [showLogsModal, setShowLogs] = useState(false);
@@ -444,8 +491,8 @@ export default function InventoryManager() {
         compatible_brands: mergeUnique(form.brand, form.compatible_brands),
         compatible_models: mergeUnique(form.model, form.compatible_models),
       };
-      if (form.quantity) payload.quantity = parseInt(form.quantity, 10);
-      if (form.unit_cost) payload.unit_cost = parseFloat(form.unit_cost);
+      if (form.quantity && !form.track_serial) payload.quantity = parseInt(form.quantity, 10);
+      if (form.unit_cost && !form.track_serial) payload.unit_cost = parseFloat(form.unit_cost);
       if (form.unit_price) payload.unit_price = parseFloat(form.unit_price);
       const { data: created } = await api.post("/inventory/", payload);
       setShowAdd(false);
@@ -459,7 +506,13 @@ export default function InventoryManager() {
           supplier: firstBatch.supplier, qty: firstBatch.quantity_received, unitCost: firstBatch.unit_cost,
         });
       } else if (created.track_serial) {
-        openReceive(created);
+        openReceive(created, {
+          quantity: form.quantity,
+          unit_cost: form.unit_cost,
+          supplier: form.supplier,
+          margin: form.margin,
+          unit_price: form.unit_price
+        });
       }
     } catch (err) {
       const detail = err.response?.data?.detail;
@@ -474,7 +527,7 @@ export default function InventoryManager() {
           </span>
         );
       } else {
-        setFormError(typeof detail === "string" ? detail : "Failed to add item");
+        setFormError(typeof detail === "string" ? detail : Array.isArray(detail) ? detail.map(d => `${d.loc?.[d.loc?.length - 1] || 'Field'}: ${d.msg}`).join(", ") : "Failed to add item");
       }
     } finally {
       setSaving(false);
@@ -505,15 +558,25 @@ export default function InventoryManager() {
       setForm(EMPTY_FORM);
       fetchAll();
     } catch (err) {
-      setFormError(err.response?.data?.detail || "Failed to update item");
+      const detail = err.response?.data?.detail;
+      setFormError(typeof detail === "string" ? detail : Array.isArray(detail) ? detail.map(d => `${d.loc?.[d.loc?.length - 1] || 'Field'}: ${d.msg}`).join(", ") : "Failed to update item");
     } finally {
       setSaving(false);
     }
   };
 
-  const openReceive = (item) => {
+  const openReceive = (item, initialData = {}) => {
     setReceiveItem(item);
-    setReceiveForm({ supplier: item.supplier ?? "", unit_cost: "", margin: "30", new_selling_price: item.unit_price ?? "", quantity: "", purchased_at: new Date().toISOString().split("T")[0], update_selling_price: false, serial_numbers: [] });
+    setReceiveForm({ 
+      supplier: initialData.supplier ?? item.supplier ?? "", 
+      unit_cost: initialData.unit_cost ?? "", 
+      margin: initialData.margin ?? "0", 
+      new_selling_price: initialData.unit_price ?? item.unit_price ?? "", 
+      quantity: initialData.quantity ?? "", 
+      purchased_at: new Date().toISOString().split("T")[0], 
+      update_selling_price: false, 
+      serial_numbers: Array(parseInt(initialData.quantity || 0, 10)).fill("") 
+    });
     setFormError("");
   };
 
@@ -532,6 +595,9 @@ export default function InventoryManager() {
       }
       if (receiveForm.purchased_at) payload.purchased_at = new Date(receiveForm.purchased_at).toISOString();
       if (receiveItem.track_serial) payload.serial_numbers = (receiveForm.serial_numbers || []).filter(s => s.trim());
+      
+      console.log("Sending receive payload:", payload);
+      
       const { data: batch } = await api.post(`/inventory/${receiveItem.id}/receive`, payload);
       const item = receiveItem;
       setReceiveItem(null);
@@ -543,7 +609,9 @@ export default function InventoryManager() {
         serialNumbers: payload.serial_numbers || [],
       });
     } catch (err) {
-      setFormError(err.response?.data?.detail || "Failed to receive stock");
+      console.error("Receive error:", err.response?.data);
+      const detail = err.response?.data?.detail;
+      setFormError(typeof detail === "string" ? detail : Array.isArray(detail) ? detail.map(d => `${JSON.stringify(d.loc)}: ${d.msg}`).join(", ") : "Failed to receive stock");
     } finally {
       setSaving(false);
     }
@@ -567,17 +635,29 @@ export default function InventoryManager() {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.patch(`/inventory/${selectedItem.id}/stock`, {
-        delta: parseInt(stockDelta, 10),
-        reason: adjustReason,
-        note: adjustNote || null,
-        batch_id: adjustBatchId || null,
-      });
+      if (selectedItem?.track_serial) {
+        await api.post(`/inventory/units/${unitAdjustSerialNumber}/status`, {
+          status: unitAdjustStatus,
+          reason: unitAdjustReason,
+          note: unitAdjustNote || null,
+        });
+        setUnitAdjustSerialNumber("");
+        setUnitAdjustStatus("lost");
+        setUnitAdjustReason("recount");
+        setUnitAdjustNote("");
+      } else {
+        await api.patch(`/inventory/${selectedItem.id}/stock`, {
+          delta: parseInt(stockDelta, 10),
+          reason: adjustReason,
+          note: adjustNote || null,
+          batch_id: adjustBatchId || null,
+        });
+        setStockDelta("");
+        setAdjustReason("recount");
+        setAdjustNote("");
+        setAdjustBatchId("");
+      }
       setShowStock(false);
-      setStockDelta("");
-      setAdjustReason("recount");
-      setAdjustNote("");
-      setAdjustBatchId("");
       fetchAll();
     } catch (err) {
       alert(err.response?.data?.detail || "Failed to adjust stock");
@@ -815,11 +895,14 @@ export default function InventoryManager() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Batch Code</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Change</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Reason</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Note</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Serial</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-1/3">Note</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {globalLogs.map((log) => (
+                {globalLogs.map((log) => {
+                  const { serial, text } = parseLogNote(log.note);
+                  return (
                   <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 transition-colors">
                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{new Date(log.created_at).toLocaleString()}</td>
                     <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">{log.admin_name}</td>
@@ -831,9 +914,11 @@ export default function InventoryManager() {
                       </span>
                     </td>
                     <td className="px-4 py-3 uppercase text-xs font-semibold text-gray-600 dark:text-gray-300">{log.reason}</td>
-                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 italic max-w-xs truncate" title={log.note}>{log.note || "—"}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-blue-600 dark:text-blue-400 whitespace-nowrap">{serial !== "—" ? serial : ""}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300 italic min-w-[200px] break-words whitespace-pre-wrap">{text !== "—" ? text : ""}</td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           )}
@@ -908,10 +993,30 @@ export default function InventoryManager() {
             </div>
             {receiveItem?.track_serial && (
               <div className="col-span-2">
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2">
-                  Serial Numbers * 
-                  <span className="text-gray-400 font-normal ml-2">(Scan or type each one)</span>
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300">
+                    Serial Numbers * 
+                    <span className="text-gray-400 font-normal ml-2">(Scan or type each one)</span>
+                  </label>
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      const qty = parseInt(receiveForm.quantity, 10);
+                      if (!qty || qty <= 0) return;
+                      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+                      const base = receiveItem?.sku ? receiveItem.sku : "SN";
+                      const newSerials = [];
+                      for (let i = 0; i < qty; i++) {
+                        const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+                        newSerials.push(`${base}-${dateStr}-${randomStr}`);
+                      }
+                      setReceiveForm(f => ({ ...f, serial_numbers: newSerials }));
+                    }}
+                    className="px-2 py-1 bg-purple-100 text-purple-700 hover:bg-purple-200 rounded text-[11px] font-semibold transition-colors"
+                  >
+                    Auto-Generate
+                  </button>
+                </div>
                 {!receiveForm.quantity || parseInt(receiveForm.quantity, 10) <= 0 ? (
                   <div className="text-sm text-amber-600 bg-amber-50 rounded-lg p-3 border border-amber-200">
                     Please enter a valid Quantity first.
@@ -936,7 +1041,7 @@ export default function InventoryManager() {
                             if (nextInput) nextInput.focus();
                           }
                         }}
-                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono bg-white dark:bg-gray-800"
                         placeholder={`Serial number ${i + 1}`}
                       />
                     ))}
@@ -948,45 +1053,8 @@ export default function InventoryManager() {
             <div>
               <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Unit Cost (LKR) *</label>
               <input type="number" step="0.01" min="0" required value={receiveForm.unit_cost}
-                onChange={(e) => {
-                  const cost = parseFloat(e.target.value) || 0;
-                  const margin = parseFloat(receiveForm.margin) || 0;
-                  const price = (cost * (1 + margin / 100)).toFixed(2);
-                  setReceiveForm((f) => ({ ...f, unit_cost: e.target.value, new_selling_price: price }));
-                }}
+                onChange={(e) => setReceiveForm((f) => ({ ...f, unit_cost: e.target.value }))}
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Margin % (For update)</label>
-              <select value={receiveForm.margin} onChange={(e) => {
-                const margin = parseFloat(e.target.value) || 0;
-                const cost = parseFloat(receiveForm.unit_cost) || 0;
-                const price = (cost * (1 + margin / 100)).toFixed(2);
-                setReceiveForm((f) => ({ ...f, margin: e.target.value, new_selling_price: price }));
-              }} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="10">10%</option>
-                <option value="20">20%</option>
-                <option value="30">30%</option>
-                <option value="50">50%</option>
-                <option value="100">100%</option>
-                <option value="0">Custom (0%)</option>
-              </select>
-            </div>
-            <div className="col-span-2 border-t pt-3 mt-1">
-              <label className="flex items-center gap-2 mb-2 cursor-pointer">
-                <input type="checkbox" checked={receiveForm.update_selling_price} 
-                  onChange={(e) => setReceiveForm(f => ({ ...f, update_selling_price: e.target.checked }))}
-                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" />
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Update Selling Price? (Current: LKR {receiveItem?.unit_price})</span>
-              </label>
-              {receiveForm.update_selling_price && (
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">New Selling Price (LKR)</label>
-                  <input type="number" step="0.01" min="0" required value={receiveForm.new_selling_price}
-                    onChange={(e) => setReceiveForm((f) => ({ ...f, new_selling_price: e.target.value }))}
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50" />
-                </div>
-              )}
             </div>
             <div className="col-span-2">
               <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Supplier</label>
@@ -1010,7 +1078,7 @@ export default function InventoryManager() {
       </Modal>
 
       {/* Item Details Modal */}
-      <Modal open={!!detailsItem} onClose={() => setDetailsItem(null)} title={`Part Details — ${detailsItem?.name ?? ""}`}>
+      <Modal open={!!detailsItem} onClose={() => setDetailsItem(null)} title={`Part Details — ${detailsItem?.name ?? ""}`} size="lg">
         {detailsItem && (
           <div className="space-y-6">
             {/* Action Bar */}
@@ -1025,6 +1093,10 @@ export default function InventoryManager() {
                 setAdjustReason("recount");
                 setAdjustNote("");
                 setAdjustBatchId("");
+                setUnitAdjustSerialNumber("");
+                setUnitAdjustStatus("lost");
+                setUnitAdjustReason("recount");
+                setUnitAdjustNote("");
                 try {
                   const { data } = await api.get(`/inventory/${detailsItem.id}/batches`);
                   setAvailableBatches(data);
@@ -1052,30 +1124,66 @@ export default function InventoryManager() {
               ) : batches.length === 0 ? (
                 <p className="py-6 text-center text-gray-400 text-sm border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl">No batches currently available. Use "Receive Stock" to add inventory.</p>
               ) : (
-                <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
+                <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 hide-scrollbar">
                   {batches.map((b) => (
-                    <div key={b.id} className="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 flex items-center justify-between bg-white dark:bg-gray-800">
-                      <div>
-                        <p className="font-mono text-sm font-semibold text-gray-800 dark:text-gray-100">{b.batch_code}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {b.supplier || "—"} · LKR {Number(b.unit_cost).toLocaleString()} ·
-                          <span className="font-semibold text-gray-700 dark:text-gray-200"> {b.quantity_remaining}</span> / {b.quantity_received} left
-                        </p>
-                        {b.units && b.units.length > 0 && (
-                          <div className="mt-1.5 flex flex-wrap gap-1">
+                    <div key={b.id} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+                      <div 
+                        className={`px-3 py-2 flex items-center justify-between cursor-pointer transition-colors ${expandedBatchId === b.id ? 'bg-gray-50 dark:bg-gray-700/50' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                        onClick={() => setExpandedBatchId(expandedBatchId === b.id ? null : b.id)}
+                      >
+                        <div>
+                          <p className="font-mono text-sm font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                            {b.batch_code}
+                            <span className="text-gray-400">
+                              <svg className={`w-4 h-4 transition-transform ${expandedBatchId === b.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                            </span>
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            {b.supplier || "—"} · LKR {Number(b.unit_cost).toLocaleString()} ·
+                            <span className="font-semibold text-gray-700 dark:text-gray-200"> {b.quantity_remaining}</span> / {b.quantity_received} left
+                          </p>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            printLabels([{ code: b.batch_code, sku: detailsItem.sku, name: detailsItem.name, supplier: b.supplier, qty: b.quantity_received, unitCost: b.unit_cost }]);
+                          }}
+                          className="text-blue-600 hover:text-blue-800 text-xs font-semibold px-2 py-1 hover:bg-blue-100 rounded transition-colors bg-blue-50">
+                          Batch Label
+                        </button>
+                      </div>
+                      
+                      {expandedBatchId === b.id && b.units && b.units.length > 0 && (
+                        <div className="border-t border-gray-100 dark:border-gray-700 p-3 bg-gray-50/50 dark:bg-gray-800/50">
+                          <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Serial Numbers in Batch</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                             {b.units.map(u => (
-                              <span key={u.serial_number} className={`px-2 py-0.5 text-[10px] font-mono rounded border ${u.status === 'in_stock' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
-                                {u.serial_number}
-                              </span>
+                              <div key={u.serial_number} className={`flex items-center justify-between p-2 border rounded-md bg-white dark:bg-gray-900 ${u.status === 'in_stock' ? 'border-green-200' : 'border-gray-200'}`}>
+                                <div>
+                                  <span className="text-xs font-mono font-semibold text-gray-800 dark:text-gray-200 block">{u.serial_number}</span>
+                                  <span className={`text-[10px] font-semibold ${u.status === 'in_stock' ? 'text-green-600' : 'text-gray-500'}`}>
+                                    {u.status === 'in_stock' ? 'In Stock' : u.status === 'lost' ? 'Lost' : 'Returned'}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    printLabels([{ code: u.serial_number, sku: detailsItem.sku, name: detailsItem.name, supplier: b.supplier, qty: 1, unitCost: b.unit_cost }]);
+                                  }}
+                                  className="text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-[10px] font-semibold transition-colors">
+                                  Print
+                                </button>
+                              </div>
                             ))}
                           </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => printLabel({ code: b.batch_code, sku: detailsItem.sku, name: detailsItem.name, supplier: b.supplier, qty: b.quantity_received, unitCost: b.unit_cost })}
-                        className="text-blue-600 hover:text-blue-800 text-xs font-semibold px-2 py-1 hover:bg-blue-50 rounded transition-colors">
-                        Label
-                      </button>
+                        </div>
+                      )}
+                      
+                      {expandedBatchId === b.id && (!b.units || b.units.length === 0) && (
+                        <div className="border-t border-gray-100 dark:border-gray-700 p-3 bg-gray-50/50 dark:bg-gray-800/50 text-center text-xs text-gray-400 italic">
+                          No serial numbers recorded for this batch.
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1089,47 +1197,87 @@ export default function InventoryManager() {
       <Modal open={showStockModal} onClose={() => setShowStock(false)} title={`Adjust Stock — ${selectedItem?.name}`}>
         <form onSubmit={handleStockAdjust} className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-300">Current stock: <strong className="text-gray-800 dark:text-gray-100">{selectedItem?.quantity}</strong></p>
-          <p className="text-xs text-gray-400">Use for recounts/shrinkage. Negative deducts oldest batches first.</p>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Reason for Adjustment *</label>
-            <select required value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="recount">Physical Recount Correction</option>
-              <option value="damaged">Damaged / Broken</option>
-              <option value="shrinkage">Lost / Missing</option>
-              <option value="returned">Returned to Inventory</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Stock Change (positive = add, negative = consume) *</label>
-            <input type="number" required value={stockDelta} onChange={(e) => setStockDelta(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g. +5 or -2" />
-          </div>
-          {parseInt(stockDelta, 10) < 0 && (
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Batch to Deduct From (Optional)</label>
-              <select value={adjustBatchId} onChange={(e) => setAdjustBatchId(e.target.value)}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">-- Automatic (Oldest First) --</option>
-                {availableBatches.filter(b => b.quantity_remaining > 0).map(b => (
-                  <option key={b.id} value={b.id}>
-                    Batch {b.batch_code} ({b.quantity_remaining} left)
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11px] text-gray-400 mt-1">If selected, the stock will be removed strictly from this batch.</p>
-            </div>
-          )}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Notes (Optional)</label>
-            <textarea value={adjustNote} onChange={(e) => setAdjustNote(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Explain the reason..." rows={2} />
-          </div>
-          {stockDelta && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">New quantity: <strong>{(selectedItem?.quantity ?? 0) + (parseInt(stockDelta, 10) || 0)}</strong></p>
+          {selectedItem?.track_serial ? (
+            <>
+              <p className="text-xs text-gray-400">Scan or type the serial number of the unit to adjust its status.</p>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Serial Number *</label>
+                <input type="text" required value={unitAdjustSerialNumber} onChange={(e) => setUnitAdjustSerialNumber(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800"
+                  placeholder="e.g. SN-12345" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">New Status *</label>
+                <select required value={unitAdjustStatus} onChange={(e) => setUnitAdjustStatus(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="in_stock">In Stock (Available)</option>
+                  <option value="lost">Lost</option>
+                  <option value="returned">Damaged / Returned</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Reason (Optional)</label>
+                <select value={unitAdjustReason} onChange={(e) => setUnitAdjustReason(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="recount">Recount</option>
+                  <option value="damage">Damage</option>
+                  <option value="loss">Loss</option>
+                  <option value="return">Return</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Note (Optional)</label>
+                <textarea value={unitAdjustNote} onChange={(e) => setUnitAdjustNote(e.target.value)}
+                  placeholder="Provide details about the change..."
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[60px]" />
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-gray-400">Use for recounts/shrinkage. Negative deducts oldest batches first.</p>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Reason for Adjustment *</label>
+                <select required value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="recount">Physical Recount Correction</option>
+                  <option value="damaged">Damaged / Broken</option>
+                  <option value="shrinkage">Lost / Missing</option>
+                  <option value="returned">Returned to Inventory</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Stock Change (positive = add, negative = consume) *</label>
+                <input type="number" required value={stockDelta} onChange={(e) => setStockDelta(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g. +5 or -2" />
+              </div>
+              {parseInt(stockDelta, 10) < 0 && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Batch to Deduct From (Optional)</label>
+                  <select value={adjustBatchId} onChange={(e) => setAdjustBatchId(e.target.value)}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">-- Automatic (Oldest First) --</option>
+                    {availableBatches.filter(b => b.quantity_remaining > 0).map(b => (
+                      <option key={b.id} value={b.id}>
+                        Batch {b.batch_code} ({b.quantity_remaining} left)
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-gray-400 mt-1">If selected, the stock will be removed strictly from this batch.</p>
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Notes (Optional)</label>
+                <textarea value={adjustNote} onChange={(e) => setAdjustNote(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Explain the reason..." rows={2} />
+              </div>
+              {stockDelta && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">New quantity: <strong>{(selectedItem?.quantity ?? 0) + (parseInt(stockDelta, 10) || 0)}</strong></p>
+              )}
+            </>
           )}
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={() => setShowStock(false)} className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">Cancel</button>
@@ -1163,9 +1311,16 @@ export default function InventoryManager() {
                 {log.batch_code && (
                   <p className="text-[11px] font-mono text-gray-500 dark:text-gray-400 mb-1">Batch: {log.batch_code}</p>
                 )}
-                {log.note && (
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 italic border-l-2 border-gray-300 dark:border-gray-600 pl-2">{log.note}</p>
-                )}
+                {(() => {
+                  if (!log.note) return null;
+                  const { serial, text } = parseLogNote(log.note);
+                  return (
+                    <div className="mt-2">
+                      {serial !== "—" && <span className="inline-block bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 text-[10px] px-2 py-0.5 rounded font-mono font-semibold mb-1">Serial: {serial}</span>}
+                      {text !== "—" && <p className="text-sm text-gray-600 dark:text-gray-300 italic border-l-2 border-gray-300 dark:border-gray-600 pl-2 whitespace-pre-wrap">{text}</p>}
+                    </div>
+                  );
+                })()}
               </div>
             ))}
           </div>

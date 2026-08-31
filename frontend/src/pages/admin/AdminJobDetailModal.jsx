@@ -352,18 +352,19 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
       </body></html>`;
       
       // Use a hidden iframe to bypass popup blockers
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      document.body.appendChild(iframe);
+      const win = window.open('', '_blank');
+      if (!win) {
+        alert("Please allow pop-ups to print the invoice.");
+        return;
+      }
       
-      iframe.contentWindow.document.open();
-      iframe.contentWindow.document.write(htmlContent);
-      iframe.contentWindow.document.close();
+      win.document.open();
+      win.document.write(htmlContent);
+      win.document.close();
       
       setTimeout(() => {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-        setTimeout(() => { document.body.removeChild(iframe); }, 2000);
+        win.focus();
+        win.print();
       }, 500);
     } catch (err) {
       console.error(err);
@@ -964,13 +965,13 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
                   setSelectedBatchId("");
                   const item = invItems.find((i) => i.id === e.target.value);
                   if (item) {
-                    setOverridePrice(item.unit_price?.toString() || "");
-                    // If batches are available in the response, get the cost of the oldest available batch
-                    // Currently invItems list may not have full batch data, so we can display what's known or leave it empty if not.
                     if (item.batches && item.batches.length > 0) {
-                       setActualCost(item.batches.filter(b => b.quantity_remaining > 0)[0]?.unit_cost || item.batches[item.batches.length-1].unit_cost);
+                       const b = item.batches.filter(b => b.quantity_remaining > 0)[0] || item.batches[item.batches.length-1];
+                       setActualCost(b.unit_cost);
+                       setOverridePrice(item.unit_price || "");
                     } else {
                        setActualCost("Hidden (Load from oldest batch)");
+                       setOverridePrice(item.unit_price?.toString() || "");
                     }
                   }
                 }}
@@ -991,15 +992,20 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
                           setSelectedBatchId(bid);
                           if (bid) {
                             const b = item.batches.find(b => b.id === bid);
-                            if (b) setActualCost(b.unit_cost);
+                            if (b) {
+                              setActualCost(b.unit_cost);
+                              setOverridePrice(item.unit_price);
+                            }
                           } else {
-                            setActualCost(item.batches.filter(b => b.quantity_remaining > 0)[0]?.unit_cost || item.batches[item.batches.length-1].unit_cost);
+                            const b = item.batches.filter(b => b.quantity_remaining > 0)[0] || item.batches[item.batches.length-1];
+                            setActualCost(b.unit_cost);
+                            setOverridePrice(item.unit_price);
                           }
                         }}
                           className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                           <option value="">Auto-Select (Oldest First)</option>
                           {item.batches.filter(b => b.quantity_remaining > 0).map(b => (
-                            <option key={b.id} value={b.id}>{b.batch_code} — LKR {b.unit_cost} ({b.quantity_remaining} left)</option>
+                            <option key={b.id} value={b.id}>{b.batch_code} — Cost: LKR {b.unit_cost} ({b.quantity_remaining} left)</option>
                           ))}
                         </select>
                       </div>

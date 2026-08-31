@@ -99,10 +99,11 @@ def request_admin_otp(data: OtpRequest, db: Session) -> dict:
         name=data.name,
         email=data.destination if data.channel == "email" else None,
         phone_number=data.destination if data.channel == "phone" else None,
-        password_hash=hash_password(data.password),
+        password_hash=None,
         channel=data.channel,
         destination=data.destination,
         code_hash=_hash_code(code),
+        verified=False,
         expires_at=datetime.now(timezone.utc) + timedelta(minutes=settings.OTP_EXP_MINUTES),
     )
     db.add(otp)
@@ -147,11 +148,31 @@ def verify_admin_otp(otp_id: str, code: str, db: Session) -> dict:
             f"Incorrect code. {remaining} attempt{'s' if remaining != 1 else ''} remaining.",
         )
 
+    otp.verified = True
+    db.commit()
+    return {"message": "Verification successful"}
+
+
+def complete_admin_setup(otp_id: str, password: str, db: Session) -> dict:
+    if not is_setup_required(db):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Setup has already been completed")
+
+    try:
+        otp = db.query(AdminSetupOtp).filter(AdminSetupOtp.id == UUID(otp_id)).first()
+    except (ValueError, AttributeError):
+        otp = None
+
+    if not otp or otp.consumed:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid or already-used verification request")
+
+    if not otp.verified:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "OTP has not been verified yet")
+
     admin = User(
         name=otp.name,
         email=otp.email,
         phone_number=otp.phone_number,
-        password_hash=otp.password_hash,
+        password_hash=hash_password(password),
         role="admin",
     )
     db.add(admin)

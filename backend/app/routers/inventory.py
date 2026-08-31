@@ -15,6 +15,7 @@ from app.schemas.inventory import (
     ReceiveStockRequest,
     StockAdjustRequest,
     InventoryAdjustmentLogResponse,
+    UnitStatusUpdateRequest,
 )
 from app.schemas.invoice import ConsumeByBatchRequest, JobPartResponse
 from app.schemas.job import CompatiblePartsResponse
@@ -114,6 +115,17 @@ def adjust_stock(
     current_user: User = Depends(require_admin),
 ):
     return inventory_service.adjust_stock(item_id, data, current_user.id, db)
+
+
+@router.post("/units/{serial_number}/status", response_model=dict)
+def update_unit_status(
+    serial_number: str,
+    data: UnitStatusUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_any_staff),
+):
+    return inventory_service.update_unit_status(serial_number, data, current_user.id, db)
+
 
 
 @router.post("/{item_id}/receive", response_model=InventoryBatchResponse, status_code=201)

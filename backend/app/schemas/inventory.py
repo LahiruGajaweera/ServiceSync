@@ -42,13 +42,21 @@ class ReceiveStockRequest(BaseModel):
 
 class InventoryItemUpdate(BaseModel):
     name: str | None = None
+    sku: str | None = None
     category: str | None = None
+    reorder_level: int | None = None
+    supplier: str | None = None
     compatible_brands: list[str] | None = None
     compatible_models: list[str] | None = None
     part_type: Literal["factory_new", "salvaged"] | None = None
     min_stock_threshold: int | None = None
     track_serial: bool | None = None
-    supplier: str | None = None
+    unit_price: Decimal | None = None
+
+class UnitStatusUpdateRequest(BaseModel):
+    status: str
+    reason: str
+    note: str | None = None
 
 
 class InventoryBatchResponse(BaseModel):
@@ -61,6 +69,7 @@ class InventoryBatchResponse(BaseModel):
     quantity_remaining: int
     purchased_at: datetime | None = None
     created_at: datetime | None = None
+    units: list[dict] | None = None
 
     model_config = {"from_attributes": True}
 
