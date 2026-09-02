@@ -1261,9 +1261,9 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
               className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
               <option value="">-- Assign Later --</option>
-              {technicians.map((t) => (
+              {technicians.filter(t => t.is_active || t.id === warrantyTechId).map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.name} ({t.email})
+                  {t.name} {t.specializations ? `(${t.specializations})` : ""}
                 </option>
               ))}
             </select>
