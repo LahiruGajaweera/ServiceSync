@@ -494,8 +494,10 @@ export default function DonorDeviceConsole() {
           <Field label="Assign Technician (optional)">
             <select value={addForm.assigned_technician_id} onChange={(e) => setAddForm({ ...addForm, assigned_technician_id: e.target.value })} className={selectCls}>
               <option value="">-- Unassigned --</option>
-              {technicians.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
+              {technicians.filter(t => t.is_active || t.id === addForm.assigned_technician_id).map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} {t.specializations ? `(${t.specializations})` : ""}
+                </option>
               ))}
             </select>
           </Field>
