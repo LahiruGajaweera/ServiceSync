@@ -64,10 +64,10 @@ export default function ModelSelect({
   const hasBrand = !!brand && !!brand.trim();
 
   const filtered = useMemo(() => {
-    if (!q) return models;
+    if (!q || q === value) return models;
     const lower = q.toLowerCase();
     return models.filter((m) => m.toLowerCase().includes(lower));
-  }, [models, q]);
+  }, [models, q, value]);
 
   const exactMatch = models.some((m) => m.toLowerCase() === q.toLowerCase());
   const canAddNew = hasBrand && q.length > 0 && !exactMatch;

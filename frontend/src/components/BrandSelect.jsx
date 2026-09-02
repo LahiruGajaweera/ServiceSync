@@ -58,10 +58,10 @@ export default function BrandSelect({
   const q = query.trim();
 
   const filtered = useMemo(() => {
-    if (!q) return brands;
+    if (!q || q === value) return brands;
     const lower = q.toLowerCase();
     return brands.filter((b) => b.toLowerCase().includes(lower));
-  }, [brands, q]);
+  }, [brands, q, value]);
 
   const exactMatch = brands.some((b) => b.toLowerCase() === q.toLowerCase());
   const canAddNew = q.length > 0 && !exactMatch;
