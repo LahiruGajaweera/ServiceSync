@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import api from "../services/api";
+import PhoneInput from "./PhoneInput";
 
 export default function SupplierSelect({ value, onChange }) {
   const [search, setSearch] = useState(value || "");
@@ -77,7 +78,14 @@ export default function SupplierSelect({ value, onChange }) {
       setShowNew(false);
       selectSupplier(data);
     } catch (err) {
-      setError(err.response?.data?.detail || "Failed to add supplier");
+      const detail = err.response?.data?.detail;
+      let errMsg = "Failed to add supplier";
+      if (typeof detail === "string") {
+        errMsg = detail;
+      } else if (Array.isArray(detail)) {
+        errMsg = detail.map(d => d.msg).join(", ");
+      }
+      setError(errMsg);
     } finally {
       setCreating(false);
     }
@@ -156,11 +164,11 @@ export default function SupplierSelect({ value, onChange }) {
             </div>
             <div>
               <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">Phone *</label>
-              <input
-                type="text"
+              <PhoneInput
+                name="phone_number"
                 value={newForm.phone_number}
                 onChange={(e) => setNewForm((f) => ({ ...f, phone_number: e.target.value }))}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-1.5 text-sm"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-blue-500"
               />
             </div>
             <div>

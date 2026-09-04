@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import PhoneInput from "../../components/PhoneInput";
 import api from "../../services/api";
 
 export default function SettingsManager() {
@@ -206,8 +207,7 @@ export default function SettingsManager() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">
                     Contact Phone Number
                   </label>
-                  <input
-                    type="text"
+                  <PhoneInput
                     name="shop_phone"
                     value={settings.shop_phone}
                     onChange={handleChange}

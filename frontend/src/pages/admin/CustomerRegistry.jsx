@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
+import PhoneInput from "../../components/PhoneInput";
 
 function Modal({ open, onClose, title, children }) {
   if (!open) return null;
@@ -161,10 +162,9 @@ export default function CustomerRegistry() {
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Phone Number *</label>
-            <input
+            <PhoneInput
               name="phone_number" required value={form.phone_number} onChange={handleChange}
               className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="077 123 4567"
             />
           </div>
           <div>

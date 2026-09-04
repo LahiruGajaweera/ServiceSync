@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import PhoneInput from "../components/PhoneInput";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import bgImage from "../repair-bg.png";
@@ -201,7 +202,7 @@ export default function SetupPage() {
                 ) : (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Phone Number</label>
-                    <input name="phone_number" required value={form.phone_number} onChange={handleChange} type="tel"
+                    <PhoneInput name="phone_number" required value={form.phone_number} onChange={handleChange}
                       placeholder="07XXXXXXXX" className={inputCls} />
                   </div>
                 )}
