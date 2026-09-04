@@ -20,6 +20,17 @@ function Modal({ open, onClose, title, children }) {
 
 const EMPTY_FORM = { name: "", email: "", phone_number: "", specializations: "" };
 
+const SKILL_OPTIONS = [
+  "Apple devices",
+  "Android devices",
+  "Board level repair",
+  "Screen repair",
+  "Software troubleshooting",
+  "Micro-soldering",
+  "Battery replacement",
+  "Water damage recovery"
+];
+
 function getTechnicianPerformance(specializations) {
   if (!specializations) return { score: 0, category: 'General' };
   
@@ -57,6 +68,9 @@ export default function TechnicianPanel() {
   const [showJobsList, setShowJobsList] = useState(false);
   const [deleting, setDeleting]       = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: '', onConfirm: null });
+  const [showSkillDropdown, setShowSkillDropdown] = useState(false);
+  const [availableSkills, setAvailableSkills] = useState(SKILL_OPTIONS);
+  const [skillSearch, setSkillSearch] = useState("");
 
   const fetchTechnicians = async () => {
     setLoading(true);
@@ -74,6 +88,20 @@ export default function TechnicianPanel() {
       });
       techs.sort((a, b) => b.performanceScore - a.performanceScore);
       setTechnicians(techs);
+
+      // Aggregate all unique skills from existing technicians
+      const allSkills = new Set(SKILL_OPTIONS);
+      techs.forEach(t => {
+        if (t.specializations) {
+          t.specializations.split(',').forEach(s => {
+            const trimmed = s.trim();
+            if (trimmed) {
+              allSkills.add(trimmed);
+            }
+          });
+        }
+      });
+      setAvailableSkills(Array.from(allSkills));
     } finally {
       setLoading(false);
     }
@@ -85,6 +113,18 @@ export default function TechnicianPanel() {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
+  const handleSkillToggle = (skill) => {
+    const currentSkills = form.specializations ? form.specializations.split(',').map(s => s.trim()).filter(Boolean) : [];
+    let newSkills;
+    if (currentSkills.includes(skill)) {
+      newSkills = currentSkills.filter(s => s !== skill);
+    } else {
+      newSkills = [...currentSkills, skill];
+    }
+    setForm({ ...form, specializations: newSkills.join(', ') });
+  };
+
+  const handleAdd = async (e) => {
     e.preventDefault();
     setFormError("");
     setSaving(true);
@@ -131,6 +171,8 @@ export default function TechnicianPanel() {
     setFormError("");
     setForm(EMPTY_FORM);
     setEditingTechnician(null);
+    setShowSkillDropdown(false);
+    setSkillSearch("");
   };
 
   const handleToggleStatus = (tech) => {
@@ -164,7 +206,7 @@ export default function TechnicianPanel() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{technicians.length} total technicians</p>
         </div>
         <button
-          onClick={() => { setShowModal(true); setCreated(null); setFormError(""); setForm(EMPTY_FORM); }}
+          onClick={() => { setShowModal(true); setCreated(null); setFormError(""); setForm(EMPTY_FORM); setShowSkillDropdown(false); }}
           className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl glass-button shadow-lg shadow-blue-500/30"
         >
           + Add Technician
@@ -384,13 +426,82 @@ export default function TechnicianPanel() {
             />
             <p className="text-xs text-gray-400 mt-1">A temporary password will be sent here via SMS.</p>
           </div>
-          <div>
+          <div className="relative">
             <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Specializations / Skills</label>
-            <input
-              name="specializations" value={form.specializations} onChange={handleChange}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g. iPhone, Samsung, Board level repair"
-            />
+            <div 
+              className="w-full border border-gray-300 dark:bg-transparent dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer min-h-[38px] flex items-center justify-between"
+              onClick={() => setShowSkillDropdown(!showSkillDropdown)}
+            >
+              <span className={form.specializations ? 'text-gray-800 dark:text-gray-100' : 'text-gray-400'}>
+                {form.specializations || "Select skills..."}
+              </span>
+              <svg className={`w-4 h-4 text-gray-500 transition-transform ${showSkillDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+            
+            {showSkillDropdown && (
+              <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-64 flex flex-col">
+                <div className="p-2 border-b dark:border-gray-700">
+                  <input
+                    type="text"
+                    value={skillSearch}
+                    onChange={(e) => setSkillSearch(e.target.value)}
+                    placeholder="Search or add new skill..."
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 focus:outline-none focus:border-blue-500 text-gray-800 dark:text-gray-100"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (skillSearch.trim()) {
+                          const newSkill = skillSearch.trim();
+                          handleSkillToggle(newSkill);
+                          if (!availableSkills.find(s => s.toLowerCase() === newSkill.toLowerCase())) {
+                            setAvailableSkills(prev => [...prev, newSkill]);
+                          }
+                          setSkillSearch('');
+                        }
+                      }
+                    }}
+                  />
+                </div>
+                <div className="overflow-y-auto">
+                  {availableSkills
+                    .filter(s => s.toLowerCase().includes(skillSearch.toLowerCase()))
+                    .map(skill => {
+                      const isSelected = (form.specializations || "").split(',').map(s => s.trim()).includes(skill);
+                      return (
+                        <div 
+                          key={skill}
+                          className="px-3 py-2 flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-200"
+                          onClick={() => handleSkillToggle(skill)}
+                        >
+                          <input 
+                            type="checkbox" 
+                            checked={isSelected}
+                            readOnly
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span>{skill}</span>
+                        </div>
+                      );
+                  })}
+                  {skillSearch.trim() && !availableSkills.find(s => s.toLowerCase() === skillSearch.trim().toLowerCase()) && (
+                    <div 
+                      className="px-3 py-2 flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm text-blue-600 dark:text-blue-400 font-medium border-t dark:border-gray-700"
+                      onClick={() => {
+                        const newSkill = skillSearch.trim();
+                        handleSkillToggle(newSkill);
+                        if (!availableSkills.find(s => s.toLowerCase() === newSkill.toLowerCase())) {
+                          setAvailableSkills(prev => [...prev, newSkill]);
+                        }
+                        setSkillSearch('');
+                      }}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+                      Add "{skillSearch.trim()}"
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex gap-3 pt-1">
             <button
