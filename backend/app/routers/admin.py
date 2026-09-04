@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import require_admin
 from app.models.user import User
-from app.schemas.user import TechnicianCreate, TechnicianCreateResponse, UserResponse
+from app.schemas.user import TechnicianCreate, TechnicianCreateResponse, TechnicianUpdate, UserResponse
 from app.services import auth_service
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -39,6 +39,39 @@ def toggle_technician_status(
         raise HTTPException(status_code=404, detail="Technician not found")
         
     technician.is_active = not technician.is_active
+    db.commit()
+    db.refresh(technician)
+    return technician
+
+
+@router.put("/technicians/{technician_id}", response_model=UserResponse)
+def update_technician(
+    technician_id: str,
+    data: TechnicianUpdate,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    from uuid import UUID
+    from fastapi import HTTPException
+    
+    try:
+        user_uuid = UUID(technician_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid technician ID")
+        
+    technician = db.query(User).filter(User.id == user_uuid, User.role == "technician").first()
+    if not technician:
+        raise HTTPException(status_code=404, detail="Technician not found")
+        
+    if data.name is not None:
+        technician.name = data.name
+    if data.email is not None:
+        technician.email = data.email
+    if data.phone_number is not None:
+        technician.phone_number = data.phone_number
+    if data.specializations is not None:
+        technician.specializations = data.specializations
+        
     db.commit()
     db.refresh(technician)
     return technician

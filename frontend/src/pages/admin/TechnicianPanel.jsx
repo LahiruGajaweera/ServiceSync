@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import api from "../../services/api";
 import PhoneInput from "../../components/PhoneInput";
 import { isValidPhoneNumber } from "../../utils/validation";
@@ -59,6 +59,7 @@ export default function TechnicianPanel() {
   const [loading, setLoading]         = useState(true);
   const [activeTab, setActiveTab]     = useState('active'); // 'active' or 'inactive'
   const [showModal, setShowModal]     = useState(false);
+  const [editingTechnician, setEditingTechnician] = useState(null);
   const [form, setForm]               = useState(EMPTY_FORM);
   const [formError, setFormError]     = useState("");
   const [saving, setSaving]           = useState(false);
@@ -111,6 +112,7 @@ export default function TechnicianPanel() {
   const handleChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
+  const handleSubmit = async (e) => {
   const handleSkillToggle = (skill) => {
     const currentSkills = form.specializations ? form.specializations.split(',').map(s => s.trim()).filter(Boolean) : [];
     let newSkills;
@@ -131,16 +133,23 @@ export default function TechnicianPanel() {
       if (!payload.email || payload.email.trim() === "") {
         delete payload.email;
       }
-      const { data } = await api.post("/admin/technicians", payload);
-      setForm(EMPTY_FORM);
-      setCreated({
-        name: data.user.name,
-        temporary_password: data.temporary_password,
-        sms_sent: data.sms_sent,
-      });
-      fetchTechnicians();
+      
+      if (editingTechnician) {
+        await api.put(`/admin/technicians/${editingTechnician.id}`, payload);
+        fetchTechnicians();
+        closeModal();
+      } else {
+        const { data } = await api.post("/admin/technicians", payload);
+        setForm(EMPTY_FORM);
+        setCreated({
+          name: data.user.name,
+          temporary_password: data.temporary_password,
+          sms_sent: data.sms_sent,
+        });
+        fetchTechnicians();
+      }
     } catch (err) {
-      let errorMsg = "Failed to add technician";
+      let errorMsg = `Failed to ${editingTechnician ? 'update' : 'add'} technician`;
       if (err.response?.data?.detail) {
         if (Array.isArray(err.response.data.detail)) {
           errorMsg = err.response.data.detail.map(e => `${e.loc.join('.')}: ${e.msg}`).join(", ");
@@ -161,13 +170,14 @@ export default function TechnicianPanel() {
     setCreated(null);
     setFormError("");
     setForm(EMPTY_FORM);
+    setEditingTechnician(null);
     setShowSkillDropdown(false);
     setSkillSearch("");
   };
 
-  const handleToggleStatus = () => {
-    if (!selectedTechnician) return;
-    const action = selectedTechnician.is_active ? "deactivate" : "activate";
+  const handleToggleStatus = (tech) => {
+    if (!tech) return;
+    const action = tech.is_active ? "deactivate" : "activate";
     
     setConfirmModal({
       isOpen: true,
@@ -176,8 +186,8 @@ export default function TechnicianPanel() {
         setConfirmModal({ isOpen: false, action: '', onConfirm: null });
         setDeleting(true);
         try {
-          await api.patch(`/admin/technicians/${selectedTechnician.id}/toggle-status`);
-          setSelectedTechnician(null);
+          await api.patch(`/admin/technicians/${tech.id}/toggle-status`);
+          if (selectedTechnician?.id === tech.id) setSelectedTechnician(null);
           fetchTechnicians();
         } catch (err) {
           alert(`Failed to ${action} technician`);
@@ -226,45 +236,143 @@ export default function TechnicianPanel() {
           <p className="text-sm text-gray-400 mt-1">Add your first technician using the button above</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {technicians.filter(t => activeTab === 'active' ? t.is_active : !t.is_active).map((t) => (
-            <div 
-              key={t.id} 
-              className="glass-panel rounded-2xl p-6 flex items-start gap-4 cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-blue-200 dark:hover:border-blue-900/50"
-              onClick={() => { setSelectedTechnician(t); setShowJobsList(false); }}
-            >
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/50 dark:to-blue-800/50 flex items-center justify-center text-blue-700 dark:text-blue-300 font-bold text-xl shrink-0 shadow-inner">
-                {t.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0">
-                <p className="font-semibold text-gray-800 dark:text-gray-100 truncate">{t.name}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{t.email}</p>
-                <div className="flex flex-wrap items-center gap-2 mt-2">
-                  <span className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-md border border-blue-100">
-                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"></path></svg>
-                    Score: {t.performanceScore}
-                  </span>
-                  <span className="inline-block px-2 py-0.5 bg-purple-50 text-purple-700 text-[10px] font-semibold rounded-md border border-purple-100">
-                    {t.category}
-                  </span>
-                  <span className="inline-flex items-center px-2 py-0.5 bg-orange-50 text-orange-700 text-[10px] font-bold rounded-md border border-orange-100">
-                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                    {t.activeJobs} Active Jobs
-                  </span>
-                </div>
-                {t.specializations && (
-                  <p className="text-xs text-gray-600 dark:text-gray-300 truncate mt-2">Skills: {t.specializations}</p>
-                )}
-                <span className={`inline-block mt-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full ${t.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                  {t.is_active ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-            </div>
-          ))}
+        <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+          <table className="w-full text-left border-collapse min-w-max">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Technician</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contact</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Specializations</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Score</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Active Jobs</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700/50">
+              {technicians.filter(t => activeTab === 'active' ? t.is_active : !t.is_active).map((t) => {
+                const isSelected = selectedTechnician?.id === t.id;
+                return (
+                  <React.Fragment key={t.id}>
+                    <tr 
+                      className={`hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
+                      onClick={() => { setSelectedTechnician(isSelected ? null : t); setShowJobsList(false); }}
+                    >
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/50 dark:to-blue-800/50 flex items-center justify-center text-blue-700 dark:text-blue-300 font-bold shrink-0">
+                            {t.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900 dark:text-gray-100">{t.name}</p>
+                            <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">{t.category}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{t.email}</p>
+                        {t.phone_number && <p className="text-xs text-gray-500">{t.phone_number}</p>}
+                      </td>
+                      <td className="p-4 max-w-[200px] truncate text-sm text-gray-600 dark:text-gray-400">
+                        {t.specializations || '-'}
+                      </td>
+                      <td className="p-4">
+                        <span className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-md border border-blue-100">
+                          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"></path></svg>
+                          {t.performanceScore}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <span className="inline-flex items-center px-2 py-0.5 bg-orange-50 text-orange-700 text-[10px] font-bold rounded-md border border-orange-100">
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                          {t.activeJobs}
+                        </span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex justify-end items-center gap-3">
+                          <button
+                            onClick={(e) => { 
+                              e.stopPropagation();
+                              setEditingTechnician(t);
+                              setForm({
+                                name: t.name,
+                                email: t.email || "",
+                                phone_number: t.phone_number || "",
+                                specializations: t.specializations || ""
+                              });
+                              setShowModal(true);
+                            }}
+                            className="text-blue-500 hover:text-blue-700 transition-colors"
+                            title="Edit Technician"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleToggleStatus(t); }}
+                            disabled={deleting}
+                            title={t.is_active ? "Deactivate" : "Activate"}
+                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${t.is_active ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                          >
+                            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${t.is_active ? 'translate-x-4.5' : 'translate-x-1'}`} style={{ transform: t.is_active ? 'translateX(1.125rem)' : 'translateX(0.25rem)' }} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    
+                    {isSelected && (
+                      <tr className="bg-gray-50/50 dark:bg-gray-800/30 border-b border-gray-100 dark:border-gray-750">
+                        <td colSpan="6" className="p-6 border-l-4 border-blue-500">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+
+                              
+                              <div>
+                                <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Current Workload</span>
+                                {t.activeJobs > 0 ? (
+                                  <div className="mt-2 space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                    {t.activeJobsList?.map(job => (
+                                      <div key={job.id} className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 flex justify-between items-center shadow-sm">
+                                        <span className="font-semibold text-gray-700 dark:text-gray-200">{job.job_id} - {job.device_brand} {job.device_model}</span>
+                                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${job.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                          {job.status.replace('_', ' ')}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-gray-400 italic">No active jobs</p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-4 flex flex-col justify-between">
+                              {t.specializations && (
+                                <div>
+                                  <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Special Skills</span>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {t.specializations.split(',').map((skill, idx) => (
+                                      <span key={idx} className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs px-2.5 py-1 rounded-md border border-gray-200 dark:border-gray-600">
+                                        {skill.trim()}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
-      <Modal open={showModal} onClose={closeModal} title="Add New Technician">
+      <Modal open={showModal} onClose={closeModal} title={editingTechnician ? "Edit Technician" : "Add New Technician"}>
         {created ? (
           <div className="space-y-4">
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -287,7 +395,7 @@ export default function TechnicianPanel() {
             </button>
           </div>
         ) : (
-        <form onSubmit={handleAdd} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {formError && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg">
               {formError}
@@ -406,109 +514,14 @@ export default function TechnicianPanel() {
               type="submit" disabled={saving}
               className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-2 rounded-lg text-sm font-semibold transition-colors"
             >
-              {saving ? "Adding…" : "Add Technician"}
+              {saving ? (editingTechnician ? "Saving…" : "Adding…") : (editingTechnician ? "Save Changes" : "Add Technician")}
             </button>
           </div>
         </form>
         )}
       </Modal>
 
-      <Modal open={!!selectedTechnician} onClose={() => { setSelectedTechnician(null); setShowJobsList(false); }} title="Technician Details">
-        {selectedTechnician && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-2xl shrink-0">
-                {selectedTechnician.name.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{selectedTechnician.name}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{selectedTechnician.email}</p>
-                {selectedTechnician.phone_number && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{selectedTechnician.phone_number}</p>
-                )}
-              </div>
-            </div>
 
-            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg space-y-3">
-              <div>
-                <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Performance Category</span>
-                <span className="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-md border border-purple-200">
-                  {selectedTechnician.category}
-                </span>
-              </div>
-
-              <div>
-                <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Current Workload</span>
-                <button 
-                  onClick={() => setShowJobsList(!showJobsList)}
-                  disabled={selectedTechnician.activeJobs === 0}
-                  className={`inline-flex items-center px-2 py-1 text-xs font-bold rounded-md border transition-colors ${
-                    selectedTechnician.activeJobs === 0 
-                      ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed'
-                      : showJobsList 
-                        ? 'bg-orange-600 text-white border-orange-700' 
-                        : 'bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-200'
-                  }`}
-                >
-                  <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                  {selectedTechnician.activeJobs} Active {selectedTechnician.activeJobs === 1 ? 'Job' : 'Jobs'} {selectedTechnician.activeJobs > 0 && (showJobsList ? '▼' : '▶')}
-                </button>
-                {showJobsList && selectedTechnician.activeJobsList?.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {selectedTechnician.activeJobsList.map(job => (
-                      <div key={job.id} className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2 flex justify-between items-center shadow-sm">
-                        <span className="font-semibold text-gray-700 dark:text-gray-200">{job.job_id} - {job.device_brand} {job.device_model}</span>
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${job.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                          {job.status.replace('_', ' ')}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              
-              <div>
-                <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Performance Score</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${selectedTechnician.performanceScore}%` }}></div>
-                  </div>
-                  <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{selectedTechnician.performanceScore}</span>
-                </div>
-              </div>
-
-              {selectedTechnician.specializations && (
-                <div>
-                  <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Special Skills</span>
-                  <p className="text-sm text-gray-700 dark:text-gray-200">{selectedTechnician.specializations}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-3 pt-4 border-t">
-              <button
-                type="button" 
-                onClick={() => { setSelectedTechnician(null); setShowJobsList(false); }}
-                className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 transition-colors"
-              >
-                Close
-              </button>
-              <button
-                type="button" 
-                onClick={handleToggleStatus}
-                disabled={deleting}
-                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors border ${
-                  selectedTechnician.is_active 
-                    ? "bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border-red-100" 
-                    : "bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 border-green-100"
-                }`}
-              >
-                {deleting ? "Processing…" : (selectedTechnician.is_active ? "Deactivate" : "Activate")}
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
 
       <Modal 
         open={confirmModal.isOpen} 

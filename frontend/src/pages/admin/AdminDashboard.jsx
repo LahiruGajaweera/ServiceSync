@@ -244,7 +244,7 @@ export default function AdminDashboard() {
         <div className="glass-panel rounded-2xl p-7">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-700 dark:text-gray-200">Ready & Completed Jobs</h3>
-            <Link to="/admin/jobs" className="text-xs text-blue-600 hover:underline">View all →</Link>
+            <Link to="/admin/jobs" className="text-xs text-blue-600 hover:underline">View all</Link>
           </div>
 
           {loadingJobs ? (
@@ -252,7 +252,7 @@ export default function AdminDashboard() {
           ) : recentJobs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-14 text-gray-400 border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl mx-2 my-2">
               <p className="font-medium text-gray-500 dark:text-gray-400 text-sm">No ready or completed jobs</p>
-              <Link to="/admin/jobs?new=1" className="mt-3 text-xs text-blue-600 hover:underline">Register first job →</Link>
+              <Link to="/admin/jobs?new=1" className="mt-3 text-xs text-blue-600 hover:underline">Register first job</Link>
             </div>
           ) : (
             <div className="w-full overflow-x-auto">

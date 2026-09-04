@@ -26,6 +26,18 @@ class TechnicianCreate(BaseModel):
     def validate_phone(cls, v: str) -> str:
         return normalize_phone(v)
 
+class TechnicianUpdate(BaseModel):
+    name: str | None = None
+    email: Optional[EmailStr] = None
+    phone_number: str | None = None
+    specializations: str | None = None
+
+    @field_validator("phone_number", mode="before")
+    def validate_phone(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return normalize_phone(v)
+
 
 class UserUpdate(BaseModel):
     name: str | None = None
