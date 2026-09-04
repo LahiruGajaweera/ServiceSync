@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
+import PhoneInput from "../../components/PhoneInput";
+import { isValidPhoneNumber } from "../../utils/validation";
 
 function Modal({ open, onClose, title, children }) {
   if (!open) return null;
@@ -309,8 +311,8 @@ export default function TechnicianPanel() {
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Phone Number *</label>
-            <input
-              name="phone_number" type="tel" required value={form.phone_number} onChange={handleChange}
+            <PhoneInput
+              name="phone_number" required value={form.phone_number} onChange={handleChange}
               className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="07XXXXXXXX"
             />

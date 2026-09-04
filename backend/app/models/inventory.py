@@ -73,7 +73,7 @@ class InventoryUnit(Base):
     )
     serial_number = Column(String(100), unique=True, nullable=False, index=True)
     status = Column(
-        Enum("in_stock", "used", "returned", "lost", name="unit_status"),
+        Enum("in_stock", "used", "returned", "lost", "damaged", name="unit_status"),
         nullable=False,
         default="in_stock",
     )

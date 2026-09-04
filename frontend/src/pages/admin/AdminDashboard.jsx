@@ -94,7 +94,9 @@ export default function AdminDashboard() {
       });
 
       if (recentRes.status === "fulfilled") {
-        setRecentJobs(recentRes.value.data.slice(0, 6));
+        const targetStatuses = ["completed", "ready_for_pickup"];
+        const filtered = recentRes.value.data.filter(j => targetStatuses.includes(j.status));
+        setRecentJobs(filtered.slice(0, 6));
       }
       if (tasksRes && tasksRes.status === "fulfilled") {
         setAdminTasks(tasksRes.value.data);
@@ -146,9 +148,27 @@ export default function AdminDashboard() {
 
   return (
     <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Admin Dashboard</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Overview of system operations and statistics</p>
+      <div className="mb-8 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Admin Dashboard</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Overview of system operations and statistics</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {[
+            { label: "Register New Job",   to: "/admin/jobs?new=1" },
+            { label: "Add Inventory Part", to: "/admin/inventory" },
+            { label: "Add Technician",     to: "/admin/technicians" },
+            { label: "Customer Registry",  to: "/admin/customers" },
+          ].map((action) => (
+            <Link
+              key={action.label}
+              to={action.to}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold shadow-sm transition-colors"
+            >
+              {action.label}
+            </Link>
+          ))}
+        </div>
       </div>
       
       {/* Admin Pending Call Tasks Alert - Compact Banner */}
@@ -219,11 +239,11 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="flex flex-col gap-5">
         {/* Recent Jobs */}
-        <div className="lg:col-span-2 glass-panel rounded-2xl p-7">
+        <div className="glass-panel rounded-2xl p-7">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-700 dark:text-gray-200">Recent Jobs</h3>
+            <h3 className="font-semibold text-gray-700 dark:text-gray-200">Ready & Completed Jobs</h3>
             <Link to="/admin/jobs" className="text-xs text-blue-600 hover:underline">View all →</Link>
           </div>
 
@@ -231,62 +251,43 @@ export default function AdminDashboard() {
             <div className="py-10 text-center text-gray-400 text-sm">Loading…</div>
           ) : recentJobs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-14 text-gray-400 border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl mx-2 my-2">
-              <p className="font-medium text-gray-500 dark:text-gray-400 text-sm">No jobs registered yet</p>
+              <p className="font-medium text-gray-500 dark:text-gray-400 text-sm">No ready or completed jobs</p>
               <Link to="/admin/jobs?new=1" className="mt-3 text-xs text-blue-600 hover:underline">Register first job →</Link>
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 dark:border-gray-800">
-                  {["Job ID", "Customer", "Device", "Status"].map((h) => (
-                    <th key={h} className="text-left pb-2 text-xs font-semibold text-gray-400 uppercase">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-                {recentJobs.map((job) => (
-                  <tr 
-                    key={job.id} 
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 cursor-pointer transition-colors"
-                    onClick={() => navigate(`/admin/jobs?jobId=${job.id}`)}
-                  >
-                    <td className="py-2.5 font-mono text-xs text-blue-600 font-semibold">{job.job_id}</td>
-                    <td className="py-2.5 text-gray-700 dark:text-gray-200">{job.customer_name}</td>
-                    <td className="py-2.5 text-gray-500 dark:text-gray-400 text-xs">{job.device_brand} {job.device_model}</td>
-                    <td className="py-2.5">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusBadge(job.status)}`}>
-                        {job.status.replace(/_/g, " ")}
-                      </span>
-                    </td>
+            <div className="w-full overflow-x-auto">
+              <table className="w-full text-sm text-left table-fixed min-w-[600px]">
+                <thead>
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <th className="pb-2 px-4 text-xs font-semibold text-gray-400 uppercase w-1/4">Job ID</th>
+                    <th className="pb-2 px-4 text-xs font-semibold text-gray-400 uppercase w-1/4">Customer</th>
+                    <th className="pb-2 px-4 text-xs font-semibold text-gray-400 uppercase w-1/4">Device</th>
+                    <th className="pb-2 px-4 text-xs font-semibold text-gray-400 uppercase w-1/4 text-right">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                  {recentJobs.map((job) => (
+                    <tr 
+                      key={job.id} 
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 cursor-pointer transition-colors"
+                      onClick={() => navigate(`/admin/jobs?jobId=${job.id}`)}
+                    >
+                      <td className="py-3 px-4 font-mono text-xs text-blue-600 font-semibold">{job.job_id}</td>
+                      <td className="py-3 px-4 text-gray-700 dark:text-gray-200">{job.customer_name}</td>
+                      <td className="py-3 px-4 text-gray-500 dark:text-gray-400 text-xs">{job.device_brand} {job.device_model}</td>
+                      <td className="py-3 px-4 text-right">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusBadge(job.status)}`}>
+                          {job.status.replace(/_/g, " ")}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 
-        {/* Quick Actions */}
-        <div className="glass-panel rounded-2xl p-7">
-          <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-4">Quick Actions</h3>
-          <div className="space-y-3">
-            {[
-              { label: "Register New Job",   to: "/admin/jobs?new=1" },
-              { label: "Add Inventory Part", to: "/admin/inventory" },
-              { label: "Add Technician",     to: "/admin/technicians" },
-              { label: "Customer Registry",  to: "/admin/customers" },
-            ].map((action) => (
-              <Link
-                key={action.label}
-                to={action.to}
-                className="w-full flex items-center px-5 py-3.5 rounded-xl bg-gradient-to-r from-brand-50 to-brand-100 hover:from-brand-500 hover:to-brand-600 dark:from-gray-800/50 dark:to-gray-700/50 dark:hover:from-brand-600 dark:hover:to-brand-700
-                           text-brand-700 dark:text-brand-300 hover:text-white dark:hover:text-white text-left glass-button text-sm font-medium group"
-              >
-                <span className="flex-1 font-medium">{action.label}</span>
-                <span className="opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-xs">→</span>
-              </Link>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

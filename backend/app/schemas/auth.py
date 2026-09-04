@@ -6,13 +6,13 @@ from pydantic import BaseModel, field_validator, model_validator
 
 
 def normalize_phone(raw: str) -> str:
-    """Normalise a Sri Lankan phone number to strictly 07XXXXXXXX format."""
+    """Normalise a Sri Lankan phone number to strictly 10 digits starting with 0."""
     if not raw:
         raise ValueError("Phone number cannot be empty")
     digits = re.sub(r"[\s\-()]", "", raw.strip())
-    if digits.startswith("07") and len(digits) == 10 and digits.isdigit():
+    if digits.startswith("0") and len(digits) == 10 and digits.isdigit():
         return digits
-    raise ValueError("Enter a valid phone number (e.g. 0712345678)")
+    raise ValueError("Enter a valid phone number (e.g. 0712345678 or 0112334455)")
 
 
 class LoginRequest(BaseModel):

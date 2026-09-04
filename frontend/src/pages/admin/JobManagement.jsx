@@ -2,7 +2,9 @@ import { useEffect, useState, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import QRCode from "qrcode";
 import api from "../../services/api";
+import { isValidPhoneNumber } from "../../utils/validation";
 import JobStatusBadge from "../../components/JobStatusBadge";
+import PhoneInput from "../../components/PhoneInput";
 import BrandSelect from "../../components/BrandSelect";
 import ModelSelect from "../../components/ModelSelect";
 import AdminJobDetailModal from "./AdminJobDetailModal";
@@ -720,12 +722,7 @@ export default function JobManagement() {
             </svg>
           </div>
           <div className="flex items-center gap-2 border-l border-gray-200 dark:border-gray-700 pl-4">
-            <button
-              onClick={() => setShowQuote(true)}
-              className="bg-white dark:bg-gray-800 border border-blue-600 text-blue-600 hover:bg-blue-50 text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition-colors"
-            >
-              Quick Quote
-            </button>
+
             <button
               onClick={() => { setShowCreate(true); setFormError(""); setForm(getEmptyForm()); setPhotos([]); setCustSearch(""); setCustResults([]); setShowNewCust(false); }}
               className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition-colors"
@@ -910,9 +907,11 @@ export default function JobManagement() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Phone *</label>
-                    <input name="phone_number" value={newCust.phone_number} onChange={handleNewCustChange}
+                    <PhoneInput
+                      name="phone_number" value={newCust.phone_number} onChange={handleNewCustChange}
                       className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="07XXXXXXXX" />
+                      placeholder="07XXXXXXXX"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Email</label>
