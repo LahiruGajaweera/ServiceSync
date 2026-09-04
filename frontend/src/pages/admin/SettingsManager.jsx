@@ -2,6 +2,21 @@ import { useEffect, useRef, useState } from "react";
 import PhoneInput from "../../components/PhoneInput";
 import api from "../../services/api";
 
+function Modal({ open, onClose, title, children }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto hide-scrollbar">
+        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white dark:bg-gray-800 z-10">
+          <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 text-xl leading-none">&times;</button>
+        </div>
+        <div className="p-6">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsManager() {
   const [activeTab, setActiveTab] = useState("general"); // "general" | "branding" | "financial" | "warranty"
   const [settings, setSettings] = useState({
@@ -22,6 +37,9 @@ export default function SettingsManager() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: '' }
   const logoInputRef = useRef(null);
+
+  const [showCustomCatModal, setShowCustomCatModal] = useState(false);
+  const [customCatName, setCustomCatName] = useState("");
 
   useEffect(() => {
     fetchSettings();
@@ -171,7 +189,7 @@ export default function SettingsManager() {
           {activeTab === "general" && (
             <div className="space-y-5">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 border-b border-gray-100 dark:border-gray-700/60 pb-3">
-                <span>🏢</span> Shop Identity & Contact
+                Shop Identity & Contact
               </h2>
               <div>
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">
@@ -237,7 +255,7 @@ export default function SettingsManager() {
           {activeTab === "branding" && (
             <div className="space-y-5">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 border-b border-gray-100 dark:border-gray-700/60 pb-3">
-                <span>🖼️</span> Logo & Invoice Customization
+                Logo & Invoice Customization
               </h2>
 
               {/* Logo Upload Box */}
@@ -301,7 +319,7 @@ export default function SettingsManager() {
           {activeTab === "financial" && (
             <div className="space-y-5">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 border-b border-gray-100 dark:border-gray-700/60 pb-3">
-                <span>💰</span> Currency Settings
+                Currency Settings
               </h2>
 
               <div>
@@ -327,7 +345,7 @@ export default function SettingsManager() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-700/60 pb-3">
                 <div>
                   <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <span>🛡️</span> Category-Specific Warranty Periods
+                    Category-Specific Warranty Periods
                   </h2>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     Set default warranty days individually for each repair category (Display, Battery, Motherboard, etc.).
@@ -336,17 +354,8 @@ export default function SettingsManager() {
                 <button
                   type="button"
                   onClick={() => {
-                    let catMap = {};
-                    try {
-                      catMap = JSON.parse(settings.category_warranties || "{}");
-                    } catch {
-                      catMap = {};
-                    }
-                    const customName = prompt("Enter Custom Repair / Part Category Name (e.g. Camera Replacement):");
-                    if (customName && customName.trim()) {
-                      catMap[customName.trim()] = "30";
-                      setSettings((prev) => ({ ...prev, category_warranties: JSON.stringify(catMap) }));
-                    }
+                    setCustomCatName("");
+                    setShowCustomCatModal(true);
                   }}
                   className="px-3.5 py-2 bg-blue-50 dark:bg-blue-900/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-300 text-xs font-semibold rounded-xl border border-blue-200 dark:border-blue-800 transition-colors flex items-center gap-1.5 shrink-0"
                 >
@@ -358,12 +367,12 @@ export default function SettingsManager() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(() => {
                   const defaultCategories = [
-                    { key: "Display & Touch", icon: "📱", desc: "Display & Touchscreen replacements" },
-                    { key: "Battery Replacement", icon: "🔋", desc: "New battery installations" },
-                    { key: "Charging Port", icon: "⚡", desc: "Charging port & sub-board repairs" },
-                    { key: "Motherboard IC", icon: "🔬", desc: "Chip-level motherboard & micro-soldering" },
-                    { key: "Software / Unlocking", icon: "💻", desc: "Flashing, OS & unlocking services" },
-                    { key: "General Repairs", icon: "🛠️", desc: "Other miscellaneous phone repairs" },
+                    { key: "Display & Touch", desc: "Display & Touchscreen replacements" },
+                    { key: "Battery Replacement", desc: "New battery installations" },
+                    { key: "Charging Port", desc: "Charging port & sub-board repairs" },
+                    { key: "Motherboard IC", desc: "Chip-level motherboard & micro-soldering" },
+                    { key: "Software / Unlocking", desc: "Flashing, OS & unlocking services" },
+                    { key: "General Repairs", desc: "Other miscellaneous phone repairs" },
                   ];
 
                   let catMap = {};
@@ -377,7 +386,7 @@ export default function SettingsManager() {
                   const allCategories = [...defaultCategories];
                   Object.keys(catMap).forEach((k) => {
                     if (!allCategories.some((c) => c.key === k)) {
-                      allCategories.push({ key: k, icon: "🏷️", desc: "Custom repair category", isCustom: true });
+                      allCategories.push({ key: k, desc: "Custom repair category", isCustom: true });
                     }
                   });
 
@@ -419,7 +428,7 @@ export default function SettingsManager() {
 
                         {/* Input & Quick Presets */}
                         <div className="flex items-center gap-3 pt-1">
-                          <div className="flex-1">
+                          <div className="w-32">
                             <div className="relative flex items-center">
                               <input
                                 type="number"
@@ -436,7 +445,7 @@ export default function SettingsManager() {
 
                           {/* Quick Days Preset Badges */}
                           <div className="flex gap-1">
-                            {["0", "14", "30", "90"].map((d) => (
+                            {["0", "7", "14", "30"].map((d) => (
                               <button
                                 key={d}
                                 type="button"
@@ -465,7 +474,7 @@ export default function SettingsManager() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <span>🏷️</span> Seasonal Offers & Discounts
+                  Seasonal Offers & Discounts
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                   Configure automated discounts per repair category. Margin protection ensures you never lose money on parts.
@@ -665,6 +674,50 @@ export default function SettingsManager() {
           </div>
         </div>
       </div>
+      
+      <Modal open={showCustomCatModal} onClose={() => setShowCustomCatModal(false)} title="Add Custom Category">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">
+              Category Name
+            </label>
+            <input
+              type="text"
+              value={customCatName}
+              onChange={(e) => setCustomCatName(e.target.value)}
+              placeholder="e.g. Camera Replacement"
+              className={inputCls}
+              autoFocus
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              onClick={() => setShowCustomCatModal(false)}
+              className="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                if (customCatName.trim()) {
+                  let catMap = {};
+                  try {
+                    catMap = JSON.parse(settings.category_warranties || "{}");
+                  } catch {
+                    catMap = {};
+                  }
+                  catMap[customCatName.trim()] = "30";
+                  setSettings((prev) => ({ ...prev, category_warranties: JSON.stringify(catMap) }));
+                }
+                setShowCustomCatModal(false);
+              }}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              Add Category
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

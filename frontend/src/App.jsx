@@ -23,6 +23,7 @@ import InvoiceManager      from "./pages/admin/InvoiceManager";
 import SalvageConsole      from "./pages/admin/SalvageConsole";
 import DonorDeviceConsole  from "./pages/admin/DonorDeviceConsole";
 import SettingsManager     from "./pages/admin/SettingsManager";
+import DirectSale          from "./pages/admin/DirectSale";
 
 // Technician pages
 import TechDashboard from "./pages/technician/TechDashboard";
@@ -60,6 +61,7 @@ export default function App() {
             {/* Removed jobs/:jobId route */}
             <Route path="customers"   element={<CustomerRegistry />} />
             <Route path="inventory"   element={<InventoryManager />} />
+            <Route path="direct-sale" element={<DirectSale />} />
             <Route path="technicians" element={<TechnicianPanel />} />
             <Route path="invoices"    element={<InvoiceManager />} />
             <Route path="salvage"     element={<SalvageConsole />} />

@@ -281,6 +281,7 @@ export default function InventoryManager() {
   const [lowStock, setLowStock]     = useState([]);
   const categories = Array.from(new Set(items.map((item) => item.category).filter(Boolean))).sort();
   const [loading, setLoading]       = useState(true);
+  const [technicians, setTechnicians] = useState([]);
   const [inventoryForecast, setInventoryForecast] = useState([]);
   const [search, setSearch]         = useState("");
   const [sortConfig, setSortConfig] = useState({ key: "name", direction: "asc" });
@@ -307,6 +308,7 @@ export default function InventoryManager() {
   // Adjust stock
   const [stockDelta, setStockDelta] = useState("");
   const [adjustReason, setAdjustReason] = useState("recount");
+  const [adjustTechnician, setAdjustTechnician] = useState("");
   const [adjustNote, setAdjustNote] = useState("");
   const [adjustBatchId, setAdjustBatchId] = useState("");
   const [availableBatches, setAvailableBatches] = useState([]);
@@ -314,8 +316,10 @@ export default function InventoryManager() {
   // Serial Unit Adjust
   const [unitToAdjust, setUnitToAdjust] = useState(null);
   const [unitAdjustSerialNumber, setUnitAdjustSerialNumber] = useState("");
+  const [showSerialDropdown, setShowSerialDropdown] = useState(false);
   const [unitAdjustStatus, setUnitAdjustStatus] = useState("lost");
   const [unitAdjustReason, setUnitAdjustReason] = useState("recount");
+  const [unitAdjustTechnician, setUnitAdjustTechnician] = useState("");
   const [unitAdjustNote, setUnitAdjustNote] = useState("");
 
   // Adjustment Logs
@@ -346,14 +350,16 @@ export default function InventoryManager() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [itemsRes, lowRes, invRes] = await Promise.all([
+      const [itemsRes, lowRes, invRes, usersRes] = await Promise.all([
         api.get("/inventory/"),
         api.get("/inventory/low-stock"),
         api.get("/analytics/predictions/inventory"),
+        api.get("/users/"),
       ]);
       setItems(itemsRes.data);
       setLowStock(lowRes.data);
       setInventoryForecast(invRes.data);
+      setTechnicians(usersRes.data.filter((u) => u.role === "technician"));
     } finally {
       setLoading(false);
     }
@@ -670,16 +676,24 @@ export default function InventoryManager() {
     setSaving(true);
     try {
       if (detailsItem?.track_serial) {
+        let finalNote = unitAdjustNote;
+        if (unitAdjustReason === "broken_by_technician" && unitAdjustTechnician) {
+          finalNote = `Broken by Technician: ${unitAdjustTechnician}` + (unitAdjustNote ? `\n${unitAdjustNote}` : "");
+        }
         await api.post(`/inventory/units/${unitAdjustSerialNumber}/status`, {
           status: unitAdjustStatus,
           reason: unitAdjustReason,
-          note: unitAdjustNote || null,
+          note: finalNote || null,
         });
       } else {
+        let finalNote = adjustNote;
+        if (adjustReason === "broken_by_technician" && adjustTechnician) {
+          finalNote = `Broken by Technician: ${adjustTechnician}` + (adjustNote ? `\n${adjustNote}` : "");
+        }
         await api.patch(`/inventory/${detailsItem.id}/stock`, {
           delta: parseInt(stockDelta, 10),
           reason: adjustReason,
-          note: adjustNote || null,
+          note: finalNote || null,
           batch_id: adjustBatchId || null,
         });
       }
@@ -1077,32 +1091,72 @@ export default function InventoryManager() {
                                   {detailsItem?.track_serial ? (
                                     <>
                                       <p className="text-xs text-gray-400 mb-4">Scan or type the serial number of the unit to adjust its status.</p>
-                                      <div>
+                                      <div className="relative">
                                         <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Serial Number *</label>
-                                        <input type="text" required value={unitAdjustSerialNumber} onChange={(e) => setUnitAdjustSerialNumber(e.target.value)}
+                                        <input type="text" required value={unitAdjustSerialNumber} 
+                                          onChange={(e) => {
+                                            setUnitAdjustSerialNumber(e.target.value);
+                                            setShowSerialDropdown(true);
+                                          }}
+                                          onFocus={() => setShowSerialDropdown(true)}
+                                          onBlur={() => setTimeout(() => setShowSerialDropdown(false), 200)}
                                           className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800"
                                           placeholder="e.g. SN-12345" />
+                                        {showSerialDropdown && (
+                                          <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                                            {availableBatches.flatMap(b => b.units || [])
+                                              .filter(u => u.serial_number.toLowerCase().includes(unitAdjustSerialNumber.toLowerCase()))
+                                              .map(u => (
+                                              <div 
+                                                key={u.serial_number} 
+                                                className="px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-sm flex justify-between items-center"
+                                                onMouseDown={() => {
+                                                   setUnitAdjustSerialNumber(u.serial_number);
+                                                   setShowSerialDropdown(false);
+                                                }}
+                                              >
+                                                <span className="text-gray-700 dark:text-gray-200">{u.serial_number}</span>
+                                                <span className={`text-xs px-2 py-0.5 rounded-full ${u.status === 'in_stock' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{u.status.replace('_', ' ')}</span>
+                                              </div>
+                                            ))}
+                                            {availableBatches.flatMap(b => b.units || []).filter(u => u.serial_number.toLowerCase().includes(unitAdjustSerialNumber.toLowerCase())).length === 0 && (
+                                              <div className="px-3 py-2 text-sm text-gray-400">No matching serial numbers</div>
+                                            )}
+                                          </div>
+                                        )}
                                       </div>
                                       <div>
                                         <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">New Status *</label>
                                         <select required value={unitAdjustStatus} onChange={(e) => setUnitAdjustStatus(e.target.value)}
                                           className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
                                           <option value="lost">Lost</option>
-                                          <option value="returned">Returned</option>
+                                          <option value="returned">Returned to Supplier</option>
                                           <option value="damaged">Damaged</option>
+                                          <option value="in_stock">In Stock (Recovered)</option>
                                         </select>
                                       </div>
                                       <div>
                                         <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Reason (Optional)</label>
                                         <select value={unitAdjustReason} onChange={(e) => setUnitAdjustReason(e.target.value)}
                                           className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                          <option value="recount">Recount</option>
-                                          <option value="damage">Damage</option>
-                                          <option value="loss">Loss</option>
-                                          <option value="return">Return</option>
-                                          <option value="other">Other</option>
+                                          <option value="recount">Recount (System vs Physical mismatch)</option>
+                                          <option value="damage">Damage (Broken in shop)</option>
+                                          <option value="broken_by_technician">Broken by Technician (Mistake during repair)</option>
+                                          <option value="loss">Loss (Missing or stolen)</option>
+                                          <option value="return">Return (Sent back to supplier)</option>
+                                          <option value="other">Other (Specify in note below)</option>
                                         </select>
                                       </div>
+                                      {unitAdjustReason === "broken_by_technician" && (
+                                        <div>
+                                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Select Technician *</label>
+                                          <select required value={unitAdjustTechnician} onChange={(e) => setUnitAdjustTechnician(e.target.value)}
+                                            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                            <option value="">-- Choose a Technician --</option>
+                                            {technicians.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+                                          </select>
+                                        </div>
+                                      )}
                                       <div>
                                         <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Note (Optional)</label>
                                         <textarea value={unitAdjustNote} onChange={(e) => setUnitAdjustNote(e.target.value)}
@@ -1117,11 +1171,13 @@ export default function InventoryManager() {
                                         <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Reason for Adjustment *</label>
                                         <select required value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)}
                                           className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                          <option value="recount">Physical Recount Correction</option>
-                                          <option value="damaged">Damaged / Broken</option>
-                                          <option value="shrinkage">Lost / Missing</option>
-                                          <option value="returned">Returned to Inventory</option>
-                                          <option value="other">Other</option>
+                                          <option value="recount">Physical Recount Correction (System mismatch)</option>
+                                          <option value="damaged">Damaged / Broken (Broken in shop)</option>
+                                          <option value="broken_by_technician">Broken by Technician (Mistake during repair)</option>
+                                          <option value="shrinkage">Lost / Missing (Stolen or missing)</option>
+                                          <option value="supplier_return">Returned to Supplier (Sent back)</option>
+                                          <option value="returned">Returned to Inventory (Tech returned)</option>
+                                          <option value="other">Other (Specify in note below)</option>
                                         </select>
                                       </div>
                                       <div>
@@ -1143,6 +1199,16 @@ export default function InventoryManager() {
                                             ))}
                                           </select>
                                           <p className="text-[11px] text-gray-400 mt-1">If selected, the stock will be removed strictly from this batch.</p>
+                                        </div>
+                                      )}
+                                      {adjustReason === "broken_by_technician" && (
+                                        <div>
+                                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Select Technician *</label>
+                                          <select required value={adjustTechnician} onChange={(e) => setAdjustTechnician(e.target.value)}
+                                            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                            <option value="">-- Choose a Technician --</option>
+                                            {technicians.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+                                          </select>
                                         </div>
                                       )}
                                       <div>

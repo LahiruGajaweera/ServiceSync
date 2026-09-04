@@ -299,7 +299,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.routers import analytics, auth, customers, donors, inventory, invoices, jobs, notifications, salvage, scraper, users, chatbot  # noqa: E402
+from app.routers import analytics, auth, customers, donors, inventory, invoices, jobs, notifications, salvage, scraper, users, chatbot, direct_sales  # noqa: E402
 from app.routers import admin, brands, models, part_specs, suppliers, admin_tasks, settings, payments  # noqa: E402
 
 app.include_router(auth.router)
