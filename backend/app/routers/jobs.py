@@ -199,9 +199,18 @@ def add_part(
 def list_parts(
     job_id: UUID,
     db: Session = Depends(get_db),
-    _=Depends(require_any_staff),
+    current_user: User = Depends(require_auth),
 ):
     return job_parts_service.list_parts(job_id, db)
+
+@router.delete("/{job_id}/parts/{part_id}", status_code=204)
+def delete_part(
+    job_id: UUID,
+    part_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_auth),
+):
+    job_parts_service.delete_job_part(job_id, part_id, db, current_user=current_user)
 
 
 # ── Status history ────────────────────────────────────────────────────────────

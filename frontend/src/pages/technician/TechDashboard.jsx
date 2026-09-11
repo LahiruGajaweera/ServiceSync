@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import JobStatusBadge from "../../components/JobStatusBadge";
 import ScanField from "../../components/ScanField";
 import TechJobDetailModal from "./TechJobDetailModal";
+import TechJobDetailBody from "./TechJobDetailBody";
 import BrandSelect from "../../components/BrandSelect";
 import ModelSelect from "../../components/ModelSelect";
 import SmartPartsPanel from "../../components/SmartPartsPanel";
@@ -50,8 +51,9 @@ export default function TechDashboard() {
   const [selectedJob, setSelectedJob] = useState(null);
   const [selectedDonor, setSelectedDonor] = useState(null);
 
-  // Job Details Modal
+  // Job Details Modal and Inline Expansion
   const [detailJob, setDetailJob] = useState(null);
+  const [expandedJobId, setExpandedJobId] = useState(null);
 
   const [now, setNow]               = useState(new Date());
 
@@ -60,6 +62,7 @@ export default function TechDashboard() {
   const [invItems, setInvItems]     = useState([]);
   const [partItemId, setPartItemId] = useState("");
   const [partBatch, setPartBatch]   = useState(null); // { id, code } from a scan
+  const [partSerial, setPartSerial] = useState(null); // specific serial scanned
   const [partQty, setPartQty]       = useState(1);
   const [partError, setPartError]   = useState("");
   const [partInfo, setPartInfo]     = useState("");
@@ -129,7 +132,7 @@ export default function TechDashboard() {
 
   const openLogPart = async (job) => {
     setPartJob(job);
-    setPartItemId(""); setPartBatch(null); setPartQty(1); setPartError(""); setPartInfo("");
+    setPartItemId(""); setPartBatch(null); setPartSerial(null); setPartQty(1); setPartError(""); setPartInfo("");
     try {
       const { data } = await api.get("/inventory/", { params: {} });
       setInvItems(data.filter((i) => i.quantity > 0));
@@ -141,11 +144,18 @@ export default function TechDashboard() {
     try {
       const { data } = await api.get(`/inventory/scan/${encodeURIComponent(code)}`);
       setPartItemId(data.item.id);
-      if (data.batch) {
+      if (data.unit) {
         setPartBatch({ id: data.batch.id, code: data.batch.batch_code });
+        setPartSerial(data.unit.serial_number);
+        setPartQty(1);
+        setPartInfo(`Matched serial ${data.unit.serial_number} from batch ${data.batch.batch_code}`);
+      } else if (data.batch) {
+        setPartBatch({ id: data.batch.id, code: data.batch.batch_code });
+        setPartSerial(null);
         setPartInfo(`Matched ${data.item.name} · batch ${data.batch.batch_code} (${data.batch.quantity_remaining} left)`);
       } else {
         setPartBatch(null);
+        setPartSerial(null);
         setPartInfo(`Matched ${data.item.name} · ${data.item.quantity} in stock (FIFO)`);
       }
     } catch (err) {
@@ -163,6 +173,7 @@ export default function TechDashboard() {
         part_source: "inventory",
         inventory_item_id: partItemId || null,
         batch_id: partBatch?.id || null,
+        serial_number: partSerial || null,
         quantity: parseInt(partQty, 10),
       });
       setPartJob(null);
@@ -275,21 +286,50 @@ export default function TechDashboard() {
             </thead>
             <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
               {activeQueue.slice(0, 8).map((job) => (
-                <tr 
-                  key={job.id} 
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 cursor-pointer transition-colors"
-                  onClick={() => setDetailJob(job)}
-                >
-                  <td className="py-2.5 font-mono text-xs text-blue-600 font-semibold">{job.job_id}</td>
-                  <td className="py-2.5 text-gray-700 dark:text-gray-200">{job.device_brand} {job.device_model}</td>
-                  <td className="py-2.5 text-gray-500 dark:text-gray-400 capitalize text-xs">{job.fault_category?.replace(/_/g, " ")}</td>
-                  <td className="py-2.5"><JobStatusBadge status={job.status} /></td>
-                  <td className="py-2.5 text-gray-400 text-xs">
-                    {job.estimated_completion_date
-                      ? new Date(job.estimated_completion_date).toLocaleDateString("en-LK")
-                      : "—"}
-                  </td>
-                </tr>
+                <React.Fragment key={job.id}>
+                  <tr 
+                    className={`hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 cursor-pointer transition-colors ${expandedJobId === job.id ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
+                    onClick={() => {
+                      if (job.status === "in_progress") {
+                        navigate(`/tech/workspace?job=${job.id}`);
+                      } else {
+                        setExpandedJobId(expandedJobId === job.id ? null : job.id);
+                      }
+                    }}
+                  >
+                    <td className="py-2.5 font-mono text-xs text-blue-600 font-semibold pl-2">{job.job_id}</td>
+                    <td className="py-2.5 text-gray-700 dark:text-gray-200">{job.device_brand} {job.device_model}</td>
+                    <td className="py-2.5 text-gray-500 dark:text-gray-400 capitalize text-xs">{job.fault_category?.replace(/_/g, " ")}</td>
+                    <td className="py-2.5"><JobStatusBadge status={job.status} /></td>
+                    <td className="py-2.5 text-gray-400 text-xs pr-2">
+                      {job.estimated_completion_date
+                        ? new Date(job.estimated_completion_date).toLocaleDateString("en-LK")
+                        : "—"}
+                    </td>
+                  </tr>
+                  {expandedJobId === job.id && (
+                    <tr>
+                      <td colSpan={5} className="p-0 border-b-2 border-blue-200 dark:border-blue-900/50 shadow-[inset_0_4px_6px_-4px_rgba(0,0,0,0.1)]">
+                        <TechJobDetailBody
+                          job={job}
+                          onClose={() => setExpandedJobId(null)}
+                          onDone={fetchMyJobs}
+                          onOpenPartLog={(j) => {
+                            setPartJob(j);
+                            setInvItems([]);
+                            setPartItemId("");
+                            setPartBatch(null);
+                            setPartSerial(null);
+                            setPartQty(1);
+                            setPartError("");
+                            setPartInfo("");
+                          }}
+                          partRefreshTrigger={partLoggedCounter}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
@@ -466,35 +506,17 @@ export default function TechDashboard() {
             <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-3 py-2 rounded-lg">{partInfo}</div>
           )}
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Scan part label</label>
-            <ScanField onCode={handleScan} placeholder="Scan QR / SKU / batch code" />
-          </div>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100 dark:border-gray-800" /></div>
-            <div className="relative flex justify-center"><span className="bg-white dark:bg-gray-800 px-2 text-xs text-gray-400">or pick manually</span></div>
-          </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Inventory Part *</label>
-            <select required value={partItemId} onChange={(e) => { setPartItemId(e.target.value); setPartBatch(null); setPartInfo(""); }}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">— Select inventory item —</option>
-              {invItems.map((i) => (
-                <option key={i.id} value={i.id}>{i.sku ? `${i.sku} · ` : ""}{i.name} (Stock: {i.quantity})</option>
-              ))}
-            </select>
-            {partBatch && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Will deduct from batch <span className="font-mono">{partBatch.code}</span></p>
-            )}
-            <p className="text-xs text-gray-400 mt-1">Cost is recorded automatically from the batch (FIFO).</p>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Scan or manual enter serial number</label>
+            <ScanField onCode={handleScan} placeholder="Scan QR / SKU / batch code" searchEndpoint="/inventory/search_codes" />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Quantity *</label>
-            <input type="number" min="1" required value={partQty} onChange={(e) => setPartQty(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input type="number" min="1" required value={partQty} onChange={(e) => setPartQty(e.target.value)} disabled={!!partSerial}
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500" />
           </div>
 
           <div className="flex gap-3">

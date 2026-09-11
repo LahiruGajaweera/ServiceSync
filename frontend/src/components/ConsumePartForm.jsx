@@ -128,7 +128,7 @@ export default function ConsumePartForm({ jobId, onConsumed }) {
 
         {/* Optional scan-or-type fallback (USB scanner / phone camera) */}
         <div className="mt-2">
-          <ScanField onCode={(c) => setCode(c)} placeholder="…or scan the label" />
+          <ScanField onCode={(c) => setCode(c)} placeholder="…or scan the label" searchEndpoint="/inventory/search_codes" />
         </div>
       </div>
 

@@ -3,7 +3,8 @@ import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import JobStatusBadge from "../../components/JobStatusBadge";
 import SmartPartsPanel from "../../components/SmartPartsPanel";
-import LogPartModal from "./LogPartModal";
+import ConfirmModal from "../../components/ConfirmModal";
+import InlineLogPart from "./InlineLogPart";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function TechWorkspace() {
@@ -14,7 +15,6 @@ export default function TechWorkspace() {
   
   // Selected Job Tab
   const [searchParams, setSearchParams] = useSearchParams();
-  const [logPartJob, setLogPartJob] = useState(null);
   
   const fetchMyJobs = async () => {
     try {
@@ -75,7 +75,6 @@ export default function TechWorkspace() {
                 key={activeJob.id} 
                 job={activeJob} 
                 onRefresh={fetchMyJobs} 
-                onOpenPartLog={setLogPartJob}
               />
             ) : (
               <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">Select a job to view details</div>
@@ -85,21 +84,11 @@ export default function TechWorkspace() {
       )}
 
       {/* Modals */}
-      {logPartJob && (
-        <LogPartModal 
-          job={logPartJob} 
-          onClose={() => setLogPartJob(null)} 
-          onSuccess={() => {
-            setLogPartJob(null);
-            fetchMyJobs();
-          }} 
-        />
-      )}
     </div>
   );
 }
 
-function WorkspaceJobPanel({ job, onRefresh, onOpenPartLog }) {
+function WorkspaceJobPanel({ job, onRefresh }) {
   const [parts, setParts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -219,6 +208,7 @@ function WorkspaceJobPanel({ job, onRefresh, onOpenPartLog }) {
 
   // Timer State state
   const [laborCost, setLaborCost] = useState("");
+  const [partToRemove, setPartToRemove] = useState(null);
   
   // Status state
   const [newStatus, setNewStatus] = useState("completed");
@@ -262,6 +252,18 @@ function WorkspaceJobPanel({ job, onRefresh, onOpenPartLog }) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const handleRemovePart = async () => {
+    if (!partToRemove) return;
+    try {
+      await api.delete(`/jobs/${job.id}/parts/${partToRemove.id}`);
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.detail || err.message || "Failed to remove part.");
+    } finally {
+      setPartToRemove(null);
     }
   };
   
@@ -365,7 +367,7 @@ function WorkspaceJobPanel({ job, onRefresh, onOpenPartLog }) {
     return <div className="p-8 text-center text-gray-400 text-sm">Loading job data...</div>;
   }
 
-  const partsTotal = parts.reduce((sum, p) => sum + Number(p.unit_cost) * p.quantity, 0);
+  const partsTotal = parts.reduce((sum, p) => sum + Number(p.unit_price) * p.quantity, 0);
   const totalCost = partsTotal + (parseFloat(laborCost) || 0);
 
   const handleStatusUpdate = async (e) => {
@@ -526,16 +528,11 @@ function WorkspaceJobPanel({ job, onRefresh, onOpenPartLog }) {
           <div>
             <div className="flex justify-between items-center mb-3">
               <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Parts Used</h4>
-              {!["completed", "ready_for_pickup", "delivered", "unclaimed"].includes(job.status) && (
-                <button
-                  type="button"
-                  onClick={() => onOpenPartLog(job)}
-                  className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-                >
-                  + Log Part
-                </button>
-              )}
             </div>
+
+            {!["completed", "ready_for_pickup", "delivered", "unclaimed"].includes(job.status) && (
+              <InlineLogPart job={job} onSuccess={fetchData} />
+            )}
             
             {loading ? (
               <p className="text-xs text-gray-400 mb-4">Loading parts...</p>
@@ -549,8 +546,9 @@ function WorkspaceJobPanel({ job, onRefresh, onOpenPartLog }) {
                   <tr className="border-b border-gray-100 dark:border-gray-800 text-gray-400">
                     <th className="pb-2 font-medium">Part</th>
                     <th className="pb-2 font-medium text-center">Qty</th>
-                    <th className="pb-2 font-medium text-right">Unit</th>
+                    <th className="pb-2 font-medium text-right">Unit Price</th>
                     <th className="pb-2 font-medium text-right">Subtotal</th>
+                    <th className="pb-2 font-medium w-10"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
@@ -558,8 +556,20 @@ function WorkspaceJobPanel({ job, onRefresh, onOpenPartLog }) {
                     <tr key={p.id}>
                       <td className="py-2 text-gray-800 dark:text-gray-100">{p.part_name || "—"}</td>
                       <td className="py-2 text-center">{p.quantity}</td>
-                      <td className="py-2 text-right">LKR {Number(p.unit_cost).toLocaleString()}</td>
-                      <td className="py-2 text-right font-medium text-gray-800 dark:text-gray-100">LKR {(Number(p.unit_cost) * p.quantity).toLocaleString()}</td>
+                      <td className="py-2 text-right">LKR {Number(p.unit_price).toLocaleString()}</td>
+                      <td className="py-2 text-right font-medium text-gray-800 dark:text-gray-100">LKR {(Number(p.unit_price) * p.quantity).toLocaleString()}</td>
+                      <td className="py-2 text-right">
+                        {!["completed", "ready_for_pickup", "delivered", "unclaimed"].includes(job.status) && (
+                          <button
+                            type="button"
+                            onClick={() => setPartToRemove(p)}
+                            className="text-red-500 hover:text-red-700"
+                            title="Remove Part"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -765,6 +775,13 @@ function WorkspaceJobPanel({ job, onRefresh, onOpenPartLog }) {
           </div>
         </div>
       </div>
+      <ConfirmModal 
+        open={!!partToRemove} 
+        title="Remove Part" 
+        message="Are you sure you want to remove this part from the job?" 
+        onConfirm={handleRemovePart} 
+        onCancel={() => setPartToRemove(null)} 
+      />
     </div>
   );
 }

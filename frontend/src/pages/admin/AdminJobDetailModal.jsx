@@ -788,8 +788,12 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
                   ))}
                 </tbody>
               </table>
-              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex justify-end">
-                <p className="text-base font-bold text-gray-800 dark:text-gray-100 bg-gray-50 dark:bg-gray-700/50 px-4 py-2 rounded-lg">Parts Total: LKR {partsTotal.toLocaleString()}</p>
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex flex-col items-end space-y-1">
+                <p className="text-sm text-gray-600 dark:text-gray-300">Parts Total: LKR {partsTotal.toLocaleString()}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Labor Cost: LKR {Number(job.labor_cost || 0).toLocaleString()}</p>
+                <p className="text-base font-bold text-gray-800 dark:text-gray-100 bg-gray-50 dark:bg-gray-700/50 px-4 py-2 rounded-lg mt-2">
+                  Total (Parts & Labor): LKR {(partsTotal + Number(job.labor_cost || 0)).toLocaleString()}
+                </p>
               </div>
             </>
           )}

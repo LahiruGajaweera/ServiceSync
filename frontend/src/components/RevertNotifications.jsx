@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import api from "../services/api";
 import AdminJobDetailModal from "../pages/admin/AdminJobDetailModal";
 import { useAuth } from "../context/AuthContext";
@@ -157,13 +158,14 @@ export default function RevertNotifications() {
         </>
       )}
 
-      {selectedJobId && (
+      {selectedJobId && createPortal(
         <AdminJobDetailModal 
           jobId={selectedJobId} 
           open={!!selectedJobId} 
           onClose={() => setSelectedJobId(null)} 
           onDone={() => { setSelectedJobId(null); fetchRequests(); }} 
-        />
+        />,
+        document.body
       )}
     </div>
   );

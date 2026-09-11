@@ -39,6 +39,7 @@ export default function JobQueue({ mode = "customer" }) {
   const [invItems, setInvItems]     = useState([]);
   const [partItemId, setPartItemId] = useState("");
   const [partBatch, setPartBatch]   = useState(null);
+  const [partSerial, setPartSerial] = useState(null);
   const [partQty, setPartQty]       = useState(1);
   const [partError, setPartError]   = useState("");
   const [partInfo, setPartInfo]     = useState("");
@@ -80,7 +81,7 @@ export default function JobQueue({ mode = "customer" }) {
 
   const openLogPart = async (job) => {
     setPartJob(job);
-    setPartItemId(""); setPartBatch(null); setPartQty(1); setPartError(""); setPartInfo("");
+    setPartItemId(""); setPartBatch(null); setPartSerial(null); setPartQty(1); setPartError(""); setPartInfo("");
     try {
       const { data } = await api.get("/inventory/", { params: {} });
       setInvItems(data.filter((i) => i.quantity > 0));
@@ -88,7 +89,7 @@ export default function JobQueue({ mode = "customer" }) {
   };
 
   const handleScan = async (code) => {
-    setPartError(""); setPartInfo(""); setPartSource("inventory"); setDonorPartId(null); setPartItemId(""); setPartBatch(null);
+    setPartError(""); setPartInfo(""); setPartSource("inventory"); setDonorPartId(null); setPartItemId(""); setPartBatch(null); setPartSerial(null);
     try {
       const { data } = await api.get(`/inventory/scan/${encodeURIComponent(code)}`);
       if (data.donor_part) {
@@ -98,6 +99,12 @@ export default function JobQueue({ mode = "customer" }) {
       } else {
         setPartSource("inventory");
         setPartItemId(data.item.id);
+        if (data.unit) {
+          setPartSerial(data.unit.serial_number);
+          setPartQty(1);
+        } else {
+          setPartSerial(null);
+        }
         if (data.batch) {
           setPartBatch({ id: data.batch.id, code: data.batch.batch_code });
           setPartInfo(`Matched ${data.item.name} · batch ${data.batch.batch_code} (${data.batch.quantity_remaining} left)`);
@@ -128,6 +135,7 @@ export default function JobQueue({ mode = "customer" }) {
           part_source: "inventory",
           inventory_item_id: partItemId || null,
           batch_id: partBatch?.id || null,
+          serial_number: partSerial || null,
           quantity: parseInt(partQty, 10),
         });
       }
@@ -294,35 +302,17 @@ export default function JobQueue({ mode = "customer" }) {
             <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-3 py-2 rounded-lg">{partInfo}</div>
           )}
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Scan part label</label>
-            <ScanField onCode={handleScan} placeholder="Scan QR / SKU / batch code" />
-          </div>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100 dark:border-gray-800" /></div>
-            <div className="relative flex justify-center"><span className="bg-white dark:bg-gray-800 px-2 text-xs text-gray-400">or pick manually</span></div>
-          </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Inventory Part *</label>
-            <select required={partSource !== "donor"} disabled={partSource === "donor"} value={partItemId} onChange={(e) => { setPartItemId(e.target.value); setPartBatch(null); setPartInfo(""); setPartSource("inventory"); }}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50">
-              <option value="">{partSource === "donor" ? "— Donor part selected —" : "— Select inventory item —"}</option>
-              {invItems.map((i) => (
-                <option key={i.id} value={i.id}>{i.sku ? `${i.sku} · ` : ""}{i.name} (Stock: {i.quantity})</option>
-              ))}
-            </select>
-            {partBatch && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Will deduct from batch <span className="font-mono">{partBatch.code}</span></p>
-            )}
-            <p className="text-xs text-gray-400 mt-1">Cost is recorded automatically from the batch (FIFO) or Donor value.</p>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Scan or manual enter serial number</label>
+            <ScanField onCode={handleScan} placeholder="Scan QR / SKU / batch code" searchEndpoint="/inventory/search_codes" />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Quantity *</label>
-            <input type="number" min="1" required value={partQty} onChange={(e) => setPartQty(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input type="number" min="1" required value={partQty} onChange={(e) => setPartQty(e.target.value)} disabled={!!partSerial}
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50" />
           </div>
 
           <div className="flex gap-3">

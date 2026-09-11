@@ -421,8 +421,49 @@ def suggest_compatible_parts(brand: str, model: str, db: Session) -> dict:
     return {"inventory_parts": inv_parts, "donor_parts": donor_parts}
 
 
+def search_codes(q: str, db: Session) -> list[str]:
+    """Search for SKUs, batch codes, or serial numbers for autocomplete."""
+    q = (q or "").strip()
+    if len(q) < 2:
+        return []
+
+    results = []
+    
+    # 1. Serial numbers (highest priority since they are specific)
+    units = db.query(InventoryUnit.serial_number).filter(
+        InventoryUnit.serial_number.ilike(f"%{q}%"),
+        InventoryUnit.status == "in_stock"
+    ).limit(5).all()
+    results.extend(u[0] for u in units)
+
+    # 2. Batch codes
+    if len(results) < 10:
+        batches = db.query(InventoryBatch.batch_code).filter(
+            InventoryBatch.batch_code.ilike(f"%{q}%"),
+            InventoryBatch.quantity_remaining > 0
+        ).limit(5).all()
+        results.extend(b[0] for b in batches)
+
+    # 3. Inventory SKUs
+    if len(results) < 10:
+        items = db.query(InventoryItem.sku).filter(
+            InventoryItem.sku.ilike(f"%{q}%"),
+            InventoryItem.quantity > 0
+        ).limit(5).all()
+        results.extend(i[0] for i in items if i[0])
+
+    # 4. Donor SKUs
+    if len(results) < 10:
+        donors = db.query(DonorPart.sku).filter(
+            DonorPart.sku.ilike(f"%{q}%"),
+            DonorPart.is_available == True
+        ).limit(5).all()
+        results.extend(d[0] for d in donors)
+
+    return list(dict.fromkeys(results))[:10]
+
+
 def resolve_scan(code: str, db: Session) -> dict:
-    """Resolve a scanned SKU or batch code to an item (and batch, if a batch code)."""
     code = (code or "").strip()
     if not code:
         raise HTTPException(400, "Empty scan code")
@@ -440,6 +481,14 @@ def resolve_scan(code: str, db: Session) -> dict:
                 "condition": donor_part.condition,
                 "is_available": donor_part.is_available
             }}
+
+    unit = db.query(InventoryUnit).filter(InventoryUnit.serial_number == code).first()
+    if unit:
+        if unit.status != "in_stock":
+            raise HTTPException(400, f"Unit is not available (status: {unit.status})")
+        batch = db.query(InventoryBatch).filter(InventoryBatch.id == unit.batch_id).first()
+        item = db.query(InventoryItem).filter(InventoryItem.id == batch.inventory_item_id).first()
+        return {"item": _add_is_low_stock(item), "batch": _serialize_batch(batch), "unit": {"serial_number": unit.serial_number, "status": unit.status}}
 
     batch = db.query(InventoryBatch).filter(InventoryBatch.batch_code == code).first()
     if batch:
