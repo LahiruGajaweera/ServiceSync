@@ -47,6 +47,7 @@ export default function TechnicianPanel() {
   const [technicians, setTechnicians] = useState([]);
   const [loading, setLoading]         = useState(true);
   const [activeTab, setActiveTab]     = useState('active'); // 'active' or 'inactive'
+  const [expandedTab, setExpandedTab] = useState('workload'); // 'workload' or 'edit'
   const [showModal, setShowModal]     = useState(false);
   const [editingTechnician, setEditingTechnician] = useState(null);
   const [form, setForm]               = useState(EMPTY_FORM);
@@ -164,7 +165,7 @@ export default function TechnicianPanel() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{technicians.length} total technicians</p>
         </div>
         <button
-          onClick={() => { setShowModal(true); setCreated(null); setFormError(""); setForm(EMPTY_FORM); }}
+          onClick={() => { setShowModal(true); setCreated(null); setFormError(""); setForm(EMPTY_FORM); setEditingTechnician(null); }}
           className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl glass-button shadow-lg shadow-blue-500/30"
         >
           + Add Technician
@@ -201,9 +202,9 @@ export default function TechnicianPanel() {
                 <th className="p-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Technician</th>
                 <th className="p-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contact</th>
                 <th className="p-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Specializations</th>
-                <th className="p-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Score</th>
-                <th className="p-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Active Jobs</th>
-                <th className="p-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Action</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">Score</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">Active Jobs</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">{activeTab === 'active' ? 'Deactivate' : 'Activate'}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700/50">
@@ -213,7 +214,11 @@ export default function TechnicianPanel() {
                   <React.Fragment key={t.id}>
                     <tr 
                       className={`hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
-                      onClick={() => { setSelectedTechnician(isSelected ? null : t); setShowJobsList(false); }}
+                      onClick={() => { 
+                        setSelectedTechnician(isSelected ? null : t); 
+                        setShowJobsList(false); 
+                        setExpandedTab('workload');
+                      }}
                     >
                       <td className="p-4">
                         <div className="flex items-center gap-3">
@@ -233,13 +238,13 @@ export default function TechnicianPanel() {
                       <td className="p-4 max-w-[200px] truncate text-sm text-gray-600 dark:text-gray-400">
                         {t.specializations || '-'}
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 text-center">
                         <span className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-md border border-blue-100">
                           <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"></path></svg>
                           {t.performanceScore}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 text-center">
                         <span className="inline-flex items-center px-2 py-0.5 bg-orange-50 text-orange-700 text-[10px] font-bold rounded-md border border-orange-100">
                           <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                           {t.activeJobs}
@@ -247,23 +252,7 @@ export default function TechnicianPanel() {
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex justify-end items-center gap-3">
-                          <button
-                            onClick={(e) => { 
-                              e.stopPropagation();
-                              setEditingTechnician(t);
-                              setForm({
-                                name: t.name,
-                                email: t.email || "",
-                                phone_number: t.phone_number || "",
-                                specializations: t.specializations || ""
-                              });
-                              setShowModal(true);
-                            }}
-                            className="text-blue-500 hover:text-blue-700 transition-colors"
-                            title="Edit Technician"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                          </button>
+
                           <button
                             onClick={(e) => { e.stopPropagation(); handleToggleStatus(t); }}
                             disabled={deleting}
@@ -278,48 +267,148 @@ export default function TechnicianPanel() {
                     
                     {isSelected && (
                       <tr className="bg-gray-50/50 dark:bg-gray-800/30 border-b border-gray-100 dark:border-gray-750">
-                        <td colSpan="6" className="p-6 border-l-4 border-blue-500">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-4">
-
-                              
-                              <div>
-                                <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Current Workload</span>
-                                {t.activeJobs > 0 ? (
-                                  <div className="mt-2 space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                                    {t.activeJobsList?.map(job => (
-                                      <div key={job.id} className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 flex justify-between items-center shadow-sm">
-                                        <span className="font-semibold text-gray-700 dark:text-gray-200">{job.job_id} - {job.device_brand} {job.device_model}</span>
-                                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${job.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                          {job.status.replace('_', ' ')}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-gray-400 italic">No active jobs</p>
-                                )}
-                              </div>
+                        <td colSpan="6" className="p-0 border-b-2 border-blue-200 dark:border-blue-900/50">
+                          <div className="bg-white dark:bg-gray-800 shadow-[inset_0_4px_6px_-4px_rgba(0,0,0,0.1)]">
+                            <div className="flex border-b border-gray-200 dark:border-gray-700 px-6 pt-3 bg-gray-50/80 dark:bg-gray-900/80">
+                              <button 
+                                onClick={() => setExpandedTab('workload')}
+                                className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 rounded-t-lg ${expandedTab === 'workload' ? "border-blue-600 text-blue-700 dark:text-blue-400 bg-white dark:bg-gray-800" : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50"}`}
+                              >
+                                Current Workload
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setExpandedTab('edit');
+                                  setEditingTechnician(t);
+                                  setForm({
+                                    name: t.name,
+                                    email: t.email || "",
+                                    phone_number: t.phone_number || "",
+                                    specializations: t.specializations || ""
+                                  });
+                                }}
+                                className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 rounded-t-lg ${expandedTab === 'edit' ? "border-blue-600 text-blue-700 dark:text-blue-400 bg-white dark:bg-gray-800" : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50"}`}
+                              >
+                                Edit Details
+                              </button>
+                              <div className="flex-1" />
                             </div>
-
-                            <div className="space-y-4 flex flex-col justify-between">
-                              {t.specializations && (
-                                <div>
-                                  <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Special Skills</span>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {t.specializations.split(',').map((skill, idx) => (
-                                      <span key={idx} className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs px-2.5 py-1 rounded-md border border-gray-200 dark:border-gray-600">
-                                        {skill.trim()}
-                                      </span>
-                                    ))}
+                          
+                            <div className="p-6">
+                            {expandedTab === 'workload' ? (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                                <div className="space-y-4">
+                                  <div>
+                                    <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Current Workload</span>
+                                    {t.activeJobs > 0 ? (
+                                      <div className="mt-2 space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                        {t.activeJobsList?.map(job => (
+                                          <div key={job.id} className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 flex justify-between items-center shadow-sm">
+                                            <span className="font-semibold text-gray-700 dark:text-gray-200">{job.job_id} - {job.device_brand} {job.device_model}</span>
+                                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${job.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                              {job.status.replace('_', ' ')}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-gray-400 italic">No active jobs</p>
+                                    )}
                                   </div>
                                 </div>
-                              )}
-                              
 
-                            </div>
+                                <div className="space-y-4 flex flex-col justify-between">
+                                  {t.specializations && (
+                                    <div>
+                                      <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Special Skills</span>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {t.specializations.split(',').map((skill, idx) => (
+                                          <span key={idx} className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs px-2.5 py-1 rounded-md border border-gray-200 dark:border-gray-600">
+                                            {skill.trim()}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="max-w-2xl mx-auto">
+                                <form onSubmit={async (e) => {
+                                  e.preventDefault();
+                                  setFormError("");
+                                  setSaving(true);
+                                  try {
+                                    const payload = { ...form };
+                                    if (!payload.email || payload.email.trim() === "") delete payload.email;
+                                    await api.put(`/admin/technicians/${t.id}`, payload);
+                                    fetchTechnicians();
+                                    setExpandedTab('workload');
+                                    setForm(EMPTY_FORM);
+                                    setEditingTechnician(null);
+                                  } catch (err) {
+                                    let errorMsg = "Failed to update technician";
+                                    if (err.response?.data?.detail) {
+                                      errorMsg = Array.isArray(err.response.data.detail) 
+                                        ? err.response.data.detail.map(e => `${e.loc.join('.')}: ${e.msg}`).join(", ") 
+                                        : typeof err.response.data.detail === "string" ? err.response.data.detail : JSON.stringify(err.response.data.detail);
+                                    }
+                                    setFormError(errorMsg);
+                                  } finally {
+                                    setSaving(false);
+                                  }
+                                }} className="space-y-4">
+                                  {formError && (
+                                    <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg">
+                                      {formError}
+                                    </div>
+                                  )}
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Full Name *</label>
+                                      <input
+                                        name="name" required value={form.name} onChange={handleChange}
+                                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Phone Number *</label>
+                                      <PhoneInput
+                                        name="phone_number" required value={form.phone_number} onChange={handleChange}
+                                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Email</label>
+                                      <input
+                                        name="email" type="email" value={form.email} onChange={handleChange}
+                                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Specializations / Skills</label>
+                                      <input
+                                        name="specializations" value={form.specializations} onChange={handleChange}
+                                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="pt-4 flex justify-center">
+                                    <button
+                                      type="submit" disabled={saving}
+                                      className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-8 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+                                    >
+                                      {saving ? "Saving…" : "Save Changes"}
+                                    </button>
+                                  </div>
+                                </form>
+                              </div>
+                            )}
                           </div>
-                        </td>
+                        </div>
+                      </td>
                       </tr>
                     )}
                   </React.Fragment>

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.donor import DonorPart
-from app.models.inventory import InventoryBatch, InventoryItem
+from app.models.inventory import InventoryBatch, InventoryItem, InventoryUnit
 from app.models.invoice import JobPartUsed
 from app.models.job import Job
 from app.models.user import User
@@ -214,4 +214,44 @@ def list_parts(job_id: UUID, db: Session) -> list[dict]:
         .all()
     )
     return [_serialize_part(p, db) for p in parts]
+
+
+def delete_job_part(job_id: UUID, part_id: UUID, db: Session, current_user: User | None = None) -> None:
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(404, "Job not found")
+
+    if current_user and current_user.role == "technician" and job.technician_id != current_user.id:
+        raise HTTPException(403, "You can only remove parts from jobs assigned to you")
+
+    part_used = db.query(JobPartUsed).filter(
+        JobPartUsed.id == part_id,
+        JobPartUsed.job_id == job_id
+    ).first()
+    if not part_used:
+        raise HTTPException(404, "Job part not found")
+
+    if part_used.part_source == "inventory":
+        item = db.query(InventoryItem).filter(InventoryItem.id == part_used.inventory_item_id).first()
+        if item:
+            item.quantity = (item.quantity or 0) + part_used.quantity
+        
+        if part_used.batch_id:
+            batch = db.query(InventoryBatch).filter(InventoryBatch.id == part_used.batch_id).first()
+            if batch:
+                batch.quantity_remaining += part_used.quantity
+        
+        if part_used.inventory_unit_id:
+            unit = db.query(InventoryUnit).filter(InventoryUnit.id == part_used.inventory_unit_id).first()
+            if unit:
+                unit.status = "in_stock"
+    
+    elif part_used.part_source == "donor":
+        if part_used.donor_part_id:
+            donor_part = db.query(DonorPart).filter(DonorPart.id == part_used.donor_part_id).first()
+            if donor_part:
+                donor_part.is_available = True
+
+    db.delete(part_used)
+    db.commit()
 

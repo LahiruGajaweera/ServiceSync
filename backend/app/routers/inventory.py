@@ -43,6 +43,15 @@ def suggest_parts(
     return inventory_service.suggest_compatible_parts(brand, model, db)
 
 
+@router.get("/search_codes")
+def search_codes(
+    q: str,
+    db: Session = Depends(get_db),
+    _=Depends(require_any_staff),
+):
+    return inventory_service.search_codes(q, db)
+
+
 @router.get("/scan/{code}")
 def resolve_scan(
     code: str,
