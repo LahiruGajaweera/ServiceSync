@@ -113,7 +113,6 @@ export default function TechnicianPanel() {
   const handleChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-  const handleSubmit = async (e) => {
   const handleSkillToggle = (skill) => {
     const currentSkills = form.specializations ? form.specializations.split(',').map(s => s.trim()).filter(Boolean) : [];
     let newSkills;
@@ -125,7 +124,7 @@ export default function TechnicianPanel() {
     setForm({ ...form, specializations: newSkills.join(', ') });
   };
 
-  const handleAdd = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setFormError("");
     setSaving(true);
@@ -207,7 +206,7 @@ export default function TechnicianPanel() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{technicians.length} total technicians</p>
         </div>
         <button
-onClick={() => { setShowModal(true); setCreated(null); setFormError(\"\"); setForm(EMPTY_FORM); setEditingTechnician(null); setShowSkillDropdown(false); }}
+          onClick={() => { setShowModal(true); setCreated(null); setFormError(""); setForm(EMPTY_FORM); setEditingTechnician(null); setShowSkillDropdown(false); }}
           className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl glass-button shadow-lg shadow-blue-500/30"
         >
           + Add Technician
@@ -528,7 +527,7 @@ onClick={() => { setShowModal(true); setCreated(null); setFormError(\"\"); setFo
             </div>
             
             {showSkillDropdown && (
-              <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-64 flex flex-col">
+              <div className="absolute z-10 w-full bottom-full mb-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-64 flex flex-col">
                 <div className="p-2 border-b dark:border-gray-700">
                   <input
                     type="text"
@@ -551,7 +550,7 @@ onClick={() => { setShowModal(true); setCreated(null); setFormError(\"\"); setFo
                     }}
                   />
                 </div>
-                <div className="overflow-y-auto">
+                <div className="overflow-y-auto custom-scrollbar">
                   {availableSkills
                     .filter(s => s.toLowerCase().includes(skillSearch.toLowerCase()))
                     .map(skill => {

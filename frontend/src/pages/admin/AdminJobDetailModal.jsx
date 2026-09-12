@@ -58,6 +58,9 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
   const [showPart, setShowPart]         = useState(false);
   const [invItems, setInvItems]         = useState([]);
   const [partSource, setPartSource]     = useState("inventory");
+  
+  // SMS Status modal
+  const [smsStatus, setSmsStatus]       = useState(null);
   const [selectedItem, setSelectedItem] = useState("");
   const [selectedBatchId, setSelectedBatchId] = useState("");
   const [quantity, setQuantity]         = useState(1);
@@ -455,11 +458,20 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
       const formData = new FormData();
       formData.append("order_id", invoice.id);
       formData.append("phone_number", job.customer_phone || "");
-      const res = await api.post(`/payments/send-link`, formData);
-      alert(res.data.message + "\\n\\nPreview:\\n" + res.data.preview);
+      const res = await api.post(`/payments/send-link`, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      setSmsStatus({ type: "success", title: "SMS Sent Successfully", message: res.data.message, preview: res.data.preview });
       setShowPay(false);
     } catch (err) {
-      alert(err.response?.data?.detail || "Failed to send SMS link");
+      const detail = err.response?.data?.detail;
+      let errorMsg = "Failed to send SMS link";
+      if (Array.isArray(detail)) {
+        errorMsg = detail.map((d) => d.msg).join(", ");
+      } else if (detail) {
+        errorMsg = detail;
+      }
+      setSmsStatus({ type: "error", title: "Failed to Send SMS", message: errorMsg });
     } finally {
       setSendingSms(false);
     }
@@ -540,7 +552,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
-      <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] overflow-y-auto relative">
+      <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] overflow-y-auto hide-scrollbar relative">
         {/* Modal Header */}
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-4 flex items-center justify-between z-10">
           <div>
@@ -1303,6 +1315,42 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* SMS Status Modal */}
+      <Modal open={!!smsStatus} onClose={() => setSmsStatus(null)} title={smsStatus?.title || "SMS Status"}>
+        <div className="space-y-4">
+          {smsStatus?.type === "success" ? (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 p-4 rounded-xl flex items-center gap-3">
+              <svg className="w-6 h-6 text-green-600 dark:text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+              <div>
+                <p className="font-bold text-sm">Successfully Sent</p>
+                <p className="text-xs mt-0.5">{smsStatus.message}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 p-4 rounded-xl flex items-center gap-3">
+              <svg className="w-6 h-6 text-red-600 dark:text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <div>
+                <p className="font-bold text-sm">Error Sending SMS</p>
+                <p className="text-xs mt-0.5">{smsStatus?.message}</p>
+              </div>
+            </div>
+          )}
+
+          {smsStatus?.preview && (
+            <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-4 rounded-xl">
+              <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Message Preview</p>
+              <p className="text-sm text-gray-800 dark:text-gray-300 font-mono whitespace-pre-wrap break-all">{smsStatus.preview}</p>
+            </div>
+          )}
+
+          <div className="flex justify-end pt-2">
+            <button type="button" onClick={() => setSmsStatus(null)} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors">
+              OK
+            </button>
+          </div>
+        </div>
       </Modal>
     </>
   )}

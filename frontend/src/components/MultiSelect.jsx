@@ -98,7 +98,15 @@ export default function MultiSelect({
   };
 
   return (
-    <div className="relative" ref={wrapRef}>
+    <div 
+      className="relative" 
+      ref={wrapRef}
+      onBlur={(e) => {
+        if (!wrapRef.current?.contains(e.relatedTarget)) {
+          setOpen(false);
+        }
+      }}
+    >
       {value.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-1.5">
           {value.map((v) => (

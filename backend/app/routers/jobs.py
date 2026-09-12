@@ -199,7 +199,7 @@ def add_part(
 def list_parts(
     job_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_auth),
+    current_user: User = Depends(require_any_staff),
 ):
     return job_parts_service.list_parts(job_id, db)
 
@@ -208,7 +208,7 @@ def delete_part(
     job_id: UUID,
     part_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_auth),
+    current_user: User = Depends(require_any_staff),
 ):
     job_parts_service.delete_job_part(job_id, part_id, db, current_user=current_user)
 
