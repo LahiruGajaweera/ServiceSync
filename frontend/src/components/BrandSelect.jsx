@@ -104,7 +104,15 @@ export default function BrandSelect({
   };
 
   return (
-    <div className="relative" ref={wrapRef}>
+    <div 
+      className="relative" 
+      ref={wrapRef}
+      onBlur={(e) => {
+        if (!wrapRef.current?.contains(e.relatedTarget)) {
+          setOpen(false);
+        }
+      }}
+    >
       <input
         id={id}
         type="text"

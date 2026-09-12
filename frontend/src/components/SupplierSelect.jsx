@@ -92,7 +92,15 @@ export default function SupplierSelect({ value, onChange }) {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div 
+      className="relative" 
+      ref={dropdownRef}
+      onBlur={(e) => {
+        if (!dropdownRef.current?.contains(e.relatedTarget)) {
+          setShowDropdown(false);
+        }
+      }}
+    >
       <input
         type="text"
         value={search}

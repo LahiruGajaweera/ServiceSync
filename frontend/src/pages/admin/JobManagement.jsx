@@ -869,7 +869,7 @@ export default function JobManagement() {
                   {custResults.map((c) => (
                     <button
                       key={c.id} type="button" onClick={() => selectCustomer(c)}
-                      className="w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors"
+                      className="w-full text-left px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors"
                     >
                       <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{c.name}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{c.phone_number}</p>

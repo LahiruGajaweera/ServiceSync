@@ -28,7 +28,7 @@ const EMPTY_FORM = {
   name: "", brand: "", model: "", category: "", spec: "", part_type: "factory_new",
   min_stock_threshold: "2", supplier: "", track_serial: false,
   compatible_brands: [], compatible_models: [],
-  quantity: "", unit_cost: "", margin: "0", unit_price: "",
+  quantity: "", unit_cost: "", margin: "0", unit_price: "", serial_numbers: [],
 };
 
 const EMPTY_RECEIVE = { supplier: "", unit_cost: "", margin: "0", new_selling_price: "", quantity: "", purchased_at: new Date().toISOString().split("T")[0], update_selling_price: false };
@@ -191,6 +191,54 @@ function CatalogFormFields({ form, handleChange, setForm, showInitialStock, cate
         </>
       )}
 
+      {showInitialStock && form.track_serial && form.quantity > 0 && (
+        <div className="col-span-2 bg-purple-50 dark:bg-purple-900/20 p-4 rounded-xl border border-purple-100 dark:border-purple-800/30 mt-2">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-purple-800 dark:text-purple-300">Unit Serial Numbers</p>
+            <button 
+              type="button" 
+              onClick={() => {
+                const qty = parseInt(form.quantity, 10);
+                if (!qty || qty <= 0) return;
+                const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+                const newSerials = [];
+                for (let i = 0; i < qty; i++) {
+                  const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+                  newSerials.push(`SN-${dateStr}-${randomStr}`);
+                }
+                setForm(f => ({ ...f, serial_numbers: newSerials }));
+              }}
+              className="px-2 py-1 bg-purple-200 dark:bg-purple-800/50 text-purple-700 dark:text-purple-300 hover:bg-purple-300 dark:hover:bg-purple-700/50 rounded text-[11px] font-semibold transition-colors"
+            >
+              Auto-Generate
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+            {Array.from({ length: parseInt(form.quantity, 10) || 0 }).map((_, i) => (
+              <input key={i} id={`initial-serial-input-${i}`} type="text" required
+                value={form.serial_numbers?.[i] || ""}
+                onChange={(e) => {
+                  const newSerials = [...(form.serial_numbers || [])];
+                  newSerials[i] = e.target.value;
+                  setForm(f => ({ ...f, serial_numbers: newSerials }));
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const nextInput = document.getElementById(`initial-serial-input-${i + 1}`);
+                    if (nextInput) nextInput.focus();
+                  }
+                }}
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono bg-white dark:bg-gray-800"
+                placeholder={`Serial number ${i + 1}`}
+              />
+            ))}
+          </div>
+          <p className="text-[11px] text-gray-500 mt-2">Must provide exactly {form.quantity} serial numbers.</p>
+        </div>
+      )}
+
+
       <div className={`col-span-2 grid gap-4 ${showInitialStock ? 'grid-cols-3' : 'grid-cols-2'}`}>
         <div>
           <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Min Stock Threshold</label>
@@ -258,7 +306,7 @@ function CatalogFormFields({ form, handleChange, setForm, showInitialStock, cate
         />
       </div>
 
-      {showInitialStock && (
+      {showInitialStock && !form.track_serial && (
         <>
           <div className="col-span-2 mt-1 border-t pt-3">
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Supplier Info</p>
@@ -478,8 +526,13 @@ export default function InventoryManager() {
         compatible_brands: mergeUnique(form.brand, form.compatible_brands),
         compatible_models: mergeUnique(form.model, form.compatible_models),
       };
-      if (form.quantity && !form.track_serial) payload.quantity = parseInt(form.quantity, 10);
-      if (form.unit_cost && !form.track_serial) payload.unit_cost = parseFloat(form.unit_cost);
+      if (form.quantity) {
+        payload.quantity = parseInt(form.quantity, 10);
+        if (form.track_serial) {
+          payload.serial_numbers = (form.serial_numbers || []).slice(0, payload.quantity);
+        }
+      }
+      if (form.unit_cost) payload.unit_cost = parseFloat(form.unit_cost);
       if (form.unit_price) payload.unit_price = parseFloat(form.unit_price);
       const { data: created } = await api.post("/inventory/", payload);
       setShowAdd(false);
