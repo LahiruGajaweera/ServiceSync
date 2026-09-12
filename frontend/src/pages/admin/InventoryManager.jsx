@@ -25,13 +25,13 @@ function Modal({ open, onClose, title, children, size = "md" }) {
 }
 
 const EMPTY_FORM = {
-  name: "", brand: "", model: "", category: "", spec: "", part_type: "factory_new",
+  name: "", brand: "", model: "", model_number: "", category: "", spec: "", part_type: "factory_new",
   min_stock_threshold: "2", supplier: "", track_serial: false,
   compatible_brands: [], compatible_models: [],
   quantity: "", unit_cost: "", margin: "0", unit_price: "", serial_numbers: [],
 };
 
-const EMPTY_RECEIVE = { supplier: "", unit_cost: "", margin: "0", new_selling_price: "", quantity: "", purchased_at: new Date().toISOString().split("T")[0], update_selling_price: false };
+const EMPTY_RECEIVE = { supplier: "", unit_cost: "", margin: "0", new_selling_price: "", quantity: "", purchased_at: new Date().toISOString().split("T")[0], update_selling_price: false, warranty_days: "" };
 
 /** Open a printable QR label for an array of labels. */
 async function printLabels(labels) {
@@ -154,6 +154,12 @@ function CatalogFormFields({ form, handleChange, setForm, showInitialStock, cate
         <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Spec / Identifier</label>
         <SpecSelect value={form.spec} onChange={(v) => setForm((f) => ({ ...f, spec: v }))} placeholder="e.g. OLED, OEM, 5000MAH" />
       </div>
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Manufacturer Part / Model No.</label>
+        <input name="model_number" value={form.model_number || ""} onChange={handleChange}
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="e.g. BN59" />
+      </div>
 
       <div className="col-span-2 mt-1 border-t pt-3">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
@@ -174,6 +180,13 @@ function CatalogFormFields({ form, handleChange, setForm, showInitialStock, cate
 
       {showInitialStock && (
         <>
+          <div className="col-span-2">
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Supplier</label>
+            <SupplierSelect
+              value={form.supplier}
+              onChange={(v) => setForm((f) => ({ ...f, supplier: v }))}
+            />
+          </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Quantity</label>
             <input name="quantity" type="number" min="0" value={form.quantity} onChange={handleChange}
@@ -239,15 +252,22 @@ function CatalogFormFields({ form, handleChange, setForm, showInitialStock, cate
       )}
 
 
-      <div className={`col-span-2 grid gap-4 ${showInitialStock ? 'grid-cols-3' : 'grid-cols-2'}`}>
-        <div>
+      <div className={`col-span-2 grid gap-4 ${showInitialStock ? 'grid-cols-4' : 'grid-cols-3'}`}>
+        <div className="flex flex-col justify-end">
           <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Min Stock Threshold</label>
           <input name="min_stock_threshold" type="number" min="0" value={form.min_stock_threshold} onChange={handleChange}
             className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
+
+        <div className="flex flex-col justify-end">
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Warranty (Days) - Optional</label>
+          <input name="warranty_days" type="number" min="0" value={form.warranty_days || ""} onChange={handleChange}
+            placeholder="e.g. 90"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
         
         {showInitialStock && (
-          <div>
+          <div className="flex flex-col justify-end">
             <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Margin %</label>
             <select name="margin" value={form.margin} onChange={(e) => {
               const margin = parseFloat(e.target.value) || 0;
@@ -265,7 +285,7 @@ function CatalogFormFields({ form, handleChange, setForm, showInitialStock, cate
           </div>
         )}
 
-        <div>
+        <div className="flex flex-col justify-end">
           <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Selling Price (LKR) *</label>
           <input name="unit_price" type="number" step="0.01" min="0" required value={form.unit_price} onChange={(e) => {
             handleChange(e);
@@ -518,11 +538,13 @@ export default function InventoryManager() {
     try {
       const payload = {
         name: generatedName,
+        model_number: form.model_number || null,
         category: form.category,
         part_type: form.part_type,
         min_stock_threshold: parseInt(form.min_stock_threshold, 10) || 0,
         track_serial: form.track_serial,
         supplier: form.supplier || null,
+        warranty_days: form.warranty_days ? parseInt(form.warranty_days, 10) : null,
         compatible_brands: mergeUnique(form.brand, form.compatible_brands),
         compatible_models: mergeUnique(form.model, form.compatible_models),
       };
@@ -586,6 +608,7 @@ export default function InventoryManager() {
     try {
       await api.patch(`/inventory/${detailsItem.id}`, {
         name: generatedName,
+        model_number: form.model_number || null,
         category: form.category,
         part_type: form.part_type,
         min_stock_threshold: parseInt(form.min_stock_threshold, 10) || 0,
@@ -630,6 +653,7 @@ export default function InventoryManager() {
         quantity: "", 
         purchased_at: new Date().toISOString().split("T")[0], 
         update_selling_price: false, 
+        warranty_days: "",
         serial_numbers: [] 
       });
       setFormError("");
@@ -657,6 +681,7 @@ export default function InventoryManager() {
     } else if (forceTab === "edit") {
       setForm({
         name: item.name ?? "",
+        model_number: item.model_number ?? "",
         brand: (item.compatible_brands || [])[0] ?? "",
         model: (item.compatible_models || [])[0] ?? "",
         category: item.category ?? "",
@@ -684,6 +709,7 @@ export default function InventoryManager() {
       quantity: initialData.quantity ?? "", 
       purchased_at: new Date().toISOString().split("T")[0], 
       update_selling_price: false, 
+      warranty_days: initialData.warranty_days ?? "",
       serial_numbers: Array(parseInt(initialData.quantity || 0, 10)).fill("") 
     });
     setFormError("");
@@ -697,11 +723,10 @@ export default function InventoryManager() {
       const payload = {
         supplier: receiveForm.supplier || null,
         unit_cost: parseFloat(receiveForm.unit_cost),
+        unit_price: parseFloat(receiveForm.new_selling_price) || 0,
         quantity: parseInt(receiveForm.quantity, 10),
+        warranty_days: parseInt(receiveForm.warranty_days, 10) || null,
       };
-      if (receiveForm.update_selling_price && receiveForm.new_selling_price) {
-        payload.new_selling_price = parseFloat(receiveForm.new_selling_price);
-      }
       if (receiveForm.purchased_at) payload.purchased_at = new Date(receiveForm.purchased_at).toISOString();
       if (detailsItem.track_serial) payload.serial_numbers = (receiveForm.serial_numbers || []).filter(s => s.trim());
       
@@ -873,7 +898,7 @@ export default function InventoryManager() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
               <tr>
-                {["SKU", "Part Name", "Category", "Type", "Qty", "Latest Selling Price", "Min", "Status"].map((h) => (
+                {["SKU", "Part Name", "Category", "Type", "Qty", "Min", "Status"].map((h) => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -897,7 +922,7 @@ export default function InventoryManager() {
                       </span>
                     </td>
                     <td className="px-4 py-3 font-bold text-gray-800 dark:text-gray-100">{item.quantity}</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300">LKR {Number(item.unit_price).toLocaleString()}</td>
+
                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{item.min_stock_threshold}</td>
                     <td className="px-4 py-3 flex items-center justify-between">
                       {item.is_low_stock ? (
@@ -952,7 +977,7 @@ export default function InventoryManager() {
                                               </span>
                                             </p>
                                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                              {b.supplier || "—"} · Buy: LKR {Number(b.unit_cost).toLocaleString()} · Sell: LKR {Number(detailsItem.unit_price).toLocaleString()} ·
+                                              {b.supplier || "—"} · Buy: LKR {Number(b.unit_cost).toLocaleString()} · Sell: LKR {Number(b.unit_price).toLocaleString()} {b.warranty_days ? `· Warranty: ${b.warranty_days}D ` : ' '}·
                                               <span className="font-semibold text-gray-700 dark:text-gray-200"> {b.quantity_remaining}</span> / {b.quantity_received} left
                                             </p>
                                           </div>
@@ -974,7 +999,11 @@ export default function InventoryManager() {
                                                   <div>
                                                     <span className="text-xs font-mono font-semibold text-gray-800 dark:text-gray-200 block">{u.serial_number}</span>
                                                     <span className={`text-[10px] font-semibold ${u.status === 'in_stock' ? 'text-green-600' : 'text-gray-500'}`}>
-                                                      {u.status === 'in_stock' ? 'In Stock' : u.status === 'lost' ? 'Lost' : 'Returned'}
+                                                      {u.status === 'in_stock' ? 'In Stock' :
+                                                       u.status === 'used' ? 'Used' :
+                                                       u.status === 'lost' ? 'Lost' :
+                                                       u.status === 'damaged' ? 'Damaged' :
+                                                       'Returned'}
                                                     </span>
                                                   </div>
                                                   <button
@@ -1072,24 +1101,19 @@ export default function InventoryManager() {
                                         <p className="text-[11px] text-gray-500 mt-2">Must provide exactly {receiveForm.quantity || 0} serial numbers.</p>
                                       </div>
                                     )}
-                                    <div>
-                                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Unit Cost (LKR) *</label>
-                                      <input type="number" step="0.01" min="0" required value={receiveForm.unit_cost}
-                                        onChange={(e) => {
-                                          const cost = e.target.value;
-                                          const m = parseFloat(receiveForm.margin) || 0;
-                                          const price = cost && receiveForm.update_selling_price ? (parseFloat(cost) * (1 + m / 100)).toFixed(2) : receiveForm.new_selling_price;
-                                          setReceiveForm((f) => ({ ...f, unit_cost: cost, new_selling_price: price }));
-                                        }}
-                                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                                    </div>
-                                    <div className="col-span-2 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
-                                      <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-200 mb-3 cursor-pointer">
-                                        <input type="checkbox" checked={receiveForm.update_selling_price} onChange={(e) => setReceiveForm(f => ({ ...f, update_selling_price: e.target.checked }))} className="rounded text-blue-600 focus:ring-blue-500" />
-                                        Update Selling Price?
-                                      </label>
-                                      {receiveForm.update_selling_price && (
-                                        <div className="grid grid-cols-2 gap-4">
+                                      <div className="grid grid-cols-2 gap-4 col-span-2">
+                                        <div>
+                                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Unit Cost (LKR) *</label>
+                                          <input type="number" step="0.01" min="0" required value={receiveForm.unit_cost}
+                                            onChange={(e) => {
+                                              const cost = e.target.value;
+                                              const m = parseFloat(receiveForm.margin) || 0;
+                                              const price = cost ? (parseFloat(cost) * (1 + m / 100)).toFixed(2) : receiveForm.new_selling_price;
+                                              setReceiveForm((f) => ({ ...f, unit_cost: cost, new_selling_price: price }));
+                                            }}
+                                            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
                                           <div>
                                             <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Margin %</label>
                                             <select name="margin" value={receiveForm.margin} onChange={(e) => {
@@ -1107,16 +1131,15 @@ export default function InventoryManager() {
                                             </select>
                                           </div>
                                           <div>
-                                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Selling Price (LKR) *</label>
-                                            <input type="number" step="0.01" min="0" required={receiveForm.update_selling_price} value={receiveForm.new_selling_price}
+                                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Batch Selling Price *</label>
+                                            <input type="number" step="0.01" min="0" required value={receiveForm.new_selling_price}
                                               onChange={(e) => {
                                                 setReceiveForm(f => ({ ...f, new_selling_price: e.target.value, margin: "0" }));
                                               }}
-                                              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50 dark:bg-blue-900/30" />
+                                              className="w-full border border-blue-300 dark:border-blue-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50 dark:bg-blue-900/30" />
                                           </div>
                                         </div>
-                                      )}
-                                    </div>
+                                      </div>
                                     <div className="col-span-2">
                                       <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Supplier</label>
                                       <SupplierSelect
@@ -1124,10 +1147,16 @@ export default function InventoryManager() {
                                         onChange={(v) => setReceiveForm((f) => ({ ...f, supplier: v }))}
                                       />
                                     </div>
-                                    <div className="col-span-2">
+                                    <div className="col-span-2 sm:col-span-1">
                                       <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Purchased At</label>
                                       <input type="date" max={new Date().toISOString().split("T")[0]} value={receiveForm.purchased_at}
                                         onChange={(e) => setReceiveForm((f) => ({ ...f, purchased_at: e.target.value }))}
+                                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                    </div>
+                                    <div className="col-span-2 sm:col-span-1">
+                                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Warranty Days (Optional)</label>
+                                      <input type="number" min="0" value={receiveForm.warranty_days} placeholder="e.g. 30"
+                                        onChange={(e) => setReceiveForm((f) => ({ ...f, warranty_days: e.target.value }))}
                                         className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                   </div>
@@ -1439,7 +1468,7 @@ export default function InventoryManager() {
       )}
 
       {/* Add Part Modal */}
-      <Modal open={showAddModal} onClose={() => setShowAdd(false)} title="Add Inventory Part">
+      <Modal open={showAddModal} onClose={() => setShowAdd(false)} title="Add Inventory Part" size="lg">
         <form onSubmit={handleAdd} className="space-y-4">
           {formError && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg">{formError}</div>}
           <CatalogFormFields form={form} handleChange={handleChange} setForm={setForm} showInitialStock categories={categories} />

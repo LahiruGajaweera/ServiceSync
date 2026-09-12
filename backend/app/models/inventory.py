@@ -11,6 +11,7 @@ class InventoryItem(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     sku = Column(String(40), unique=True, nullable=True, index=True)
     name = Column(String(200), nullable=False)
+    model_number = Column(String(100), nullable=True)
     category = Column(String(100), nullable=False)
     compatible_brands = Column(JSONB, default=list)
     compatible_models = Column(JSONB, default=list)
@@ -22,6 +23,7 @@ class InventoryItem(Base):
     min_stock_threshold = Column(Integer, nullable=False, default=2)
     supplier = Column(String(200), nullable=True)
     track_serial = Column(Boolean, nullable=False, default=False)
+    warranty_days = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -50,8 +52,10 @@ class InventoryBatch(Base):
     )
     supplier = Column(String(200), nullable=True)
     unit_cost = Column(Numeric(10, 2), nullable=False, default=0)
+    unit_price = Column(Numeric(10, 2), nullable=False, default=0)
     quantity_received = Column(Integer, nullable=False, default=0)
     quantity_remaining = Column(Integer, nullable=False, default=0)
+    warranty_days = Column(Integer, nullable=True)
     purchased_at = Column(DateTime(timezone=True), server_default=func.now())
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

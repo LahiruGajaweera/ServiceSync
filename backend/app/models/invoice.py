@@ -21,6 +21,7 @@ class Invoice(Base):
     payment_method = Column(String(50), nullable=True)
     payment_reference = Column(String(255), nullable=True)
     qr_code_data = Column(Text, nullable=True)
+    warranty_days = Column(Integer, nullable=True)
     paid_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -52,4 +53,5 @@ class JobPartUsed(Base):
     quantity = Column(Integer, nullable=False, default=1)
     unit_cost = Column(Numeric(10, 2), nullable=False, default=0)
     unit_price = Column(Numeric(10, 2), nullable=False, default=0)
+    warranty_days = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -66,14 +66,16 @@ def _next_batch_code(item: InventoryItem, db: Session) -> str:
     return code
 
 
-def _add_batch(item, supplier, unit_cost, quantity, purchased_at, db) -> InventoryBatch:
+def _add_batch(item, supplier, unit_cost, unit_price, quantity, purchased_at, db, warranty_days=None) -> InventoryBatch:
     batch = InventoryBatch(
         batch_code=_next_batch_code(item, db),
         inventory_item_id=item.id,
         supplier=supplier,
         unit_cost=unit_cost or 0,
+        unit_price=unit_price or 0,
         quantity_received=quantity,
         quantity_remaining=quantity,
+        warranty_days=warranty_days,
         purchased_at=purchased_at or datetime.now(timezone.utc),
     )
     db.add(batch)
@@ -147,6 +149,7 @@ def create_item(data: InventoryItemCreate, db: Session) -> dict:
     unit_cost = payload.pop("unit_cost", None)
     unit_price = payload.pop("unit_price", None)
     supplier = payload.get("supplier")
+    warranty_days = payload.pop("warranty_days", None)
     serial_numbers = payload.pop("serial_numbers", None)
 
     if payload.get("track_serial") and qty and qty > 0:
@@ -169,7 +172,7 @@ def create_item(data: InventoryItemCreate, db: Session) -> dict:
     db.flush()  # assign id before creating its first batch
 
     if qty and qty > 0:
-        batch = _add_batch(item, supplier, unit_cost or 0, qty, None, db)
+        batch = _add_batch(item, supplier, unit_cost or 0, unit_price or 0, qty, None, db, warranty_days)
         db.flush()
         if item.track_serial and serial_numbers:
             for sn in serial_numbers:
@@ -199,14 +202,14 @@ def receive_stock(item_id: UUID, data: ReceiveStockRequest, db: Session) -> dict
         item.sku = _generate_sku(item.category, db)
         db.flush()
 
-    if data.new_selling_price is not None:
-        item.unit_price = data.new_selling_price
+    # Update the global base price to serve as the default for future batches
+    item.unit_price = data.unit_price
 
     if item.track_serial:
         if not data.serial_numbers or len(data.serial_numbers) != data.quantity:
             raise HTTPException(400, f"Expected {data.quantity} serial numbers for tracked item")
 
-    batch = _add_batch(item, data.supplier, data.unit_cost, data.quantity, data.purchased_at, db)
+    batch = _add_batch(item, data.supplier, data.unit_cost, data.unit_price, data.quantity, data.purchased_at, db, data.warranty_days)
     db.flush()
     
     if item.track_serial and data.serial_numbers:
@@ -320,7 +323,7 @@ def adjust_stock(item_id: UUID, data: StockAdjustRequest, user_id: UUID, db: Ses
             item.quantity = (item.quantity or 0) + data.delta
             batch_id_to_use = newest.id
         else:
-            new_batch = _add_batch(item, item.supplier, item.unit_price or 0, data.delta, None, db)
+            new_batch = _add_batch(item, item.supplier, item.unit_price or 0, item.unit_price or 0, data.delta, None, db)
             db.flush()
             batch_id_to_use = new_batch.id
             
