@@ -14,7 +14,6 @@ class Job(Base):
     technician_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     device_brand = Column(String(100), nullable=False)
     device_model = Column(String(100), nullable=False)
-    current_timer_mode = Column(String(20), nullable=True)  # 'diagnostic' or 'repair'
     total_away_seconds = Column(Integer, nullable=False, default=0)
     device_imei = Column(String(20), nullable=True)
     fault_category = Column(

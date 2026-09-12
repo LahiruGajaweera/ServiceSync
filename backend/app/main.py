@@ -49,7 +49,6 @@ def _run_migrations() -> None:
         "ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS model_number VARCHAR(100)",
         "ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS sku VARCHAR(40)",
         "ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS track_serial BOOLEAN NOT NULL DEFAULT FALSE",
-        "ALTER TABLE inventory_items ALTER COLUMN unit_price SET DEFAULT 0",
         "CREATE UNIQUE INDEX IF NOT EXISTS ix_inventory_items_sku ON inventory_items (sku)",
         "ALTER TABLE inventory_batches ADD COLUMN IF NOT EXISTS unit_price NUMERIC(10, 2) NOT NULL DEFAULT 0",
         "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS batch_id UUID REFERENCES inventory_batches(id)",
@@ -66,8 +65,6 @@ def _run_migrations() -> None:
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS rework_of_job_id UUID REFERENCES jobs(id)",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS active_repair_start_time TIMESTAMP WITH TIME ZONE",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS current_timer_mode VARCHAR(20)",
-        # Warranty days
-        "ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS warranty_days INTEGER",
         "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS warranty_days INTEGER",
         "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS inventory_unit_id UUID REFERENCES inventory_units(id)",
         # Invoices features
@@ -145,8 +142,8 @@ def _backfill_inventory() -> None:
                 db.add(InventoryBatch(
                     batch_code=_next_batch_code(item, db),
                     inventory_item_id=item.id,
-                    supplier=item.supplier,
-                    unit_cost=item.unit_price or 0,
+                    supplier="Legacy",
+                    unit_cost=0,
                     quantity_received=item.quantity,
                     quantity_remaining=item.quantity,
                     purchased_at=datetime.now(timezone.utc),

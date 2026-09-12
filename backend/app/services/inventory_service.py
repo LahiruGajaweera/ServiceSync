@@ -80,8 +80,6 @@ def _add_batch(item, supplier, unit_cost, unit_price, quantity, purchased_at, db
     )
     db.add(batch)
     item.quantity = (item.quantity or 0) + quantity
-    if supplier:
-        item.supplier = supplier
     return batch
 
 
@@ -167,7 +165,6 @@ def create_item(data: InventoryItemCreate, db: Session) -> dict:
     item = InventoryItem(**payload)
     item.sku = _generate_sku(item.category, db)
     item.quantity = 0
-    item.unit_price = unit_price or 0
     db.add(item)
     db.flush()  # assign id before creating its first batch
 
@@ -201,9 +198,6 @@ def receive_stock(item_id: UUID, data: ReceiveStockRequest, db: Session) -> dict
     if not item.sku:
         item.sku = _generate_sku(item.category, db)
         db.flush()
-
-    # Update the global base price to serve as the default for future batches
-    item.unit_price = data.unit_price
 
     if item.track_serial:
         if not data.serial_numbers or len(data.serial_numbers) != data.quantity:
@@ -323,7 +317,7 @@ def adjust_stock(item_id: UUID, data: StockAdjustRequest, user_id: UUID, db: Ses
             item.quantity = (item.quantity or 0) + data.delta
             batch_id_to_use = newest.id
         else:
-            new_batch = _add_batch(item, item.supplier, item.unit_price or 0, item.unit_price or 0, data.delta, None, db)
+            new_batch = _add_batch(item, "Manual Adjust", 0, 0, data.delta, None, db)
             db.flush()
             batch_id_to_use = new_batch.id
             
