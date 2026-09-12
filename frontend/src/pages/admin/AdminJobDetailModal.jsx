@@ -51,6 +51,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
   const [parts, setParts]       = useState([]);
   const [history, setHistory]   = useState([]);
   const [invoice, setInvoice]   = useState(null);
+  const [jobWarrantyDays, setJobWarrantyDays] = useState("");
   const [loading, setLoading]   = useState(true);
   const [promoSetting, setPromoSetting] = useState(null);
 
@@ -58,6 +59,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
   const [showPart, setShowPart]         = useState(false);
   const [invItems, setInvItems]         = useState([]);
   const [partSource, setPartSource]     = useState("inventory");
+  const [warrantyCategoryDefaults, setWarrantyCategoryDefaults] = useState(null);
   
   // SMS Status modal
   const [smsStatus, setSmsStatus]       = useState(null);
@@ -67,8 +69,11 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
   const [unitCost, setUnitCost]         = useState("");
   const [actualCost, setActualCost]     = useState("");
   const [overridePrice, setOverridePrice] = useState("");
+  const [warrantyDays, setWarrantyDays]   = useState("");
   const [partError, setPartError]       = useState("");
   const [savingPart, setSavingPart]     = useState(false);
+  const [editingWarrantyId, setEditingWarrantyId] = useState(null);
+  const [editingWarrantyValue, setEditingWarrantyValue] = useState("");
 
   // Invoice modal
   const [showInvoice, setShowInvoice] = useState(false);
@@ -199,8 +204,10 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
       if (historyRes.status === "fulfilled") setHistory(historyRes.value.data);
       if (invoiceRes.status === "fulfilled" && invoiceRes.value.data)
         setInvoice(invoiceRes.value.data);
-      if (settingsRes.status === "fulfilled" && settingsRes.value.data)
+      if (settingsRes.status === "fulfilled" && settingsRes.value.data) {
         setPromoSetting(settingsRes.value.data.promotional_offers);
+        setWarrantyCategoryDefaults(settingsRes.value.data.warranty_category_defaults);
+      }
     } finally {
       setLoading(false);
     }
@@ -209,7 +216,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
   useEffect(() => { fetchAll(); }, [jobId, open]);
 
   const openAddPart = async () => {
-    setPartError(""); setSelectedItem(""); setSelectedBatchId(""); setQuantity(1); setUnitCost(""); setActualCost(""); setOverridePrice(""); setPartSource("inventory");
+    setPartError(""); setSelectedItem(""); setSelectedBatchId(""); setQuantity(1); setUnitCost(""); setActualCost(""); setOverridePrice(""); setPartSource("inventory"); setWarrantyDays("");
     try {
       const { data } = await api.get("/inventory/", { params: {} });
       setInvItems(data.filter((i) => i.quantity > 0));
@@ -235,6 +242,9 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
       if (overridePrice) {
         payload.override_price = parseFloat(overridePrice);
       }
+      if (warrantyDays !== "") {
+        payload.warranty_days = parseInt(warrantyDays, 10);
+      }
       await api.post(`/jobs/${jobId}/parts`, payload);
       setShowPart(false);
       fetchAll();
@@ -242,6 +252,19 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
       setPartError(err.response?.data?.detail || "Failed to add part");
     } finally {
       setSavingPart(false);
+    }
+  };
+
+  const handleSaveWarranty = async (partId) => {
+    try {
+      await api.patch(`/jobs/${jobId}/parts/${partId}`, {
+        warranty_days: editingWarrantyValue === "" ? null : parseInt(editingWarrantyValue, 10)
+      });
+      setEditingWarrantyId(null);
+      fetchAll();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update warranty");
     }
   };
 
@@ -282,6 +305,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
         labor_cost: parseFloat(laborCost) || 0,
         discount_amount: calcDiscountAmt,
         tax_rate: 0,
+        warranty_days: jobWarrantyDays !== "" ? parseInt(jobWarrantyDays, 10) : null,
       });
       setShowInvoice(false);
       await fetchAll();
@@ -337,8 +361,22 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
           <tr><td class="k">Device</td><td class="v">${job.device_brand} ${job.device_model}</td></tr>
           ${job.device_imei ? `<tr><td class="k">IMEI</td><td class="v">${job.device_imei}</td></tr>` : ""}
           <tr><td class="k">Fault</td><td class="v">${job.fault_category ? job.fault_category.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—"}</td></tr>
+          ${(invoice.warranty_days || (parts.length > 0 && parts.some(p => p.warranty_days))) ? `<tr><td class="k">Warranty</td><td class="v" style="font-weight: 700;">${invoice.warranty_days || Math.max(...parts.map(p => p.warranty_days || 0))} Days</td></tr>` : ""}
         </table>
         <hr class="divider" />
+        ${(parts.length > 0 || Number(job.labor_cost) > 0) ? `
+        <table>
+          <tr><td class="k" style="font-weight:600; padding-bottom: 4px; color:#374151;">Description</td><td class="v" style="font-weight:600; padding-bottom: 4px; color:#374151;">Amount</td></tr>
+          <tr>
+            <td class="k" style="padding-top:4px;">
+              <div style="color:#111827; font-weight: 500;">Repair & Service</div>
+              ${parts.length > 0 ? `<div style="font-size:11px; color:#4b5563; margin-top:2px;">Parts used: ${parts.map(p => p.part_name).join(', ')}</div>` : ""}
+            </td>
+            <td class="v" style="padding-top:4px; color:#111827; font-weight: 500;">LKR ${Number(invoice.subtotal).toLocaleString()}</td>
+          </tr>
+        </table>
+        <hr class="divider" />
+        ` : ""}
         <table class="totals-table">
           <tr><td class="k">Subtotal (Parts & Labor)</td><td class="v">LKR ${Number(invoice.subtotal).toLocaleString()}</td></tr>
           ${Number(invoice.discount_amount) > 0 ? `<tr><td class="k" style="color:#16a34a">Discount</td><td class="v" style="color:#16a34a">- LKR ${Number(invoice.discount_amount).toLocaleString()}</td></tr>` : ""}
@@ -776,7 +814,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
               <table className="w-full text-sm">
                 <thead className="border-b border-gray-100 dark:border-gray-800">
                   <tr>
-                    {["Part", "Source", "Batch", "Used By", "Qty", "Cost", "Price", "Subtotal"].map((h) => (
+                    {["Part", "Source", "Batch", "Used By", "Qty", "Cost", "Price", "Warranty", "Subtotal"].map((h) => (
                       <th key={h} className="text-left pb-2 text-xs font-semibold text-gray-400 uppercase">{h}</th>
                     ))}
                   </tr>
@@ -795,6 +833,38 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
                       <td className="py-2.5 text-gray-600 dark:text-gray-300">{p.quantity}</td>
                       <td className="py-2.5 text-gray-500 dark:text-gray-400 line-through text-xs">LKR {Number(p.unit_cost).toLocaleString()}</td>
                       <td className="py-2.5 text-gray-800 dark:text-gray-100 font-medium">LKR {Number(p.unit_price).toLocaleString()}</td>
+                      <td className="py-2.5 text-gray-600 dark:text-gray-300 text-xs">
+                        {editingWarrantyId === p.id ? (
+                          <div className="flex items-center gap-1">
+                            <input 
+                              type="number" 
+                              min="0"
+                              value={editingWarrantyValue} 
+                              onChange={(e) => setEditingWarrantyValue(e.target.value)}
+                              className="w-16 border border-gray-300 dark:border-gray-600 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              placeholder="Days"
+                              autoFocus
+                            />
+                            <button onClick={() => handleSaveWarranty(p.id)} className="text-green-600 hover:text-green-800 p-1" title="Save">
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                            </button>
+                            <button onClick={() => setEditingWarrantyId(null)} className="text-gray-400 hover:text-gray-600 p-1" title="Cancel">
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 group">
+                            <span>{p.warranty_days ? `${p.warranty_days} days` : "—"}</span>
+                            <button 
+                              onClick={() => { setEditingWarrantyId(p.id); setEditingWarrantyValue(p.warranty_days !== null ? p.warranty_days.toString() : ""); }}
+                              className="text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" 
+                              title="Edit Warranty"
+                            >
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                            </button>
+                          </div>
+                        )}
+                      </td>
                       <td className="py-2.5 font-bold text-gray-800 dark:text-gray-100">LKR {(Number(p.unit_price) * p.quantity).toLocaleString()}</td>
                     </tr>
                   ))}
@@ -888,7 +958,12 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
               <div className="space-y-4 text-center py-4">
                 <p className="text-sm text-gray-500 dark:text-gray-400">No invoice has been generated for this job yet.</p>
                 <button
-                  onClick={() => { setInvError(""); setLaborCost(job.labor_cost || ""); setShowInvoice(true); }}
+                  onClick={() => { 
+                    setInvError(""); 
+                    setLaborCost(job.labor_cost || ""); 
+                    setJobWarrantyDays(parts.some(p => p.warranty_days) ? Math.max(...parts.map(p => p.warranty_days || 0)) : (warrantyCategoryDefaults ? JSON.parse(warrantyCategoryDefaults.value || "{}")[job.fault_category?.toLowerCase()] || "" : ""));
+                    setShowInvoice(true); 
+                  }}
                   disabled={job.status !== "ready_for_pickup"}
                   className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:dark:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white text-sm font-bold py-2.5 px-4 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2"
                 >
@@ -899,6 +974,13 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
             ) : (
               <div>
                 <div className="space-y-3">
+                  <div className="flex justify-between items-center text-sm text-gray-600 dark:text-gray-300">
+                    <span>Warranty</span>
+                    <span className="font-medium text-purple-700 dark:text-purple-400">
+                      {invoice.warranty_days ? `${invoice.warranty_days} Days` : "No Warranty"}
+                    </span>
+                  </div>
+                  
                   <div className="flex justify-between items-center text-sm text-gray-600 dark:text-gray-300">
                     <span>Subtotal</span>
                     <span className="font-medium text-gray-900 dark:text-white">LKR {Number(invoice.subtotal).toLocaleString()}</span>
@@ -989,6 +1071,26 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
                        setActualCost("Hidden (Load from oldest batch)");
                        setOverridePrice(item.unit_price?.toString() || "");
                     }
+                    
+                    // Fallback logic for warranty
+                    let wDays = "";
+                    if (item.warranty_days !== null && item.warranty_days !== undefined) {
+                      wDays = item.warranty_days;
+                    } else if (warrantyCategoryDefaults) {
+                      try {
+                        const defaults = JSON.parse(warrantyCategoryDefaults.value || "{}");
+                        const catKey = (item.category || "").toLowerCase();
+                        if (defaults[catKey] !== undefined) {
+                          wDays = defaults[catKey];
+                        } else if (defaults["other"] !== undefined) {
+                          wDays = defaults["other"];
+                        }
+                      } catch (e) {
+                        console.error("Failed to parse warranty defaults", e);
+                      }
+                    }
+                    setWarrantyDays(wDays !== "" ? wDays.toString() : "");
+
                   }
                 }}
                   className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -1033,11 +1135,18 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
                    <p className="text-xs text-orange-600 mt-1 font-medium">Est. Unit Cost: {actualCost === "Hidden (Load from oldest batch)" ? actualCost : `LKR ${actualCost}`}</p>
                 )}
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Final Selling Price (LKR) *</label>
-                <input type="number" step="0.01" min="0" required value={overridePrice} onChange={(e) => setOverridePrice(e.target.value)}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50" />
-                <p className="text-xs text-gray-400 mt-1">Lower this value to give the customer a discount.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Final Selling Price (LKR) *</label>
+                  <input type="number" step="0.01" min="0" required value={overridePrice} onChange={(e) => setOverridePrice(e.target.value)}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50" />
+                  <p className="text-xs text-gray-400 mt-1">Lower this value to give the customer a discount.</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Warranty (Days)</label>
+                  <input type="number" min="0" value={warrantyDays} onChange={(e) => setWarrantyDays(e.target.value)}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Optional" />
+                </div>
               </div>
             </>
           )}
@@ -1089,12 +1198,18 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg px-4 py-2 text-sm text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-800">
             Parts total: <strong>LKR {partsTotal.toLocaleString()}</strong>
           </div>
-          <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Labor Cost (LKR)</label>
               <input type="number" min="0" step="0.01" value={laborCost} onChange={(e) => setLaborCost(e.target.value)}
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800"
                 placeholder="0.00" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Job Warranty (Days)</label>
+              <input type="number" min="0" value={jobWarrantyDays} onChange={(e) => setJobWarrantyDays(e.target.value)}
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800"
+                placeholder="No Warranty" />
             </div>
           </div>
           <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 text-sm space-y-2 border border-gray-100 dark:border-gray-800 shadow-inner">

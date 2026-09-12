@@ -51,6 +51,7 @@ def create_invoice(data: InvoiceCreate, db: Session) -> Invoice:
         total_amount=total_amount,
         payment_status="unpaid",
         qr_code_data=qr_data,
+        warranty_days=data.warranty_days,
     )
     db.add(invoice)
     db.commit()

@@ -45,11 +45,13 @@ def _run_migrations() -> None:
         # Temporary-password / force-change-on-first-login (existing rows default to FALSE)
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_temporary_password BOOLEAN NOT NULL DEFAULT FALSE",
         # Inventory batch system
+        "ALTER TABLE inventory_batches ADD COLUMN IF NOT EXISTS warranty_days INTEGER",
+        "ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS model_number VARCHAR(100)",
         "ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS sku VARCHAR(40)",
         "ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS track_serial BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE inventory_items ALTER COLUMN unit_price SET DEFAULT 0",
         "CREATE UNIQUE INDEX IF NOT EXISTS ix_inventory_items_sku ON inventory_items (sku)",
-        "CREATE UNIQUE INDEX IF NOT EXISTS ix_inventory_items_sku ON inventory_items (sku)",
+        "ALTER TABLE inventory_batches ADD COLUMN IF NOT EXISTS unit_price NUMERIC(10, 2) NOT NULL DEFAULT 0",
         "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS batch_id UUID REFERENCES inventory_batches(id)",
         "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS used_by_technician_id UUID REFERENCES users(id)",
         "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS unit_price NUMERIC(10, 2) NOT NULL DEFAULT 0",
@@ -59,6 +61,14 @@ def _run_migrations() -> None:
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS reminder_90_sent BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS reminder_425_sent BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS investigated BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS total_diagnostic_seconds INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS total_active_repair_seconds INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS rework_of_job_id UUID REFERENCES jobs(id)",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS active_repair_start_time TIMESTAMP WITH TIME ZONE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS current_timer_mode VARCHAR(20)",
+        # Warranty days
+        "ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS warranty_days INTEGER",
+        "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS warranty_days INTEGER",
         "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS inventory_unit_id UUID REFERENCES inventory_units(id)",
         # Invoices features
         "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS discount_amount NUMERIC(10, 2) NOT NULL DEFAULT 0",

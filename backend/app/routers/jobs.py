@@ -17,7 +17,7 @@ from app.schemas.job import (
     AutoResumeRequest,
 )
 from app.services import invoice_service, job_parts_service, job_service
-from app.schemas.invoice import JobPartCreate
+from app.schemas.invoice import JobPartCreate, JobPartUpdate
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
@@ -202,6 +202,16 @@ def list_parts(
     current_user: User = Depends(require_any_staff),
 ):
     return job_parts_service.list_parts(job_id, db)
+
+@router.patch("/{job_id}/parts/{part_id}")
+def update_part(
+    job_id: UUID,
+    part_id: UUID,
+    data: JobPartUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_staff),
+):
+    return job_parts_service.update_part(job_id, part_id, data, db, current_user=current_user)
 
 @router.delete("/{job_id}/parts/{part_id}", status_code=204)
 def delete_part(
