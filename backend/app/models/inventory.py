@@ -19,11 +19,8 @@ class InventoryItem(Base):
         Enum("factory_new", "salvaged", name="part_type"), nullable=False
     )
     quantity = Column(Integer, nullable=False, default=0)
-    unit_price = Column(Numeric(10, 2), nullable=False, default=0)
     min_stock_threshold = Column(Integer, nullable=False, default=2)
-    supplier = Column(String(200), nullable=True)
     track_serial = Column(Boolean, nullable=False, default=False)
-    warranty_days = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

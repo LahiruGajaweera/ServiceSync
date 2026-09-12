@@ -48,14 +48,11 @@ class InventoryItemUpdate(BaseModel):
     sku: str | None = None
     category: str | None = None
     reorder_level: int | None = None
-    supplier: str | None = None
     compatible_brands: list[str] | None = None
     compatible_models: list[str] | None = None
     part_type: Literal["factory_new", "salvaged"] | None = None
     min_stock_threshold: int | None = None
     track_serial: bool | None = None
-    unit_price: Decimal | None = None
-    warranty_days: int | None = None
 
 class UnitStatusUpdateRequest(BaseModel):
     status: str
@@ -90,11 +87,8 @@ class InventoryItemResponse(BaseModel):
     compatible_models: list
     part_type: str
     quantity: int
-    unit_price: Decimal
     min_stock_threshold: int
-    supplier: str | None = None
     track_serial: bool = False
-    warranty_days: int | None = None
     is_low_stock: bool = False
     batches: list[InventoryBatchResponse] = []
     created_at: datetime
