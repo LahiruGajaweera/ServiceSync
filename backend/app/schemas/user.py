@@ -1,8 +1,10 @@
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
+
+from app.schemas.auth import normalize_phone
 
 
 class UserCreate(BaseModel):
@@ -16,8 +18,25 @@ class TechnicianCreate(BaseModel):
     """Admin-issued technician account. Password is auto-generated server-side."""
 
     name: str
-    email: EmailStr
+    email: Optional[EmailStr] = None
     phone_number: str
+    specializations: str | None = None
+
+    @field_validator("phone_number", mode="before")
+    def validate_phone(cls, v: str) -> str:
+        return normalize_phone(v)
+
+class TechnicianUpdate(BaseModel):
+    name: str | None = None
+    email: Optional[EmailStr] = None
+    phone_number: str | None = None
+    specializations: str | None = None
+
+    @field_validator("phone_number", mode="before")
+    def validate_phone(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return normalize_phone(v)
 
 
 class UserUpdate(BaseModel):
@@ -30,6 +49,7 @@ class UserResponse(BaseModel):
     name: str
     email: str | None = None
     avatar_url: str | None = None
+    specializations: str | None = None
     role: str
     is_active: bool
     created_at: datetime

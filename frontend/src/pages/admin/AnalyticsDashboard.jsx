@@ -18,9 +18,9 @@ const FAULT_COLORS = ["#3b82f6","#a855f7","#f59e0b","#22c55e","#ef4444","#06b6d4
 
 function KpiCard({ label, value, sub, accent }) {
   return (
-    <div className={`bg-white rounded-xl shadow-sm p-5 border-l-4 ${accent}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border-l-4 ${accent}`}>
       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</p>
-      <p className="text-2xl font-bold text-gray-800 mt-0.5">{value}</p>
+      <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 mt-0.5">{value}</p>
       {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
     </div>
   );
@@ -28,8 +28,8 @@ function KpiCard({ label, value, sub, accent }) {
 
 function Section({ title, children }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <h3 className="font-semibold text-gray-700 mb-4 text-sm uppercase tracking-wide">{title}</h3>
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+      <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-4 text-sm uppercase tracking-wide">{title}</h3>
       {children}
     </div>
   );
@@ -39,40 +39,116 @@ const fmtLKR = (n) =>
   n == null ? "—" : `LKR ${Number(n).toLocaleString("en-LK", { maximumFractionDigits: 2 })}`;
 
 export default function AnalyticsDashboard() {
+  const [activeTab, setActiveTab]   = useState("overview");
   const [summary, setSummary]       = useState(null);
   const [jobsTrend, setJobsTrend]   = useState([]);
   const [revTrend, setRevTrend]     = useState([]);
   const [techStats, setTechStats]   = useState([]);
+  const [techLeaderboard, setTechLeaderboard] = useState([]);
   const [faultDist, setFaultDist]   = useState([]);
+  const [faultFilters, setFaultFilters] = useState({
+    startDate: "",
+    endDate: "",
+    brand: "all",
+    model: "all",
+  });
+  const [datePreset, setDatePreset] = useState("custom");
   const [statusDist, setStatusDist] = useState([]);
+  const [deviceModels, setDeviceModels] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState(null);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [sumRes, jobsRes, revRes, techRes, faultRes, statusRes] = await Promise.all([
-          api.get("/analytics/summary"),
-          api.get("/analytics/jobs-trend", { params: { days: 30 } }),
-          api.get("/analytics/revenue-trend", { params: { months: 6 } }),
-          api.get("/analytics/technician-stats"),
-          api.get("/analytics/fault-distribution"),
-          api.get("/analytics/status-distribution"),
+        const [sumRes, jobsRes, revRes, techRes, statusRes, leaderRes, modelsRes] = await Promise.all([
+          api.get("/analytics/summary").catch(e => ({ data: null })),
+          api.get("/analytics/jobs-trend", { params: { days: 30 } }).catch(e => ({ data: [] })),
+          api.get("/analytics/revenue-trend", { params: { months: 6 } }).catch(e => ({ data: [] })),
+          api.get("/analytics/technician-stats").catch(e => ({ data: [] })),
+          api.get("/analytics/status-distribution").catch(e => ({ data: [] })),
+          api.get("/analytics/technician-performance").catch(e => ({ data: [] })),
+          api.get("/analytics/device-models").catch(e => ({ data: [] })),
         ]);
         setSummary(sumRes.data);
         setJobsTrend(jobsRes.data);
         setRevTrend(revRes.data);
         setTechStats(techRes.data);
-        setFaultDist(faultRes.data);
         setStatusDist(statusRes.data);
+        setTechLeaderboard(leaderRes.data);
+        setDeviceModels(modelsRes.data);
       } catch (e) {
-        setError("Failed to load analytics. Make sure the backend is running.");
+        console.error("Analytics load error:", e);
+        const errMsg = e.response?.data?.detail || e.message || "Unknown error";
+        setError(`Failed to load analytics. Make sure the backend is running. Details: ${errMsg}`);
       } finally {
         setLoading(false);
       }
     };
     load();
   }, []);
+
+  const handlePresetChange = (preset) => {
+    setDatePreset(preset);
+    const now = new Date();
+    let start = "";
+    let end = "";
+
+    if (preset === "last_7_days") {
+      const d = new Date();
+      d.setDate(d.getDate() - 7);
+      start = d.toISOString().split("T")[0];
+      end = now.toISOString().split("T")[0];
+    } else if (preset === "current_month") {
+      start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+    } else if (preset === "last_month") {
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split("T")[0];
+      end = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split("T")[0];
+    } else if (preset === "last_3_months") {
+      const d = new Date();
+      d.setMonth(d.getMonth() - 3);
+      start = d.toISOString().split("T")[0];
+      end = now.toISOString().split("T")[0];
+    }
+
+    if (preset !== "custom") {
+      setFaultFilters(prev => ({ ...prev, startDate: start, endDate: end }));
+    }
+  };
+
+  const loadFaults = async () => {
+    try {
+      const params = {};
+      if (faultFilters.startDate) params.start_date = faultFilters.startDate;
+      if (faultFilters.endDate) params.end_date = faultFilters.endDate;
+      if (faultFilters.brand !== "all") params.brand = faultFilters.brand;
+      if (faultFilters.model !== "all") params.model = faultFilters.model;
+
+      const res = await api.get("/analytics/fault-distribution", { params });
+      
+      const allCategories = ["screen", "battery", "charging_port", "water_damage", "software", "camera", "buttons", "other"];
+      const dataMap = new Map(allCategories.map(c => [c, 0]));
+      
+      (res.data || []).forEach(item => {
+        dataMap.set(item.fault_category, item.count);
+      });
+      
+      const finalData = allCategories.map(cat => ({
+        fault_category: cat,
+        count: dataMap.get(cat)
+      })).sort((a, b) => b.count - a.count);
+
+      setFaultDist(finalData);
+    } catch (e) {
+      console.error("Failed to load fault distribution", e);
+    }
+  };
+
+  useEffect(() => {
+    loadFaults();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [faultFilters]);
 
   if (loading) {
     return (
@@ -92,14 +168,75 @@ export default function AnalyticsDashboard() {
   const j = summary?.jobs ?? {};
   const r = summary?.revenue ?? {};
 
+  const combinedTechs = [...(techStats || [])].map(t => {
+    const leaderData = (techLeaderboard || []).find(l => l.technician_id === t.technician_id);
+    return {
+      ...t,
+      score: leaderData?.performance_score ?? null,
+      rating: leaderData?.rating ?? null,
+      specialty: leaderData?.top_specialty ?? null
+    };
+  }).sort((a, b) => {
+    if (a.score !== null && b.score !== null) return b.score - a.score;
+    if (a.score !== null) return -1;
+    if (b.score !== null) return 1;
+    return b.total - a.total;
+  });
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-xl font-bold text-gray-800">Analytics Dashboard</h2>
+        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Analytics Dashboard</h2>
         <span className="text-xs text-gray-400">Live data from ServiceSync</span>
       </div>
 
-      {/* ── KPI Row ─────────────────────────────────────────── */}
+      {/* ── Tabs Navigation ──────────────────────────────────────── */}
+      <div className="flex border-b border-gray-200 dark:border-gray-700">
+        <button
+          onClick={() => setActiveTab("overview")}
+          className={`py-2.5 px-5 text-sm font-semibold border-b-2 transition-colors ${
+            activeTab === "overview"
+              ? "border-brand-500 text-brand-600 dark:text-brand-400"
+              : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          }`}
+        >
+          Business Overview
+        </button>
+        <button
+          onClick={() => setActiveTab("job-analysis")}
+          className={`py-2.5 px-5 text-sm font-semibold border-b-2 transition-colors ${
+            activeTab === "job-analysis"
+              ? "border-brand-500 text-brand-600 dark:text-brand-400"
+              : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          }`}
+        >
+          Job Analysis
+        </button>
+        <button
+          onClick={() => setActiveTab("fault-analysis")}
+          className={`py-2.5 px-5 text-sm font-semibold border-b-2 transition-colors ${
+            activeTab === "fault-analysis"
+              ? "border-brand-500 text-brand-600 dark:text-brand-400"
+              : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          }`}
+        >
+          Fault Analysis
+        </button>
+        <button
+          onClick={() => setActiveTab("leaderboard")}
+          className={`py-2.5 px-5 text-sm font-semibold border-b-2 transition-colors ${
+            activeTab === "leaderboard"
+              ? "border-brand-500 text-brand-600 dark:text-brand-400"
+              : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          }`}
+        >
+          Technician Leaderboard
+        </button>
+      </div>
+
+      {activeTab === "overview" && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          {/* ── KPI Row ─────────────────────────────────────────── */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <KpiCard label="Total Jobs"      value={j.total ?? 0}           sub={`${j.active ?? 0} active`}        accent="border-blue-500" />
         <KpiCard label="Completed"       value={(j.completed ?? 0)}     sub="repaired & delivered"             accent="border-green-500" />
@@ -114,29 +251,8 @@ export default function AnalyticsDashboard() {
         <KpiCard label="Salvage Pending"   value={summary?.salvage?.pending_assessments ?? 0} sub="awaiting approval" accent="border-orange-500" />
       </div>
 
-      {/* ── Charts Row 1: Jobs Trend + Revenue Trend ─────── */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <Section title="Jobs Created — Last 30 Days">
-          {jobsTrend.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-10">No jobs in the last 30 days</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={jobsTrend} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="jobGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(d) => d.slice(5)} interval="preserveStartEnd" />
-                <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-                <Tooltip labelFormatter={(d) => `Date: ${d}`} formatter={(v) => [v, "Jobs"]} />
-                <Area type="monotone" dataKey="jobs" stroke="#3b82f6" strokeWidth={2} fill="url(#jobGrad)" dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </Section>
+      {/* ── Charts Row 1: Revenue Trend ─────── */}
+      <div className="grid grid-cols-1 gap-6">
 
         <Section title="Revenue — Last 6 Months (LKR)">
           {revTrend.length === 0 ? (
@@ -147,55 +263,177 @@ export default function AnalyticsDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v) => [`LKR ${Number(v).toLocaleString()}`, "Revenue"]} />
+                <Tooltip 
+                  formatter={(v) => [`LKR ${Number(v).toLocaleString()}`, "Revenue"]}
+                  contentStyle={{ backgroundColor: "rgba(30, 41, 59, 0.9)", border: "none", borderRadius: "8px", color: "#f8fafc" }}
+                  itemStyle={{ color: "#a855f7", fontWeight: 600 }}
+                />
                 <Bar dataKey="revenue" fill="#a855f7" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
         </Section>
       </div>
+      </div>
+      )}
 
-      {/* ── Charts Row 2: Status Pie + Fault Distribution ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <Section title="Job Status Distribution">
+      {activeTab === "job-analysis" && (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <Section title="Jobs Created — Last 30 Days">
+            {jobsTrend.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-10">No jobs in the last 30 days</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={jobsTrend} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="jobGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(d) => d.slice(5)} interval="preserveStartEnd" />
+                  <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                  <Tooltip 
+                    labelFormatter={(d) => `Date: ${d}`} 
+                    formatter={(v) => [v, "Jobs"]} 
+                    contentStyle={{ backgroundColor: "rgba(30, 41, 59, 0.9)", border: "none", borderRadius: "8px", color: "#f8fafc" }}
+                    itemStyle={{ color: "#3b82f6", fontWeight: 600 }}
+                  />
+                  <Area type="monotone" dataKey="jobs" stroke="#3b82f6" strokeWidth={2} fill="url(#jobGrad)" dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </Section>
+
+          {/* ── Charts Row 2: Status Pie ── */}
+          <Section title="Job Status Distribution">
           {statusDist.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-10">No jobs yet</p>
           ) : (
             <div className="flex items-center gap-6">
               <ResponsiveContainer width="55%" height={220}>
                 <PieChart>
-                  <Pie data={statusDist} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={85} innerRadius={45}>
+                  <Pie data={statusDist} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={85} innerRadius={45} stroke="none">
                     {statusDist.map((entry) => (
-                      <Cell key={entry.status} fill={STATUS_COLORS[entry.status] ?? "#94a3b8"} />
+                      <Cell key={entry.status} fill={STATUS_COLORS[entry.status] ?? "#94a3b8"} stroke="none" />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v, n) => [v, n.replace(/_/g, " ")]} />
+                  <Tooltip 
+                    formatter={(v, n) => [v, n.replace(/_/g, " ")]} 
+                    contentStyle={{ backgroundColor: "rgba(30, 41, 59, 0.9)", border: "none", borderRadius: "8px", color: "#f8fafc" }}
+                    itemStyle={{ color: "#f8fafc", fontWeight: 600 }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex flex-col gap-2">
                 {statusDist.map((entry) => (
                   <div key={entry.status} className="flex items-center gap-2 text-xs">
                     <span className="w-3 h-3 rounded-full shrink-0" style={{ background: STATUS_COLORS[entry.status] ?? "#94a3b8" }} />
-                    <span className="text-gray-600 capitalize">{entry.status.replace(/_/g, " ")}</span>
-                    <span className="ml-auto font-semibold text-gray-800">{entry.count}</span>
+                    <span className="text-gray-600 dark:text-gray-300 capitalize">{entry.status.replace(/_/g, " ")}</span>
+                    <span className="ml-auto font-semibold text-gray-800 dark:text-gray-100">{entry.count}</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
         </Section>
+        </div>
+      )}
 
-        <Section title="Fault Category Breakdown">
+      {activeTab === "fault-analysis" && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <Section title="Fault Category Breakdown">
+            <div className="bg-gray-50/80 dark:bg-gray-900/40 px-3 py-2 rounded-xl mb-3 grid grid-cols-1 md:grid-cols-5 gap-3 items-end border border-gray-100 dark:border-gray-800">
+            
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Time Range</label>
+              <select 
+                value={datePreset} 
+                onChange={(e) => handlePresetChange(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2 dark:bg-gray-900 dark:border-gray-700 dark:placeholder-gray-400 dark:text-gray-200"
+              >
+                <option value="custom">Custom Date Range</option>
+                <option value="last_7_days">Last 7 Days</option>
+                <option value="current_month">Current Month</option>
+                <option value="last_month">Last Month</option>
+                <option value="last_3_months">Last 3 Months</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Start Date</label>
+              <input 
+                type="date"
+                value={faultFilters.startDate} 
+                onChange={(e) => {
+                  setDatePreset("custom");
+                  setFaultFilters({ ...faultFilters, startDate: e.target.value });
+                }}
+                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2 dark:bg-gray-900 dark:border-gray-700 dark:placeholder-gray-400 dark:text-gray-200"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">End Date</label>
+              <input 
+                type="date"
+                value={faultFilters.endDate} 
+                onChange={(e) => {
+                  setDatePreset("custom");
+                  setFaultFilters({ ...faultFilters, endDate: e.target.value });
+                }}
+                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2 dark:bg-gray-900 dark:border-gray-700 dark:placeholder-gray-400 dark:text-gray-200"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Brand</label>
+              <select 
+                value={faultFilters.brand} 
+                onChange={(e) => setFaultFilters({ ...faultFilters, brand: e.target.value })}
+                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2 dark:bg-gray-900 dark:border-gray-700 dark:placeholder-gray-400 dark:text-gray-200"
+              >
+                <option value="all">All Brands</option>
+                <option value="Apple">Apple</option>
+                <option value="Samsung">Samsung</option>
+                <option value="Google">Google</option>
+                <option value="OnePlus">OnePlus</option>
+                <option value="Motorola">Motorola</option>
+                <option value="Nokia">Nokia</option>
+                <option value="Nothing">Nothing</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Model</label>
+              <select 
+                value={faultFilters.model} 
+                onChange={(e) => setFaultFilters({ ...faultFilters, model: e.target.value })}
+                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2 dark:bg-gray-900 dark:border-gray-700 dark:placeholder-gray-400 dark:text-gray-200"
+              >
+                <option value="all">All Models</option>
+                {(Array.isArray(deviceModels) ? deviceModels : []).map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+            </div>
+          
           {faultDist.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-10">No jobs yet</p>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={faultDist} layout="vertical" margin={{ top: 4, right: 16, left: 70, bottom: 0 }}>
+              <BarChart data={faultDist} layout="vertical" margin={{ top: 4, right: 16, left: 90, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
-                <YAxis type="category" dataKey="fault_category" tick={{ fontSize: 10 }} width={68} tickFormatter={(v) => v.replace(/_/g, " ")} />
-                <Tooltip formatter={(v) => [v, "Jobs"]} labelFormatter={(l) => l.replace(/_/g, " ")} />
-                <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+                <YAxis type="category" dataKey="fault_category" tick={{ fontSize: 12 }} width={100} interval={0} tickFormatter={(v) => v.replace(/_/g, " ")} />
+                <Tooltip 
+                  formatter={(v) => [v, "Jobs"]} 
+                  labelFormatter={(l) => l.replace(/_/g, " ")} 
+                  contentStyle={{ backgroundColor: "rgba(30, 41, 59, 0.9)", border: "none", borderRadius: "8px", color: "#f8fafc" }}
+                  itemStyle={{ color: "#38bdf8", fontWeight: 600 }}
+                />
+                <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={22}>
                   {faultDist.map((_, i) => (
                     <Cell key={i} fill={FAULT_COLORS[i % FAULT_COLORS.length]} />
                   ))}
@@ -205,53 +443,93 @@ export default function AnalyticsDashboard() {
           )}
         </Section>
       </div>
+      )}
 
-      {/* ── Technician Performance Table ─────────────────── */}
-      <Section title="Technician Performance">
-        {techStats.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">No technicians registered yet</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  {["Technician", "Total Jobs", "Active", "Completed", "Delivered", "Unclaimed"].map((h) => (
-                    <th key={h} className="text-left pb-2 text-xs font-semibold text-gray-400 uppercase pr-4">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {techStats.map((t) => (
-                  <tr key={t.technician_id} className="hover:bg-gray-50">
-                    <td className="py-2.5 font-medium text-gray-800 pr-4">{t.name}</td>
-                    <td className="py-2.5 font-bold text-gray-700 pr-4">{t.total}</td>
-                    <td className="py-2.5 pr-4">
-                      <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
-                        {t.status_breakdown.in_progress ?? 0}
-                      </span>
-                    </td>
-                    <td className="py-2.5 pr-4">
-                      <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">
-                        {t.status_breakdown.completed ?? 0}
-                      </span>
-                    </td>
-                    <td className="py-2.5 pr-4">
-                      <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
-                        {t.status_breakdown.delivered ?? 0}
-                      </span>
-                    </td>
-                    <td className="py-2.5">
-                      <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">
-                        {t.status_breakdown.unclaimed ?? 0}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Section>
+      {activeTab === "leaderboard" && (
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          {/* ── Comprehensive Technician Leaderboard ─────────────────── */}
+          <Section title="Comprehensive Technician Leaderboard">
+            {combinedTechs.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-6">No technicians registered yet</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 dark:border-gray-800">
+                      <th className="text-left pb-2 text-xs font-semibold text-gray-400 uppercase pr-4">Technician</th>
+                      <th className="text-left pb-2 text-xs font-semibold text-gray-400 uppercase pr-4">Workload</th>
+                      <th className="text-left pb-2 text-xs font-semibold text-gray-400 uppercase pr-4">Completed</th>
+                      <th className="text-left pb-2 text-xs font-semibold text-gray-400 uppercase pr-4">Top Specialty</th>
+                      <th className="text-left pb-2 text-xs font-semibold text-gray-400 uppercase pr-4">Score</th>
+                      <th className="text-left pb-2 text-xs font-semibold text-gray-400 uppercase pr-4">Rating</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                    {combinedTechs.map((t, idx) => (
+                      <tr key={t.technician_id} className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">
+                        <td className="py-3 font-medium text-gray-800 dark:text-gray-100 flex items-center gap-2 pr-4">
+                          {idx === 0 && t.score !== null && <span title="Top Performer">🥇</span>}
+                          {idx === 1 && t.score !== null && <span title="Runner Up">🥈</span>}
+                          {idx === 2 && t.score !== null && <span title="Third Place">🥉</span>}
+                          {idx > 2 && <span className="w-5 text-center text-gray-400 dark:text-gray-500">{idx + 1}</span>}
+                          {(idx === 0 || idx === 1 || idx === 2) && t.score === null && <span className="w-5 text-center text-gray-400 dark:text-gray-500">{idx + 1}</span>}
+                          {t.name}
+                        </td>
+                        <td className="py-3 pr-4">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-700 dark:text-gray-200">{t.total} <span className="font-normal text-xs text-gray-500">Total</span></span>
+                            <span className="text-xs text-blue-600 dark:text-blue-400 font-semibold">{t.status_breakdown.in_progress ?? 0} Active</span>
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4">
+                          <div className="flex gap-2">
+                            <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 text-xs font-semibold" title="Completed">
+                              {(t.status_breakdown.completed ?? 0) + (t.status_breakdown.delivered ?? 0)}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4">
+                          {t.specialty ? (
+                            <span className="px-2 py-1 rounded border border-indigo-200 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-800/50 dark:text-indigo-400 text-xs font-semibold">
+                              ⭐ {t.specialty}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs italic">Evaluating...</span>
+                          )}
+                        </td>
+                        <td className="py-3 pr-4 min-w-[120px]">
+                          {t.score !== null ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div className="h-full bg-brand-500 rounded-full" style={{width: `${Math.min(t.score, 100)}%`}}></div>
+                              </div>
+                              <span className="font-bold text-gray-800 dark:text-gray-200 text-xs">{Math.round(t.score)}</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-xs">N/A</span>
+                          )}
+                        </td>
+                        <td className="py-3">
+                          {t.rating ? (
+                            <span className={`px-2 py-1 rounded-md text-xs font-semibold ${
+                              t.rating === "Excellent" ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400" :
+                              t.rating === "Good" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400" : "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-400"
+                            }`}>
+                              {t.rating}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Section>
+        </div>
+      )}
     </div>
   );
 }

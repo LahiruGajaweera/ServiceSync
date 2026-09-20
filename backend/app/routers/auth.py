@@ -12,6 +12,7 @@ from app.schemas.auth import (
     OtpRequestResponse,
     OtpVerifyRequest,
     ResetPasswordRequest,
+    SetupCompleteRequest,
     SetupStatusResponse,
     TokenResponse,
     UpdatePasswordRequest,
@@ -32,9 +33,14 @@ def request_setup_otp(request: OtpRequest, db: Session = Depends(get_db)):
     return auth_service.request_admin_otp(request, db)
 
 
-@router.post("/setup/verify-otp", response_model=TokenResponse, status_code=201)
+@router.post("/setup/verify-otp", status_code=200)
 def verify_setup_otp(request: OtpVerifyRequest, db: Session = Depends(get_db)):
     return auth_service.verify_admin_otp(request.otp_id, request.code, db)
+
+
+@router.post("/setup/complete", response_model=TokenResponse, status_code=201)
+def complete_setup(request: SetupCompleteRequest, db: Session = Depends(get_db)):
+    return auth_service.complete_admin_setup(request.otp_id, request.password, db)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -57,14 +63,22 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
     return auth_service.reset_password(request.otp_id, request.code, request.new_password, db)
 
 
+@router.post("/update-password/request-otp", response_model=OtpRequestResponse, status_code=201)
+def request_update_password_otp(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return auth_service.request_update_password_otp(current_user, db)
+
+
 @router.post("/update-password", response_model=TokenResponse)
 def update_password(
     request: UpdatePasswordRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Authenticated user replaces their (temporary) password."""
-    return auth_service.update_password(current_user, request.new_password, db)
+    """Authenticated user replaces their (temporary) password with OTP verification."""
+    return auth_service.update_password(current_user, request.new_password, request.otp_id, request.code, db)
 
 
 @router.get("/me", response_model=UserResponse)

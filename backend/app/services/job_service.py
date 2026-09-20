@@ -1,14 +1,15 @@
 import secrets
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 from uuid import UUID
 
 from fastapi import HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session, aliased
 
 from app.models.customer import Customer
-from app.models.job import Job, JobStatusHistory
+from app.models.job import Job, JobStatusHistory, JobImage
 from app.models.user import User
-from app.schemas.job import AssignTechnicianRequest, JobCreate, JobStatusUpdate
+from app.models.invoice import Invoice
+from app.schemas.job import AssignTechnicianRequest, JobCreate, JobStatusUpdate, TimerToggleRequest, AutoResumeRequest
 
 
 # ─── helpers ─────────────────────────────────────────────────────────────────
@@ -21,7 +22,13 @@ def _generate_job_id(db: Session) -> str:
     raise RuntimeError("Could not generate a unique Job ID — retry the request")
 
 
-def _job_dict(job: Job, customer_name=None, customer_phone=None, technician_name=None) -> dict:
+def _job_dict(job: Job, customer_name=None, customer_phone=None, technician_name=None, images=None, warranty_days=None) -> dict:
+    is_warranty_valid = None
+    warranty_valid_until = None
+    if job.completed_date and warranty_days:
+        warranty_valid_until = (job.completed_date + timedelta(days=warranty_days)).date()
+        is_warranty_valid = warranty_valid_until >= datetime.now(timezone.utc).date()
+
     return {
         "id": job.id,
         "job_id": job.job_id,
@@ -30,6 +37,7 @@ def _job_dict(job: Job, customer_name=None, customer_phone=None, technician_name
         "customer_phone": customer_phone,
         "technician_id": job.technician_id,
         "technician_name": technician_name,
+        "job_type": job.job_type,
         "device_brand": job.device_brand,
         "device_model": job.device_model,
         "device_imei": job.device_imei,
@@ -41,16 +49,32 @@ def _job_dict(job: Job, customer_name=None, customer_phone=None, technician_name
         "investigated": job.investigated,
         "received_date": job.received_date,
         "completed_date": job.completed_date,
+        "is_warranty_valid": is_warranty_valid,
+        "warranty_valid_until": warranty_valid_until,
         "notes": job.notes,
         "revert_requested_to": job.revert_requested_to,
         "revert_reason": job.revert_reason,
         "admin_alert": job.admin_alert,
         "labor_cost": job.labor_cost,
+        "physical_condition": job.physical_condition,
+        "images": images or [],
         "created_at": job.created_at,
+        "rework_of_job_id": job.rework_of_job_id,
+        "rework_reason": job.rework_reason,
+        "active_repair_start_time": job.active_repair_start_time,
+        "total_diagnostic_seconds": job.total_diagnostic_seconds,
+        "total_active_repair_seconds": job.total_active_repair_seconds,
+        "current_timer_mode": job.current_timer_mode,
+        "qc_mic_tested": job.qc_mic_tested,
+        "qc_camera_tested": job.qc_camera_tested,
+        "qc_touch_tested": job.qc_touch_tested,
+        "qc_biometrics_tested": job.qc_biometrics_tested,
+        "qc_wifi_tested": job.qc_wifi_tested,
+        "qc_charging_tested": job.qc_charging_tested,
     }
 
 
-def _query_jobs(db: Session, status: str | None = None, technician_id: UUID | None = None, include_unassigned: bool = False):
+def _query_jobs(db: Session, status: str | None = None, technician_id: UUID | None = None, include_unassigned: bool = False, has_alerts: bool = False):
     TechAlias = aliased(User)
 
     q = (
@@ -59,9 +83,11 @@ def _query_jobs(db: Session, status: str | None = None, technician_id: UUID | No
             Customer.name.label("customer_name"),
             Customer.phone_number.label("customer_phone"),
             TechAlias.name.label("technician_name"),
+            Invoice.warranty_days.label("warranty_days"),
         )
         .join(Customer, Job.customer_id == Customer.id)
         .outerjoin(TechAlias, Job.technician_id == TechAlias.id)
+        .outerjoin(Invoice, Job.id == Invoice.job_id)
     )
 
     if status:
@@ -72,35 +98,120 @@ def _query_jobs(db: Session, status: str | None = None, technician_id: UUID | No
         else:
             q = q.filter(Job.technician_id == technician_id)
 
+    if has_alerts:
+        q = q.filter((Job.revert_requested_to.isnot(None)) | (Job.admin_alert.isnot(None)))
+
     return q.order_by(Job.created_at.desc()).all()
 
 
 # ─── public ──────────────────────────────────────────────────────────────────
 
+def toggle_timer(job_id: UUID, data: TimerToggleRequest, current_user: User, db: Session) -> dict:
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+        
+    if job.technician_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to toggle timer for this job")
+        
+    now_time = datetime.now(timezone.utc)
+    requested_mode = data.mode
+
+    if job.active_repair_start_time:
+        # A timer is running. Stop it and record elapsed time.
+        elapsed = (now_time - job.active_repair_start_time.replace(tzinfo=timezone.utc)).total_seconds()
+        
+        if job.current_timer_mode == "diagnostic":
+            job.total_diagnostic_seconds = (job.total_diagnostic_seconds or 0) + int(elapsed)
+        else:
+            job.total_active_repair_seconds = (job.total_active_repair_seconds or 0) + int(elapsed)
+            
+        job.active_repair_start_time = None
+        job.current_timer_mode = None
+        
+        # If the user clicked to switch to the OTHER mode (requested_mode is different than the one that was running)
+        # We start the new mode immediately. If requested_mode is None or same, it's just a pause.
+        if requested_mode and requested_mode != job.current_timer_mode: # wait, current_timer_mode is None now.
+            pass # We will handle starting the new mode below
+            
+    # If we are starting a timer (either because it was paused, or we just switched modes)
+    if requested_mode and not job.active_repair_start_time:
+        job.active_repair_start_time = now_time
+        job.current_timer_mode = requested_mode
+        if job.status == "pending":
+            job.status = "in_progress"
+            
+    db.commit()
+    db.refresh(job)
+    
+    customer = db.query(Customer).filter(Customer.id == job.customer_id).first()
+    tech = db.query(User).filter(User.id == job.technician_id).first()
+    return _job_dict(job, customer.name if customer else None, customer.phone_number if customer else None, tech.name if tech else None)
+
+
+def auto_resume_timer(job_id: UUID, data: AutoResumeRequest, current_user: User, db: Session) -> dict:
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+        
+    if job.technician_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to toggle timer for this job")
+        
+    now_time = datetime.now(timezone.utc)
+    
+    if data.away_seconds > 0:
+        # Cap away seconds to 12 hours max per session to prevent overnight penalties
+        capped_away = min(data.away_seconds, 12 * 3600)
+        job.total_away_seconds = (job.total_away_seconds or 0) + capped_away
+
+    # Start timer
+    job.active_repair_start_time = now_time
+    job.current_timer_mode = data.mode
+    if job.status == "pending":
+        job.status = "in_progress"
+            
+    db.commit()
+    db.refresh(job)
+    
+    customer = db.query(Customer).filter(Customer.id == job.customer_id).first()
+    tech = db.query(User).filter(User.id == job.technician_id).first()
+    return _job_dict(job, customer.name if customer else None, customer.phone_number if customer else None, tech.name if tech else None)
+
 def create_job(data: JobCreate, created_by: User, db: Session, background_tasks: BackgroundTasks = None) -> dict:
+    original_job_code = None
+    if data.rework_of_job_id:
+        parent_job = db.query(Job).filter(Job.id == data.rework_of_job_id).first()
+        if parent_job:
+            original_job_code = parent_job.job_id
+
     job = Job(
         job_id=_generate_job_id(db),
         customer_id=data.customer_id,
         technician_id=data.technician_id,
+        rework_of_job_id=data.rework_of_job_id,
+        job_type=data.job_type,
+        rework_reason=data.rework_reason,
         device_brand=data.device_brand,
         device_model=data.device_model,
         device_imei=data.device_imei,
         fault_category=data.fault_category,
         fault_description=data.fault_description,
         estimated_completion_date=data.estimated_completion_date,
-        estimated_cost=data.estimated_cost,
+        estimated_cost=data.estimated_cost if not data.rework_of_job_id else 0,
         investigated=data.investigated,
         notes=data.notes,
+        physical_condition=data.physical_condition,
         status="pending",
     )
     db.add(job)
     db.flush()  # populate job.id before inserting history
 
+    history_note = f"Warranty Claim registered (Rework of #{original_job_code})" if original_job_code else "Job registered"
     history = JobStatusHistory(
         job_id=job.id,
         status="pending",
         changed_by=created_by.id,
-        notes="Job registered",
+        notes=history_note,
     )
     db.add(history)
     db.commit()
@@ -114,9 +225,27 @@ def create_job(data: JobCreate, created_by: User, db: Session, background_tasks:
     return _job_dict(job, customer.name if customer else None, customer.phone_number if customer else None)
 
 
-def list_jobs(db: Session, status: str | None = None, technician_id: UUID | None = None, include_unassigned: bool = False) -> list[dict]:
-    rows = _query_jobs(db, status=status, technician_id=technician_id, include_unassigned=include_unassigned)
-    return [_job_dict(job, cname, cphone, tname) for job, cname, cphone, tname in rows]
+def list_jobs(db: Session, status: str | None = None, technician_id: UUID | None = None, include_unassigned: bool = False, has_alerts: bool = False) -> list[dict]:
+    rows = _query_jobs(db, status=status, technician_id=technician_id, include_unassigned=include_unassigned, has_alerts=has_alerts)
+    if not rows:
+        return []
+        
+    job_ids = [job.id for job, *_ in rows]
+    all_images = db.query(JobImage).filter(JobImage.job_id.in_(job_ids)).all()
+    images_by_job = {}
+    for img in all_images:
+        images_by_job.setdefault(img.job_id, []).append({
+            "id": img.id,
+            "file_path": img.file_path,
+            "created_at": img.created_at
+        })
+        
+    return [_job_dict(job, cname, cphone, tname, images_by_job.get(job.id, []), warranty_days) for job, cname, cphone, tname, warranty_days in rows]
+
+
+def get_all_identified_faults(db: Session) -> list[str]:
+    results = db.query(Job.identified_fault).filter(Job.identified_fault.isnot(None)).distinct().all()
+    return [r[0] for r in results if r[0]]
 
 
 def get_job(job_id: UUID, db: Session) -> dict:
@@ -127,16 +256,22 @@ def get_job(job_id: UUID, db: Session) -> dict:
             Customer.name.label("customer_name"),
             Customer.phone_number.label("customer_phone"),
             TechAlias.name.label("technician_name"),
+            Invoice.warranty_days.label("warranty_days"),
         )
         .join(Customer, Job.customer_id == Customer.id)
         .outerjoin(TechAlias, Job.technician_id == TechAlias.id)
+        .outerjoin(Invoice, Job.id == Invoice.job_id)
         .filter(Job.id == job_id)
         .first()
     )
     if not row:
         raise HTTPException(404, "Job not found")
-    job, cname, cphone, tname = row
-    return _job_dict(job, cname, cphone, tname)
+    job, cname, cphone, tname, warranty_days = row
+    
+    images = db.query(JobImage).filter(JobImage.job_id == job_id).all()
+    images_list = [{"id": img.id, "file_path": img.file_path, "created_at": img.created_at} for img in images]
+    
+    return _job_dict(job, cname, cphone, tname, images_list, warranty_days)
 
 def clear_admin_alert(job_id: UUID, db: Session) -> dict:
     job = db.query(Job).filter(Job.id == job_id).first()
@@ -153,22 +288,34 @@ def clear_admin_alert(job_id: UUID, db: Session) -> dict:
 
 def get_job_by_public_id(public_id: str, db: Session) -> dict | None:
     row = (
-        db.query(Job)
+        db.query(Job, Invoice.warranty_days.label("warranty_days"))
+        .outerjoin(Invoice, Job.id == Invoice.job_id)
         .filter(Job.job_id == public_id.upper())
         .first()
     )
     if not row:
         return None
+    job, warranty_days = row
+        
+    is_warranty_valid = None
+    warranty_valid_until = None
+    if job.completed_date and warranty_days:
+        warranty_valid_until = (job.completed_date + timedelta(days=warranty_days)).date()
+        is_warranty_valid = warranty_valid_until >= datetime.now(timezone.utc).date()
+
     return {
-        "job_id": row.job_id,
-        "device_brand": row.device_brand,
-        "device_model": row.device_model,
-        "fault_category": row.fault_category,
-        "status": row.status,
-        "estimated_completion_date": row.estimated_completion_date,
-        "estimated_cost": row.estimated_cost,
-        "received_date": row.received_date,
-        "completed_date": row.completed_date,
+        "job_id": job.job_id,
+        "job_type": job.job_type,
+        "device_brand": job.device_brand,
+        "device_model": job.device_model,
+        "fault_category": job.fault_category,
+        "status": job.status,
+        "estimated_completion_date": job.estimated_completion_date,
+        "estimated_cost": job.estimated_cost,
+        "received_date": job.received_date,
+        "completed_date": job.completed_date,
+        "is_warranty_valid": is_warranty_valid,
+        "warranty_valid_until": warranty_valid_until,
     }
 
 
@@ -177,7 +324,16 @@ def update_status(job_id: UUID, data: JobStatusUpdate, changed_by: User, db: Ses
     if not job:
         raise HTTPException(404, "Job not found")
 
-    STATUS_ORDER = {"pending": 0, "in_progress": 1, "completed": 2, "ready_for_pickup": 3, "delivered": 4, "unclaimed": 4}
+    STATUS_ORDER = {
+        "pending": 0, 
+        "in_progress": 1, 
+        "completed": 2, 
+        "failed": 2,
+        "rejected": 2,
+        "ready_for_pickup": 3, 
+        "delivered": 4, 
+        "unclaimed": 4
+    }
     current_order = STATUS_ORDER.get(job.status, 0)
     new_order = STATUS_ORDER.get(data.status, 0)
 
@@ -187,18 +343,39 @@ def update_status(job_id: UUID, data: JobStatusUpdate, changed_by: User, db: Ses
     if changed_by.role == "technician":
         if job.technician_id != changed_by.id:
             raise HTTPException(403, "You must claim this job before updating its status")
-        if data.status not in ["pending", "in_progress", "completed"]:
-            raise HTTPException(403, "Technicians can only update status up to 'completed'")
+        if data.status not in ["pending", "in_progress", "completed", "failed", "rejected"]:
+            raise HTTPException(403, "Technicians can only update status up to completed/failed/rejected")
     elif changed_by.role == "admin":
         if new_order in [1, 2] and current_order < 3:
-            raise HTTPException(403, "Admins cannot update job to 'in_progress' or 'completed'. This is the technician's role.")
+            raise HTTPException(403, "Admins cannot update job to 'in_progress', 'completed', 'failed', or 'rejected'. This is the technician's role.")
 
     job.status = data.status
-    if data.estimated_cost is not None and data.status == "completed":
+    if data.estimated_cost is not None and data.status in ["completed", "failed", "rejected"]:
         job.estimated_cost = data.estimated_cost
 
-    if data.status == "completed":
+    if data.status in ["completed", "failed", "rejected"]:
         job.completed_date = datetime.now(timezone.utc)
+        
+        # Save structured completion data
+        if data.actual_fault is not None:
+            job.actual_fault = data.actual_fault
+        if data.identified_fault is not None:
+            job.identified_fault = data.identified_fault
+        if data.complexity_level is not None:
+            job.complexity_level = data.complexity_level
+        if data.diagnostic_time_mins is not None:
+            job.diagnostic_time_mins = data.diagnostic_time_mins
+        if data.repair_time_mins is not None:
+            job.repair_time_mins = data.repair_time_mins
+        if data.resolution_notes is not None:
+            job.resolution_notes = data.resolution_notes
+            
+        if data.qc_mic_tested is not None: job.qc_mic_tested = data.qc_mic_tested
+        if data.qc_camera_tested is not None: job.qc_camera_tested = data.qc_camera_tested
+        if data.qc_touch_tested is not None: job.qc_touch_tested = data.qc_touch_tested
+        if data.qc_biometrics_tested is not None: job.qc_biometrics_tested = data.qc_biometrics_tested
+        if data.qc_wifi_tested is not None: job.qc_wifi_tested = data.qc_wifi_tested
+        if data.qc_charging_tested is not None: job.qc_charging_tested = data.qc_charging_tested
 
     history = JobStatusHistory(
         job_id=job.id,
@@ -235,15 +412,15 @@ def get_job_history(job_id: UUID, db: Session) -> list[dict]:
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
         raise HTTPException(404, "Job not found")
-    history = (
-        db.query(JobStatusHistory)
+    rows = (
+        db.query(JobStatusHistory, User)
+        .outerjoin(User, JobStatusHistory.changed_by == User.id)
         .filter(JobStatusHistory.job_id == job_id)
         .order_by(JobStatusHistory.created_at.asc())
         .all()
     )
     result = []
-    for h in history:
-        tech = db.query(User).filter(User.id == h.changed_by).first()
+    for h, tech in rows:
         result.append({
             "id": h.id,
             "status": h.status,

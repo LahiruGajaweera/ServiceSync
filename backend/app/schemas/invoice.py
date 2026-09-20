@@ -14,6 +14,12 @@ class JobPartCreate(BaseModel):
     quantity: int = 1
     unit_cost: Decimal | None = None  # auto-filled from batch for inventory parts
     override_price: Decimal | None = None
+    serial_number: str | None = None
+    warranty_days: int | None = None
+
+
+class JobPartUpdate(BaseModel):
+    warranty_days: int | None = None
 
 
 class ConsumeByBatchRequest(BaseModel):
@@ -23,6 +29,8 @@ class ConsumeByBatchRequest(BaseModel):
     job_id: UUID
     technician_id: UUID | None = None
     quantity: int = 1
+    serial_number: str | None = None
+    warranty_days: int | None = None
 
 
 class JobPartResponse(BaseModel):
@@ -40,6 +48,7 @@ class JobPartResponse(BaseModel):
     unit_cost: Decimal
     unit_price: Decimal | None = None
     part_name: str | None = None
+    warranty_days: int | None = None
     created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
@@ -48,23 +57,29 @@ class JobPartResponse(BaseModel):
 class InvoiceCreate(BaseModel):
     job_id: UUID
     labor_cost: Decimal = Decimal("0.00")
+    discount_amount: Decimal = Decimal("0.00")
     tax_rate: Decimal = Decimal("0.00")
+    warranty_days: int | None = None
 
 
 class MarkPaidRequest(BaseModel):
-    payment_method: Literal["cash", "card", "transfer"]
+    payment_method: Literal["cash", "card", "transfer", "payhere"]
+    payment_reference: str | None = None
 
 
 class InvoiceResponse(BaseModel):
     id: UUID
     job_id: UUID
     subtotal: Decimal
+    discount_amount: Decimal
     tax_amount: Decimal
     total_amount: Decimal
     payment_status: str
     payment_method: str | None
+    payment_reference: str | None
     qr_code_data: str | None
     paid_at: datetime | None
     created_at: datetime | None
+    warranty_days: int | None = None
 
     model_config = {"from_attributes": True}

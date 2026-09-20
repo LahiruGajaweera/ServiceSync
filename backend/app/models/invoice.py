@@ -10,6 +10,7 @@ class Invoice(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), unique=True, nullable=False)
     subtotal = Column(Numeric(10, 2), nullable=False, default=0)
+    discount_amount = Column(Numeric(10, 2), nullable=False, default=0)
     tax_amount = Column(Numeric(10, 2), nullable=False, default=0)
     total_amount = Column(Numeric(10, 2), nullable=False, default=0)
     payment_status = Column(
@@ -18,7 +19,9 @@ class Invoice(Base):
         default="unpaid",
     )
     payment_method = Column(String(50), nullable=True)
+    payment_reference = Column(String(255), nullable=True)
     qr_code_data = Column(Text, nullable=True)
+    warranty_days = Column(Integer, nullable=True)
     paid_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -41,10 +44,14 @@ class JobPartUsed(Base):
     batch_id = Column(
         UUID(as_uuid=True), ForeignKey("inventory_batches.id"), nullable=True
     )
+    inventory_unit_id = Column(
+        UUID(as_uuid=True), ForeignKey("inventory_units.id"), nullable=True
+    )
     used_by_technician_id = Column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     quantity = Column(Integer, nullable=False, default=1)
     unit_cost = Column(Numeric(10, 2), nullable=False, default=0)
     unit_price = Column(Numeric(10, 2), nullable=False, default=0)
+    warranty_days = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

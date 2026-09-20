@@ -9,7 +9,7 @@ router = APIRouter(prefix="/chatbot", tags=["chatbot"])
 @router.post("/message", response_model=ChatResponse)
 async def send_message(request: ChatRequest, db: Session = Depends(get_db)):
     try:
-        result = await process_chat_message(request.message, db)
+        result = await process_chat_message(request.message, request.history, db)
         return ChatResponse(reply=result["reply"], job_data=result.get("job_data"))
     except Exception as e:
         raise HTTPException(

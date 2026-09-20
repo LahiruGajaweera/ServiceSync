@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 class InventoryItemCreate(BaseModel):
     name: str
+    model_number: str | None = None
     category: str
     compatible_brands: list[str] = []
     compatible_models: list[str] = []
@@ -19,7 +20,8 @@ class InventoryItemCreate(BaseModel):
     unit_cost: Decimal | None = None
     unit_price: Decimal | None = None
     supplier: str | None = None
-
+    serial_numbers: list[str] | None = None
+    warranty_days: int | None = None
 
 class StockAdjustRequest(BaseModel):
     delta: int  # positive = restock, negative = consume
@@ -35,18 +37,27 @@ class ReceiveStockRequest(BaseModel):
     unit_cost: Decimal
     quantity: int
     purchased_at: datetime | None = None
-    new_selling_price: Decimal | None = None
+    unit_price: Decimal
+    warranty_days: int | None = None
+    serial_numbers: list[str] | None = None
 
 
 class InventoryItemUpdate(BaseModel):
     name: str | None = None
+    model_number: str | None = None
+    sku: str | None = None
     category: str | None = None
+    reorder_level: int | None = None
     compatible_brands: list[str] | None = None
     compatible_models: list[str] | None = None
     part_type: Literal["factory_new", "salvaged"] | None = None
     min_stock_threshold: int | None = None
     track_serial: bool | None = None
-    supplier: str | None = None
+
+class UnitStatusUpdateRequest(BaseModel):
+    status: str
+    reason: str
+    note: str | None = None
 
 
 class InventoryBatchResponse(BaseModel):
@@ -55,10 +66,13 @@ class InventoryBatchResponse(BaseModel):
     inventory_item_id: UUID
     supplier: str | None = None
     unit_cost: Decimal
+    unit_price: Decimal
     quantity_received: int
     quantity_remaining: int
+    warranty_days: int | None = None
     purchased_at: datetime | None = None
     created_at: datetime | None = None
+    units: list[dict] | None = None
 
     model_config = {"from_attributes": True}
 
@@ -67,14 +81,13 @@ class InventoryItemResponse(BaseModel):
     id: UUID
     sku: str | None = None
     name: str
+    model_number: str | None = None
     category: str
     compatible_brands: list
     compatible_models: list
     part_type: str
     quantity: int
-    unit_price: Decimal
     min_stock_threshold: int
-    supplier: str | None = None
     track_serial: bool = False
     is_low_stock: bool = False
     batches: list[InventoryBatchResponse] = []

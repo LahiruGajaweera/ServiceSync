@@ -25,10 +25,10 @@ export default function DateTimeDisplay() {
 
   return (
     <div className="flex items-center space-x-3 text-sm">
-      <div className="font-semibold text-gray-900 text-base">
+      <div className="font-semibold text-gray-900 dark:text-white text-base">
         {formattedTime}
       </div>
-      <div className="font-medium text-gray-800 border-l border-gray-300 pl-3">
+      <div className="font-medium text-gray-800 dark:text-gray-100 border-l border-gray-300 dark:border-gray-600 pl-3">
         {formattedDate}
       </div>
     </div>

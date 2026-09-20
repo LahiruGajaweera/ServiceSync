@@ -1,179 +1,415 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from "recharts";
 import api from "../../services/api";
 
-function AlertCard({ title, value, type, message }) {
-  const styles = {
-    critical: "bg-red-50 border-red-200 text-red-800",
-    warning: "bg-amber-50 border-amber-200 text-amber-800",
-    ok: "bg-green-50 border-green-200 text-green-800",
-  };
-  const currentStyle = styles[type] || styles.ok;
+function CustomSearchSelect({ value, onChange, options, placeholder }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!query) return options;
+    return options.filter(o => o.toLowerCase().includes(query.toLowerCase()));
+  }, [options, query]);
 
   return (
-    <div className={`p-4 rounded-xl border ${currentStyle} flex flex-col justify-between`}>
-      <h4 className="font-bold">{title}</h4>
-      <p className="text-sm mt-1">{message}</p>
-      <div className="mt-4 flex items-end justify-between">
-        <span className="text-2xl font-black">{value}</span>
-      </div>
+    <div className="relative" ref={wrapRef}>
+      <button 
+        type="button" 
+        onClick={() => { setOpen(!open); setQuery(""); }}
+        className="flex items-center justify-between px-3 py-1.5 w-32 md:w-40 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
+      >
+        <span className="truncate">{value || placeholder}</span>
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+            <input 
+              type="text"
+              autoFocus
+              placeholder="Search..."
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              className="w-full px-2 py-1.5 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-brand-500"
+            />
+          </div>
+          <ul className="max-h-48 overflow-y-auto text-sm">
+            <li 
+              onClick={() => { onChange(""); setOpen(false); }}
+              className={`px-3 py-2 cursor-pointer hover:bg-brand-50 dark:hover:bg-gray-700 ${!value ? "font-bold text-brand-600" : "text-gray-700 dark:text-gray-200"}`}
+            >
+              {placeholder}
+            </li>
+            {filtered.map(opt => (
+              <li 
+                key={opt}
+                onClick={() => { onChange(opt); setOpen(false); }}
+                className={`px-3 py-2 cursor-pointer hover:bg-brand-50 dark:hover:bg-gray-700 ${value === opt ? "font-bold text-brand-600" : "text-gray-700 dark:text-gray-200"}`}
+              >
+                {opt}
+              </li>
+            ))}
+            {filtered.length === 0 && <li className="px-3 py-2 text-gray-400">No results</li>}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function PredictiveAnalytics() {
-  const [inventoryForecast, setInventoryForecast] = useState([]);
   const [faultTrends, setFaultTrends] = useState([]);
+  const [deviceTrends, setDeviceTrends] = useState([]);
+  const [criticalInventory, setCriticalInventory] = useState([]);
   const [techScores, setTechScores] = useState([]);
+  const [selectedBrand, setSelectedBrand] = useState("");
+  const [selectedDevice, setSelectedDevice] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState("Colombo");
+  const [selectedFaultCategory, setSelectedFaultCategory] = useState("");
+  const [brands, setBrands] = useState([]);
+  const [models, setModels] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const faultCategories = [
+    { value: "screen", label: "Screen" },
+    { value: "battery", label: "Battery" },
+    { value: "charging_port", label: "Charging Port" },
+    { value: "camera", label: "Camera" },
+    { value: "speaker", label: "Speaker" },
+    { value: "software", label: "Software" },
+    { value: "water_damage", label: "Water Damage" },
+    { value: "other", label: "Other" }
+  ];
 
   useEffect(() => {
-    const load = async () => {
+    const fetchBrands = async () => {
       try {
-        const [invRes, faultsRes, techRes] = await Promise.all([
-          api.get("/analytics/predictions/inventory"),
-          api.get("/analytics/predictions/faults"),
-          api.get("/analytics/technician-performance"),
-        ]);
-        setInventoryForecast(invRes.data);
-        setFaultTrends(faultsRes.data);
-        setTechScores(techRes.data);
+        const { data } = await api.get("/brands/");
+        setBrands(data.map(b => b.name));
       } catch (e) {
-        console.error("Failed to load predictions", e);
-      } finally {
-        setLoading(false);
+        console.error("Failed to load brands", e);
       }
     };
-    load();
+    fetchBrands();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="p-8 flex items-center justify-center h-64">
-        <div className="text-gray-400 text-sm animate-pulse">Running AI Forecasts...</div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    const fetchModels = async () => {
+      if (!selectedBrand) {
+        setModels([]);
+        return;
+      }
+      try {
+        const { data } = await api.get("/models/", { params: { brand: selectedBrand } });
+        setModels(data.map(m => m.name));
+      } catch (e) {
+        console.error("Failed to load models", e);
+      }
+    };
+    fetchModels();
+  }, [selectedBrand]);
 
-  const criticalInventory = inventoryForecast.filter(i => i.status === "critical" || i.status === "warning");
+  useEffect(() => {
+    const fetchDevices = async () => {
+      try {
+        const params = selectedFaultCategory ? { fault_category: selectedFaultCategory } : {};
+        const { data } = await api.get("/analytics/predictions/devices", { params });
+        setDeviceTrends(data);
+      } catch (e) {
+        console.error("Failed to load device trends", e);
+      }
+    };
+    fetchDevices();
+  }, [selectedFaultCategory]);
+
+  useEffect(() => {
+    const fetchAll = async () => {
+      if (!loading) setIsUpdating(true);
+      try {
+        const params = { location: selectedLocation };
+        if (selectedBrand) params.device_brand = selectedBrand;
+        if (selectedDevice) params.device_model = selectedDevice;
+
+        const [faultsRes, invRes, techRes] = await Promise.all([
+          api.get("/analytics/predictions/faults", { params }),
+          api.get("/analytics/predictions/inventory").catch(() => ({ data: [] })),
+          api.get("/analytics/leaderboard").catch(() => ({ data: [] }))
+        ]);
+        
+        setFaultTrends(faultsRes.data);
+        if (invRes.data) {
+          setCriticalInventory(invRes.data.filter(i => i.restock_recommended > 0));
+        }
+        if (techRes.data) {
+          setTechScores(techRes.data);
+        }
+      } catch (e) {
+        console.error("Failed to load analytics data", e);
+      } finally {
+        setLoading(false);
+        setIsUpdating(false);
+      }
+    };
+    fetchAll();
+  }, [selectedBrand, selectedDevice, selectedLocation]);
 
   return (
     <div className="p-6 space-y-8">
       <div className="flex flex-col mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">AI Predictions & Smart Alerts</h2>
-        <p className="text-sm text-gray-500">Time-Series Forecasting using Scikit-Learn and ARIMA models</p>
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">AI Predictions & Smart Alerts</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Time-Series Forecasting using Scikit-Learn and ARIMA models</p>
       </div>
 
-      {/* Smart Alerts Section */}
       <section>
-        <h3 className="font-semibold text-gray-700 mb-4 text-sm uppercase tracking-wide">Smart Alerts: Inventory Demand</h3>
+        <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-4 text-sm uppercase tracking-wide">Smart Alerts: Inventory Demand</h3>
         {criticalInventory.length === 0 ? (
           <div className="p-4 bg-green-50 text-green-700 rounded-xl border border-green-200">
             ✅ No critical stock shortages predicted for the upcoming week based on historical usage.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="flex flex-col gap-3">
             {criticalInventory.map((inv, idx) => (
-              <AlertCard
-                key={idx}
-                type={inv.status}
-                title={inv.part_name}
-                value={`${inv.restock_recommended} needed`}
-                message={`Predicted demand: ${inv.predicted_demand}. Current stock: ${inv.current_stock}.`}
-              />
+              <div key={idx} className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+                <span className="text-xl">⚠️</span>
+                <div>
+                  <h4 className="font-bold text-red-800">Critical Shortage Predicted: {inv.part_name}</h4>
+                  <p className="text-sm text-red-600">
+                    Current Stock: {inv.current_stock} | Predicted Demand: {inv.predicted_demand} | 
+                    Restock Recommendation: <span className="font-bold">+{inv.restock_recommended} units</span>
+                  </p>
+                </div>
+              </div>
             ))}
           </div>
         )}
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Fault Trends */}
-        <section className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="font-semibold text-gray-700 mb-4 text-sm uppercase tracking-wide">Trending Faults (Next Month)</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="text-gray-500 border-b">
-                  <th className="pb-2">Fault Category</th>
-                  <th className="pb-2">Current Avg/Mo</th>
-                  <th className="pb-2">Predicted</th>
-                  <th className="pb-2">Trend</th>
-                </tr>
-              </thead>
-              <tbody>
-                {faultTrends.length === 0 ? (
-                  <tr><td colSpan="4" className="py-4 text-center text-gray-400">Not enough data to forecast</td></tr>
-                ) : (
-                  faultTrends.map((f, idx) => (
-                    <tr key={idx} className="border-b last:border-0">
-                      <td className="py-3 capitalize font-medium">{f.fault_category.replace(/_/g, " ")}</td>
-                      <td className="py-3">{f.current_avg}</td>
-                      <td className="py-3 font-semibold">{f.forecasted}</td>
-                      <td className="py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                          f.status === "increasing" ? "bg-red-100 text-red-700" :
-                          f.status === "decreasing" ? "bg-green-100 text-green-700" :
-                          "bg-gray-100 text-gray-700"
+      <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-brand-100 dark:border-gray-700">
+        <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h3 className="font-bold text-gray-800 dark:text-gray-100 text-lg uppercase tracking-wide flex items-center gap-2">
+              <span className="text-brand-600">📈</span> Trending Devices Forecast
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-2xl">
+              This chart highlights the top 10 smartphone models predicted to have the highest repair volume next month. 
+              Use this insight to proactively stock up on parts for these specific models.
+            </p>
+          </div>
+          <select
+            value={selectedFaultCategory}
+            onChange={(e) => setSelectedFaultCategory(e.target.value)}
+            className="px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
+          >
+            <option value="">All Repair Types</option>
+            {faultCategories.map((c) => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
+          </select>
+        </div>
+        
+        {deviceTrends.length === 0 ? (
+          <div className="py-10 text-center text-gray-400">Not enough data to forecast device trends</div>
+        ) : (
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={deviceTrends.slice(0, 10).map(d => ({ ...d, forecasted: Math.round(d.forecasted) }))} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <XAxis dataKey="device_model" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
+                <YAxis tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip 
+                  cursor={{fill: '#f9fafb'}}
+                  contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                />
+                <Bar dataKey="forecasted" name="Expected Repairs" radius={[6, 6, 0, 0]}>
+                  {deviceTrends.slice(0, 10).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={index === 0 ? '#3b82f6' : '#93c5fd'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </section>
+
+      <div className="flex flex-col gap-8">
+        <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 w-full">
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div>
+              <h3 className="font-semibold text-gray-700 dark:text-gray-200 text-sm uppercase tracking-wide">Trending Faults Forecast</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Expected repair volumes for the upcoming month based on recent patterns.</p>
+            </div>
+            <div className="flex gap-2">
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-800 dark:text-blue-200 focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium"
+                title="Weather Location"
+              >
+                <option value="Colombo">Colombo</option>
+                <option value="Kandy">Kandy</option>
+                <option value="Galle">Galle</option>
+                <option value="Jaffna">Jaffna</option>
+                <option value="Gampaha">Gampaha</option>
+                <option value="Kurunegala">Kurunegala</option>
+                <option value="Anuradhapura">Anuradhapura</option>
+              </select>
+              <div className="flex gap-2">
+                <CustomSearchSelect 
+                  value={selectedBrand}
+                  onChange={(val) => {
+                    setSelectedBrand(val);
+                    setSelectedDevice("");
+                  }}
+                  options={brands}
+                  placeholder="All Brands"
+                />
+
+                <CustomSearchSelect 
+                  value={selectedDevice}
+                  onChange={(val) => setSelectedDevice(val)}
+                  options={models}
+                  placeholder="All Models"
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div className={`mt-6 flex flex-col gap-6 transition-opacity duration-300 ${isUpdating ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
+            {loading ? (
+              <div className="py-10 text-center text-gray-400 animate-pulse">Running AI Forecasts...</div>
+            ) : faultTrends.length === 0 ? (
+              <div className="py-4 text-center text-gray-400">Not enough data to forecast</div>
+            ) : (
+              (() => {
+                const maxVal = Math.max(...faultTrends.map(f => Math.max(f.current_avg, f.forecasted)), 1);
+                
+                return faultTrends.map((f, idx) => {
+                  const currentPct = (f.current_avg / maxVal) * 100;
+                  const forecastPct = (f.forecasted / maxVal) * 100;
+                  
+                  return (
+                    <div key={idx} className="flex flex-col md:flex-row md:items-center gap-4">
+                      <div className="w-full md:w-32 flex-shrink-0 flex flex-col gap-1">
+                        <span className="capitalize font-semibold text-gray-800 dark:text-gray-100 text-sm">{f.fault_category.replace(/_/g, " ")}</span>
+                        {f.weather_impacted && (
+                          <span title="Expected rainfall increases the likelihood of this issue." className="px-2 py-0.5 w-max bg-blue-100 text-blue-800 text-[10px] uppercase font-bold rounded-full shadow-sm">
+                            🌧️ Weather Alert
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="flex-1 flex flex-col gap-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-16 text-xs text-gray-500 dark:text-gray-400 text-right">Past Avg:</div>
+                          <div className="flex-1 h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden flex items-center">
+                            <div className="h-full bg-gray-400 dark:bg-gray-500 rounded-full" style={{ width: `${currentPct}%` }}></div>
+                          </div>
+                          <div className="w-8 text-xs font-medium text-gray-600 dark:text-gray-300">{Math.round(f.current_avg)}</div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                          <div className="w-16 text-xs text-gray-800 dark:text-gray-200 font-medium text-right">Expected:</div>
+                          <div className="flex-1 h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden flex items-center">
+                            <div 
+                              className={`h-full rounded-full ${f.status === 'increasing' ? 'bg-red-500' : f.status === 'decreasing' ? 'bg-green-500' : 'bg-brand-500'}`} 
+                              style={{ width: `${forecastPct}%` }}
+                            ></div>
+                          </div>
+                          <div className="w-8 text-xs font-bold text-gray-800 dark:text-gray-100">{Math.round(f.forecasted)}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="w-32 flex justify-end">
+                        <span className={`px-2 py-1 flex items-center gap-1 w-max rounded-md text-xs font-bold ${
+                          f.status === "increasing" ? "bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400" :
+                          f.status === "decreasing" ? "bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400" :
+                          "bg-gray-50 text-gray-600 border border-gray-200 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
                         }`}>
-                          {f.trend_percentage > 0 ? "+" : ""}{f.trend_percentage}% {f.status}
+                          {f.status === "increasing" && <><span className="text-red-500">⬆</span> Increasing</>}
+                          {f.status === "decreasing" && <><span className="text-green-500">⬇</span> Decreasing</>}
+                          {f.status === "stable" && <><span className="text-gray-400">➡</span> Stable</>}
                         </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+                  );
+                });
+              })()
+            )}
           </div>
         </section>
 
-        {/* Technician Score */}
-        <section className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="font-semibold text-gray-700 mb-4 text-sm uppercase tracking-wide">Technician Performance Leaderboard</h3>
+
+      </div>
+
+      {/* ── Smart Inventory Forecast Section ── */}
+      <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 w-full border border-gray-100 dark:border-gray-700">
+        <div className="mb-6">
+          <h3 className="font-bold text-gray-800 dark:text-gray-100 text-lg uppercase tracking-wide flex items-center gap-2">
+            <span className="text-amber-500">📦</span> Smart Parts Ordering Forecast
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-2xl">
+            Based on the fault predictions above, the AI has calculated exactly which parts you need to order to meet expected demand.
+          </p>
+        </div>
+        
+        {loading ? (
+          <div className="py-10 text-center text-gray-400 animate-pulse">Calculating Inventory Requirements...</div>
+        ) : criticalInventory.length === 0 ? (
+          <div className="py-10 text-center text-gray-400">
+            <p className="text-2xl mb-2">🎉</p>
+            <p className="font-medium text-gray-800 dark:text-gray-200">Stock Levels Optimal</p>
+            <p className="text-sm mt-1">You have enough parts in stock to meet the predicted demand for next week.</p>
+          </div>
+        ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="text-gray-500 border-b">
-                  <th className="pb-2">Technician</th>
-                  <th className="pb-2">Jobs Completed</th>
-                  <th className="pb-2">Score</th>
-                  <th className="pb-2">Rating</th>
+              <thead className="text-xs text-gray-500 uppercase bg-gray-50 dark:bg-gray-700/50 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Part Name</th>
+                  <th className="px-4 py-3 font-semibold text-center">Current Stock</th>
+                  <th className="px-4 py-3 font-semibold text-center">Predicted Demand</th>
+                  <th className="px-4 py-3 font-semibold text-center bg-amber-50/50 dark:bg-amber-900/10 text-amber-800 dark:text-amber-200">Order Quantity</th>
+                  <th className="px-4 py-3 font-semibold text-center">Status</th>
                 </tr>
               </thead>
-              <tbody>
-                {techScores.length === 0 ? (
-                  <tr><td colSpan="4" className="py-4 text-center text-gray-400">Not enough data for scoring</td></tr>
-                ) : (
-                  techScores.map((t, idx) => (
-                    <tr key={idx} className="border-b last:border-0">
-                      <td className="py-3 font-medium text-gray-800 flex items-center gap-2">
-                        {idx === 0 && <span title="Top Performer">🥇</span>}
-                        {idx === 1 && <span title="Runner Up">🥈</span>}
-                        {t.name}
-                      </td>
-                      <td className="py-3">{t.total_jobs_completed}</td>
-                      <td className="py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${t.performance_score}%` }}></div>
-                          </div>
-                          <span className="font-bold">{t.performance_score}</span>
-                        </div>
-                      </td>
-                      <td className="py-3">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                          t.rating === "Excellent" ? "bg-green-100 text-green-800" :
-                          t.rating === "Good" ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800"
-                        }`}>
-                          {t.rating}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {criticalInventory.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{item.part_name}</td>
+                    <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-300 font-mono">{item.current_stock}</td>
+                    <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-300 font-mono">{item.predicted_demand}</td>
+                    <td className="px-4 py-3 text-center font-bold text-amber-600 dark:text-amber-400 font-mono bg-amber-50/30 dark:bg-amber-900/10">
+                      +{item.restock_recommended}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`px-2 py-1 text-[10px] uppercase font-bold rounded-full ${
+                        item.status === 'critical' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800' :
+                        'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+                      }`}>
+                        {item.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-        </section>
-      </div>
+        )}
+      </section>
+
     </div>
   );
 }

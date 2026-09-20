@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import ChatbotWidget from "../components/ChatbotWidget";
+import bgImage from "../repair-bg.png";
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState({ identifier: "", password: "" });
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(location.state?.successMessage || "");
   const [loading, setLoading] = useState(false);
 
   // If the system has no admin yet, send the owner to first-run setup
@@ -41,6 +44,7 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setLoading(true);
     try {
       const user = await login(form.identifier, form.password);
@@ -57,21 +61,34 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat relative"
+      style={{ backgroundImage: `url(${bgImage})` }}
+    >
+      {/* Dark frosted overlay to make the image visible while ensuring white text pops */}
+      <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm z-0"></div>
+
+      <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-extrabold text-blue-600 tracking-tight">ServiceSync</h1>
-          <p className="text-gray-500 mt-2 text-sm">Smart Repair Shop Management System</p>
+          <h1 className="text-5xl font-extrabold text-white tracking-tight drop-shadow-lg">ServiceSync</h1>
+          <p className="text-gray-200 mt-3 text-base font-medium drop-shadow-md bg-black/30 border border-white/10 inline-block px-5 py-1.5 rounded-full backdrop-blur-sm">Smart Repair Shop Management System</p>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <h2 className="text-xl font-bold text-gray-800 mb-6">Staff Sign In</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6">Staff Sign In</h2>
+
+          {success && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-6 flex items-start gap-2">
+              <svg className="w-5 h-5 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+              <span>{success}</span>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">
                 Email or Phone
               </label>
               <input
@@ -81,14 +98,14 @@ export default function LoginPage() {
                 value={form.identifier}
                 onChange={(e) => setForm({ ...form, identifier: e.target.value })}
                 placeholder="you@example.com or 07XXXXXXXX"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
+                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm
                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                            placeholder:text-gray-400 transition"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">
                 Password
               </label>
               <input
@@ -97,7 +114,7 @@ export default function LoginPage() {
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 placeholder="••••••••"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
+                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm
                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                            placeholder:text-gray-400 transition"
               />
@@ -129,12 +146,14 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-5">
-          Customer?{" "}
-          <a href="/track" className="text-blue-500 hover:underline font-medium">
-            Track your repair →
-          </a>
-        </p>
+        <div className="text-center mt-6">
+          <p className="text-sm text-gray-200 font-medium bg-black/40 py-2 px-6 rounded-full inline-block shadow-lg border border-white/10 backdrop-blur-md">
+            Customer?{" "}
+            <a href="/track" className="text-blue-300 hover:text-white hover:underline font-bold ml-1 transition-colors">
+              Track your repair →
+            </a>
+          </p>
+        </div>
       </div>
       <ChatbotWidget />
     </div>

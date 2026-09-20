@@ -17,5 +17,6 @@ class User(Base):
     # True until the user replaces an admin-issued temporary password on first login.
     is_temporary_password = Column(Boolean, default=False, nullable=False)
     avatar_url = Column(String(255), nullable=True)
+    specializations = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

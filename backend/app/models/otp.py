@@ -15,11 +15,13 @@ class AdminSetupOtp(Base):
     name = Column(String(100), nullable=False)
     email = Column(String(255), nullable=True)
     phone_number = Column(String(20), nullable=True)
-    password_hash = Column(String(255), nullable=False)
+    password_hash = Column(String(255), nullable=True)
 
     channel = Column(String(10), nullable=False)        # "email" | "phone"
     destination = Column(String(255), nullable=False)   # the email or phone
     code_hash = Column(String(64), nullable=False)      # sha256 hex of the code
+
+    verified = Column(Boolean, default=False, nullable=False)
 
     expires_at = Column(DateTime(timezone=True), nullable=False)
     attempts = Column(Integer, default=0, nullable=False)

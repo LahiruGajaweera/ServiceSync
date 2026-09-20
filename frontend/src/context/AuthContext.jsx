@@ -38,6 +38,11 @@ export function AuthProvider({ children }) {
 
   const verifySetupOtp = useCallback(async (otpId, code) => {
     const { data } = await api.post("/auth/setup/verify-otp", { otp_id: otpId, code });
+    return data;
+  }, []);
+
+  const completeSetup = useCallback(async (otpId, password) => {
+    const { data } = await api.post("/auth/setup/complete", { otp_id: otpId, password });
     localStorage.setItem("ss_token", data.access_token);
     localStorage.setItem("ss_user", JSON.stringify(data.user));
     api.defaults.headers.common["Authorization"] = `Bearer ${data.access_token}`;
@@ -61,10 +66,8 @@ export function AuthProvider({ children }) {
       code,
       new_password: newPassword,
     });
-    localStorage.setItem("ss_token", data.access_token);
-    localStorage.setItem("ss_user", JSON.stringify(data.user));
-    api.defaults.headers.common["Authorization"] = `Bearer ${data.access_token}`;
-    setUser(data.user);
+    // Do not log the user in automatically after a password reset.
+    // They should be redirected to the login page to authenticate manually.
     return data.user;
   }, []);
 
@@ -91,7 +94,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, setupAdmin, requestSetupOtp, verifySetupOtp, requestPasswordReset, verifyResetOtp, resetPassword, updatePassword, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, login, setupAdmin, requestSetupOtp, verifySetupOtp, completeSetup, requestPasswordReset, verifyResetOtp, resetPassword, updatePassword, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

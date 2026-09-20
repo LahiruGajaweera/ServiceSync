@@ -99,10 +99,11 @@ def request_admin_otp(data: OtpRequest, db: Session) -> dict:
         name=data.name,
         email=data.destination if data.channel == "email" else None,
         phone_number=data.destination if data.channel == "phone" else None,
-        password_hash=hash_password(data.password),
+        password_hash=None,
         channel=data.channel,
         destination=data.destination,
         code_hash=_hash_code(code),
+        verified=False,
         expires_at=datetime.now(timezone.utc) + timedelta(minutes=settings.OTP_EXP_MINUTES),
     )
     db.add(otp)
@@ -147,11 +148,31 @@ def verify_admin_otp(otp_id: str, code: str, db: Session) -> dict:
             f"Incorrect code. {remaining} attempt{'s' if remaining != 1 else ''} remaining.",
         )
 
+    otp.verified = True
+    db.commit()
+    return {"message": "Verification successful"}
+
+
+def complete_admin_setup(otp_id: str, password: str, db: Session) -> dict:
+    if not is_setup_required(db):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Setup has already been completed")
+
+    try:
+        otp = db.query(AdminSetupOtp).filter(AdminSetupOtp.id == UUID(otp_id)).first()
+    except (ValueError, AttributeError):
+        otp = None
+
+    if not otp or otp.consumed:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid or already-used verification request")
+
+    if not otp.verified:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "OTP has not been verified yet")
+
     admin = User(
         name=otp.name,
         email=otp.email,
         phone_number=otp.phone_number,
-        password_hash=otp.password_hash,
+        password_hash=hash_password(password),
         role="admin",
     )
     db.add(admin)
@@ -328,8 +349,8 @@ def create_technician(data: TechnicianCreate, db: Session) -> dict:
 
     The technician must change it on first login (``is_temporary_password``).
     """
-    email = data.email.strip().lower()
-    if db.query(User).filter(User.email == email).first():
+    email = data.email.strip().lower() if data.email else None
+    if email and db.query(User).filter(User.email == email).first():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "A user with this email already exists")
 
     phone = normalize_phone(data.phone_number)
@@ -344,6 +365,7 @@ def create_technician(data: TechnicianCreate, db: Session) -> dict:
         password_hash=hash_password(temp_password),
         role="technician",
         is_temporary_password=True,
+        specializations=data.specializations,
     )
     db.add(technician)
     db.commit()
@@ -359,8 +381,50 @@ def create_technician(data: TechnicianCreate, db: Session) -> dict:
     }
 
 
-def update_password(user: User, new_password: str, db: Session) -> dict:
+def request_update_password_otp(user: User, db: Session) -> dict:
+    if user.phone_number:
+        channel, destination = "phone", user.phone_number
+    elif user.email:
+        channel, destination = "email", user.email
+    else:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Your account has no email or phone number to send a verification code to",
+        )
+
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    otp = PasswordResetOtp(
+        user_id=user.id,
+        channel=channel,
+        destination=destination,
+        code_hash=_hash_code(code),
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=settings.OTP_EXP_MINUTES),
+    )
+    db.add(otp)
+    db.commit()
+    db.refresh(otp)
+
+    delivered = otp_delivery.send_otp(channel, destination, code)
+
+    return {
+        "otp_id": str(otp.id),
+        "channel": channel,
+        "destination_masked": _mask(channel, destination),
+        "expires_in_seconds": settings.OTP_EXP_MINUTES * 60,
+        "dev_otp": None if delivered else code,
+    }
+
+
+def update_password(user: User, new_password: str, otp_id: str | None, code: str | None, db: Session) -> dict:
     """Set a new password for the authenticated user and clear the temp flag."""
+    if not user.is_temporary_password:
+        if not otp_id or not code:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "OTP is required to update your password")
+        otp = _load_valid_reset_otp(otp_id, code, db)
+        if otp.user_id != user.id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Invalid OTP for this user")
+        otp.consumed = True
+        
     user.password_hash = hash_password(new_password)
     user.is_temporary_password = False
     db.commit()

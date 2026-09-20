@@ -29,7 +29,7 @@ def list_users(
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
-    return db.query(User).filter(User.is_active.is_(True)).all()
+    return db.query(User).all()
 
 
 @router.get("/me/performance")

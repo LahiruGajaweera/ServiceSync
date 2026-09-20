@@ -1,19 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import PhoneInput from "../components/PhoneInput";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import bgImage from "../repair-bg.png";
 
 const inputCls =
-  "w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm " +
+  "w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm " +
   "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent " +
   "placeholder:text-gray-400 transition";
 
 export default function SetupPage() {
-  const { requestSetupOtp, verifySetupOtp } = useAuth();
+  const { requestSetupOtp, verifySetupOtp, completeSetup } = useAuth();
   const navigate = useNavigate();
 
   const [checking, setChecking] = useState(true);
-  const [step, setStep] = useState("details"); // "details" | "verify"
+  const [step, setStep] = useState("details"); // "details" | "verify" | "password"
   const [channel, setChannel] = useState("email");
   const [form, setForm] = useState({
     name: "",
@@ -68,19 +70,10 @@ export default function SetupPage() {
       setError(channel === "email" ? "Enter your email address." : "Enter your phone number.");
       return;
     }
-    if (form.password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
-    if (form.password !== form.confirm) {
-      setError("Passwords do not match.");
-      return;
-    }
     setBusy(true);
     try {
       const data = await requestSetupOtp({
         name: form.name.trim(),
-        password: form.password,
         channel,
         destination,
       });
@@ -109,10 +102,32 @@ export default function SetupPage() {
     }
     setBusy(true);
     try {
-      const user = await verifySetupOtp(otpInfo.otp_id, code.trim());
-      navigate(user.role === "admin" ? "/admin" : "/tech", { replace: true });
+      await verifySetupOtp(otpInfo.otp_id, code.trim());
+      setStep("password");
     } catch (err) {
       setError(parseErr(err, "Verification failed."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+    if (form.password !== form.confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const user = await completeSetup(otpInfo.otp_id, form.password);
+      navigate(user.role === "admin" ? "/admin" : "/tech", { replace: true });
+    } catch (err) {
+      setError(parseErr(err, "Failed to create account."));
     } finally {
       setBusy(false);
     }
@@ -127,33 +142,39 @@ export default function SetupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat relative"
+      style={{ backgroundImage: `url(${bgImage})` }}
+    >
+      {/* Dark frosted overlay to make the image visible while ensuring white text pops */}
+      <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm z-0"></div>
+
+      <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-extrabold text-blue-600 tracking-tight">ServiceSync</h1>
-          <p className="text-gray-500 mt-2 text-sm">Smart Repair Shop Management System</p>
+          <h1 className="text-5xl font-extrabold text-white tracking-tight drop-shadow-lg">ServiceSync</h1>
+          <p className="text-gray-200 mt-3 text-base font-medium drop-shadow-md bg-black/30 border border-white/10 inline-block px-5 py-1.5 rounded-full backdrop-blur-sm">Smart Repair Shop Management System</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
           {step === "details" ? (
             <>
-              <h2 className="text-xl font-bold text-gray-800">Welcome — Let's get started</h2>
-              <p className="text-sm text-gray-500 mt-1 mb-6">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Welcome — Let's get started</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-6">
                 Create the owner / administrator account. We'll verify your{" "}
                 {channel === "email" ? "email" : "phone number"} with a one-time code.
               </p>
 
               <form onSubmit={handleDetailsSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Full Name</label>
                   <input name="name" required autoFocus value={form.name} onChange={handleChange}
                     placeholder="e.g. Kasun Perera" className={inputCls} />
                 </div>
 
                 {/* Channel toggle */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Verify using</label>
-                  <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-lg">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Verify using</label>
+                  <div className="grid grid-cols-2 gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
                     {[
                       { v: "email", label: "Email" },
                       { v: "phone", label: "Phone (SMS)" },
@@ -163,7 +184,7 @@ export default function SetupPage() {
                         type="button"
                         onClick={() => { setChannel(opt.v); setError(""); }}
                         className={`py-2 rounded-md text-sm font-medium transition-colors ${
-                          channel === opt.v ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                          channel === opt.v ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200"
                         }`}
                       >
                         {opt.label}
@@ -174,29 +195,17 @@ export default function SetupPage() {
 
                 {channel === "email" ? (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Email Address</label>
                     <input name="email" type="email" required value={form.email} onChange={handleChange}
                       placeholder="owner@example.com" className={inputCls} />
                   </div>
                 ) : (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number</label>
-                    <input name="phone_number" required value={form.phone_number} onChange={handleChange}
-                      placeholder="07XXXXXXXX or +94XXXXXXXXX" className={inputCls} />
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Phone Number</label>
+                    <PhoneInput name="phone_number" required value={form.phone_number} onChange={handleChange}
+                      placeholder="07XXXXXXXX" className={inputCls} />
                   </div>
                 )}
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
-                  <input name="password" type="password" required value={form.password} onChange={handleChange}
-                    placeholder="At least 6 characters" className={inputCls} />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm Password</label>
-                  <input name="confirm" type="password" required value={form.confirm} onChange={handleChange}
-                    placeholder="Re-enter password" className={inputCls} />
-                </div>
 
                 {error && (
                   <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
@@ -210,27 +219,20 @@ export default function SetupPage() {
                 </button>
               </form>
             </>
-          ) : (
+          ) : step === "verify" ? (
             <>
               <button type="button" onClick={() => { setStep("details"); setError(""); }}
                 className="text-sm text-blue-500 hover:underline mb-3">
                 ← Back
               </button>
-              <h2 className="text-xl font-bold text-gray-800">Enter verification code</h2>
-              <p className="text-sm text-gray-500 mt-1 mb-6">
-                We sent a 6-digit code to <strong className="text-gray-700">{otpInfo?.destination_masked}</strong>.
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Enter verification code</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-6">
+                We sent a 6-digit code to <strong className="text-gray-700 dark:text-gray-200">{otpInfo?.destination_masked}</strong>.
               </p>
-
-              {otpInfo?.dev_otp && (
-                <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm">
-                  <strong>Dev mode</strong> (no SMS/email provider configured). Your code is{" "}
-                  <span className="font-mono font-bold tracking-widest">{otpInfo.dev_otp}</span>.
-                </div>
-              )}
 
               <form onSubmit={handleVerify} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">6-Digit Code</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">6-Digit Code</label>
                   <input
                     value={code}
                     onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
@@ -254,12 +256,48 @@ export default function SetupPage() {
 
                 <button type="submit" disabled={busy}
                   className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-blue-400 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">
-                  {busy ? "Verifying…" : "Verify & Create Account"}
+                  {busy ? "Verifying…" : "Verify"}
                 </button>
 
                 <button type="button" disabled={busy} onClick={sendOtp}
                   className="w-full text-blue-500 hover:underline text-sm">
                   Resend code
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <button type="button" onClick={() => { setStep("details"); setError(""); }}
+                className="text-sm text-blue-500 hover:underline mb-3">
+                ← Start Over
+              </button>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Create a Password</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-6">
+                Your contact details have been verified. Now set a secure password for your admin account.
+              </p>
+
+              <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Password</label>
+                  <input name="password" type="password" required autoFocus value={form.password} onChange={handleChange}
+                    placeholder="At least 6 characters" className={inputCls} />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Confirm Password</label>
+                  <input name="confirm" type="password" required value={form.confirm} onChange={handleChange}
+                    placeholder="Re-enter password" className={inputCls} />
+                </div>
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <button type="submit" disabled={busy}
+                  className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-blue-400 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">
+                  {busy ? "Creating Account…" : "Complete Setup"}
                 </button>
               </form>
             </>

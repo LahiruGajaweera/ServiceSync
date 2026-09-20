@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ServiceSync</title>
+    <script src="https://www.payhere.lk/lib/payhere.js"></script>
     <script>
       // Prevent FOUC (Flash of Unstyled Content) by setting theme before body renders
       if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -14,6 +15,14 @@
     </script>
   </head>
   <body>
+    <script>
+      window.onerror = function(message, source, lineno, colno, error) {
+        document.body.innerHTML = '<div style="padding: 20px; color: red; font-family: monospace;"><h3>React Crashed:</h3>' + message + '<br><br>' + (error && error.stack ? error.stack.replace(/\n/g, '<br>') : '') + '</div>';
+      };
+      window.addEventListener('unhandledrejection', function(event) {
+        document.body.innerHTML = '<div style="padding: 20px; color: red; font-family: monospace;"><h3>Promise Rejected:</h3>' + event.reason + '</div>';
+      });
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

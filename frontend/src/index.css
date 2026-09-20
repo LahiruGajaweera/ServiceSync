@@ -1,56 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @layer base {
   body {
-    @apply transition-colors duration-200;
+    @apply transition-colors duration-300 font-sans antialiased text-gray-800 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen bg-fixed;
   }
   .dark body {
-    @apply bg-gray-900 text-gray-100;
+    @apply bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-gray-100 bg-fixed;
   }
-  
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-lg;
+  }
+  .dark .glass-panel {
+    @apply bg-gray-800/60 backdrop-blur-md border border-gray-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.12)];
+  }
+  .glass-button {
+    @apply transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md active:scale-95;
+  }
 }
 
 /* Global dark mode overrides to prevent invisible text and white boxes */
 /* Placed OUTSIDE of @layer to ensure they have higher specificity than utility classes */
-.dark .bg-white {
+/* Global dark mode overrides to prevent invisible text and white boxes */
+/* Scoped to #root to prevent breaking third-party modals (e.g., PayHere) injected into body */
+.dark #root .bg-white {
   @apply bg-gray-800 border-gray-700 text-gray-100 !important;
 }
 
 /* Text color fixes for dark mode */
-.dark .text-black,
-.dark .text-gray-950,
-.dark .text-gray-900,
-.dark .text-gray-800,
-.dark .text-gray-700,
-.dark .text-gray-600 {
+.dark #root .text-black,
+.dark #root .text-gray-950,
+.dark #root .text-gray-900,
+.dark #root .text-gray-800,
+.dark #root .text-gray-700,
+.dark #root .text-gray-600 {
   @apply text-gray-200 !important;
 }
 
-.dark .text-gray-500 {
+.dark #root .text-gray-500 {
   @apply text-gray-400 !important;
 }
 
 /* Borders and backgrounds */
-.dark .border-gray-200,
-.dark .border-gray-100 {
+.dark #root .border-gray-200,
+.dark #root .border-gray-100 {
   @apply border-gray-700 !important;
 }
 
-.dark .bg-gray-50,
-.dark .bg-gray-100 {
+.dark #root .bg-gray-50,
+.dark #root .bg-gray-100 {
   @apply bg-gray-900 !important;
 }
 
-.dark .hover\:bg-gray-50:hover,
-.dark .hover\:bg-gray-100:hover {
+.dark #root .hover\:bg-gray-50:hover,
+.dark #root .hover\:bg-gray-100:hover {
   @apply bg-gray-700 !important;
 }
 
 /* Inputs */
-.dark input, 
-.dark select, 
-.dark textarea {
+.dark #root input, 
+.dark #root select, 
+.dark #root textarea {
   @apply bg-gray-700 text-gray-100 border-gray-600 !important;
 }

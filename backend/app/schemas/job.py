@@ -12,13 +12,19 @@ FAULT_CATEGORIES = Literal[
 
 JOB_STATUSES = Literal[
     "pending", "in_progress", "completed",
-    "ready_for_pickup", "delivered", "unclaimed"
+    "ready_for_pickup", "delivered", "unclaimed",
+    "failed", "rejected"
 ]
+
+JOB_TYPES = Literal["new", "rework", "warranty"]
 
 
 class JobCreate(BaseModel):
     customer_id: UUID
     technician_id: UUID | None = None
+    rework_of_job_id: UUID | None = None
+    job_type: JOB_TYPES = "new"
+    rework_reason: str | None = None
     device_brand: str
     device_model: str
     device_imei: str | None = None
@@ -28,12 +34,37 @@ class JobCreate(BaseModel):
     estimated_cost: Decimal | None = None
     investigated: bool = False
     notes: str | None = None
+    physical_condition: str | None = None
+
+
+class JobImageResponse(BaseModel):
+    id: UUID
+    file_path: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 class JobStatusUpdate(BaseModel):
     status: JOB_STATUSES
     estimated_cost: Decimal | None = None
     notes: str | None = None
+    
+    # Structured completion data (sent when status == 'completed')
+    actual_fault: str | None = None
+    identified_fault: str | None = None
+    complexity_level: Literal["low", "medium", "high"] | None = None
+    diagnostic_time_mins: int | None = None
+    repair_time_mins: int | None = None
+    resolution_notes: str | None = None
+    
+    # QC Checklist
+    qc_mic_tested: bool | None = None
+    qc_camera_tested: bool | None = None
+    qc_touch_tested: bool | None = None
+    qc_biometrics_tested: bool | None = None
+    qc_wifi_tested: bool | None = None
+    qc_charging_tested: bool | None = None
 
 
 class JobRevertRequest(BaseModel):
@@ -49,6 +80,15 @@ class AssignTechnicianRequest(BaseModel):
     technician_id: UUID | None = None
 
 
+class TimerToggleRequest(BaseModel):
+    mode: str | None = None  # "diagnostic" or "repair". None means pause.
+
+
+class AutoResumeRequest(BaseModel):
+    mode: str
+    away_seconds: int
+
+
 class JobListItem(BaseModel):
     id: UUID
     job_id: str
@@ -57,6 +97,9 @@ class JobListItem(BaseModel):
     customer_phone: str | None = None
     technician_id: UUID | None = None
     technician_name: str | None = None
+    job_type: str | None = None
+    is_warranty_valid: bool | None = None
+    warranty_valid_until: date | None = None
     device_brand: str
     device_model: str
     device_imei: str | None = None
@@ -74,7 +117,34 @@ class JobListItem(BaseModel):
     revert_reason: str | None = None
     admin_alert: str | None = None
     labor_cost: Decimal | None = None
+    physical_condition: str | None = None
+    
+    actual_fault: str | None = None
+    complexity_level: str | None = None
+    diagnostic_time_mins: int | None = None
+    repair_time_mins: int | None = None
+    
+    rework_of_job_id: UUID | None = None
+    active_repair_start_time: datetime | None = None
+    total_diagnostic_seconds: int | None = 0
+    total_active_repair_seconds: int | None = 0
+    total_away_seconds: int | None = 0
+    current_timer_mode: str | None = None
+    
+    # QC Checklist
+    qc_mic_tested: bool | None = None
+    qc_camera_tested: bool | None = None
+    qc_touch_tested: bool | None = None
+    qc_biometrics_tested: bool | None = None
+    qc_wifi_tested: bool | None = None
+    qc_charging_tested: bool | None = None
+
+    model_config = {"from_attributes": True}
+    resolution_notes: str | None = None
+    images: list[JobImageResponse] = []
     created_at: datetime | None = None
+    is_warranty_valid: bool | None = None
+    warranty_valid_until: date | None = None
 
 
 class PublicJobResponse(BaseModel):
@@ -85,8 +155,11 @@ class PublicJobResponse(BaseModel):
     status: str
     estimated_completion_date: date | None = None
     estimated_cost: Decimal | None = None
+    job_type: str | None = None
     received_date: datetime | None = None
     completed_date: datetime | None = None
+    is_warranty_valid: bool | None = None
+    warranty_valid_until: date | None = None
 
 
 class CompatibleInventoryPart(BaseModel):

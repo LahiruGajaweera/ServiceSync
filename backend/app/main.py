@@ -24,6 +24,7 @@ async def lifespan(_: FastAPI):
     _seed_brands()
     _seed_models()
     _seed_specs()
+    _seed_settings()
     
     # Start background tasks
     bg_task = asyncio.create_task(background_task_runner())
@@ -39,26 +40,60 @@ def _run_migrations() -> None:
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_number VARCHAR(20)",
         "ALTER TABLE users ALTER COLUMN email DROP NOT NULL",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(255)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS specializations VARCHAR(255)",
         "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_phone_number ON users (phone_number)",
         # Temporary-password / force-change-on-first-login (existing rows default to FALSE)
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_temporary_password BOOLEAN NOT NULL DEFAULT FALSE",
         # Inventory batch system
+        "ALTER TABLE inventory_batches ADD COLUMN IF NOT EXISTS warranty_days INTEGER",
+        "ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS model_number VARCHAR(100)",
         "ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS sku VARCHAR(40)",
         "ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS track_serial BOOLEAN NOT NULL DEFAULT FALSE",
-        "ALTER TABLE inventory_items ALTER COLUMN unit_price SET DEFAULT 0",
         "CREATE UNIQUE INDEX IF NOT EXISTS ix_inventory_items_sku ON inventory_items (sku)",
+        "ALTER TABLE inventory_batches ADD COLUMN IF NOT EXISTS unit_price NUMERIC(10, 2) NOT NULL DEFAULT 0",
         "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS batch_id UUID REFERENCES inventory_batches(id)",
         "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS used_by_technician_id UUID REFERENCES users(id)",
         "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS unit_price NUMERIC(10, 2) NOT NULL DEFAULT 0",
-        # Optional estimated repair cost quoted at job intake (may be absent)
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS estimated_cost NUMERIC(10, 2)",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS final_warning_sent BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS reminder_83_sent BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS reminder_90_sent BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS reminder_425_sent BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS investigated BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS total_diagnostic_seconds INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS total_active_repair_seconds INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS rework_of_job_id UUID REFERENCES jobs(id)",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS active_repair_start_time TIMESTAMP WITH TIME ZONE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS current_timer_mode VARCHAR(20)",
+        "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS warranty_days INTEGER",
+        "ALTER TABLE job_parts_used ADD COLUMN IF NOT EXISTS inventory_unit_id UUID REFERENCES inventory_units(id)",
+        # Invoices features
+        "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS discount_amount NUMERIC(10, 2) NOT NULL DEFAULT 0",
+        "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(255)",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS admin_alert TEXT",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS physical_condition VARCHAR(255)",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS salvage_delayed_until TIMESTAMP WITH TIME ZONE",
         "ALTER TABLE inventory_adjustment_logs ADD COLUMN IF NOT EXISTS batch_id UUID REFERENCES inventory_batches(id)",
         "ALTER TABLE donor_devices ADD COLUMN IF NOT EXISTS source_description VARCHAR(255)",
         "ALTER TABLE donor_devices ADD COLUMN IF NOT EXISTS assigned_technician_id UUID REFERENCES users(id)",
         "ALTER TABLE donor_parts ADD COLUMN IF NOT EXISTS approval_status VARCHAR(20) NOT NULL DEFAULT 'approved'",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS actual_fault VARCHAR(100)",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS identified_fault VARCHAR(100)",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS diagnostic_time_mins INTEGER",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS repair_time_mins INTEGER",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS resolution_notes TEXT",
+        
+        # QC Checklist
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_mic_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_camera_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_touch_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_biometrics_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_wifi_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_charging_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        
+        # Job Type and Rework
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS job_type job_type NOT NULL DEFAULT 'new'",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS rework_reason TEXT",
     ]
     
     with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
@@ -68,6 +103,18 @@ def _run_migrations() -> None:
             pass
         try:
             conn.execute(text("ALTER TYPE donor_status ADD VALUE IF NOT EXISTS 'assessed'"))
+        except Exception:
+            pass
+        try:
+            conn.execute(text("ALTER TYPE job_status ADD VALUE IF NOT EXISTS 'failed'"))
+        except Exception:
+            pass
+        try:
+            conn.execute(text("ALTER TYPE job_status ADD VALUE IF NOT EXISTS 'rejected'"))
+        except Exception:
+            pass
+        try:
+            conn.execute(text("CREATE TYPE job_type AS ENUM ('new', 'rework', 'warranty')"))
         except Exception:
             pass
 
@@ -103,8 +150,8 @@ def _backfill_inventory() -> None:
                 db.add(InventoryBatch(
                     batch_code=_next_batch_code(item, db),
                     inventory_item_id=item.id,
-                    supplier=item.supplier,
-                    unit_cost=item.unit_price or 0,
+                    supplier="Legacy",
+                    unit_cost=0,
                     quantity_received=item.quantity,
                     quantity_remaining=item.quantity,
                     purchased_at=datetime.now(timezone.utc),
@@ -220,6 +267,33 @@ def _seed_specs() -> None:
         db.close()
 
 
+def _seed_settings() -> None:
+    """Populate default system settings if missing (idempotent)."""
+    from app.core.database import SessionLocal
+    from app.models.setting import SystemSetting
+    from app.routers.settings import DEFAULT_SETTINGS
+
+    db = SessionLocal()
+    try:
+        existing = {s.key for s in db.query(SystemSetting).all()}
+        added = False
+        for key, info in DEFAULT_SETTINGS.items():
+            if key not in existing:
+                db.add(
+                    SystemSetting(
+                        key=key,
+                        value=info["value"],
+                        category=info["category"],
+                        description=info.get("description"),
+                    )
+                )
+                added = True
+        if added:
+            db.commit()
+    finally:
+        db.close()
+
+
 app = FastAPI(
     title="ServiceSync API",
     description="Smart Job & Inventory Management System for Phone Repair Shop",
@@ -229,18 +303,19 @@ app = FastAPI(
 
 import os
 os.makedirs("uploads/avatars", exist_ok=True)
+os.makedirs("uploads/logos", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 from app.routers import analytics, auth, customers, donors, inventory, invoices, jobs, notifications, salvage, scraper, users, chatbot  # noqa: E402
-from app.routers import admin, brands, models, part_specs, suppliers  # noqa: E402
+from app.routers import admin, brands, models, part_specs, suppliers, admin_tasks, settings, payments  # noqa: E402
 
 app.include_router(auth.router)
 app.include_router(admin.router)
@@ -259,6 +334,9 @@ app.include_router(brands.router)
 app.include_router(models.router)
 app.include_router(part_specs.router)
 app.include_router(chatbot.router)
+app.include_router(admin_tasks.router)
+app.include_router(settings.router)
+app.include_router(payments.router)
 
 
 @app.get("/health", tags=["System"])

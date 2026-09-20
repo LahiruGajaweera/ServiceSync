@@ -19,17 +19,17 @@ const SOURCE_LABEL = {
 const STATUS_BADGE = {
   available: "bg-blue-100 text-blue-700",
   stripped:  "bg-teal-100 text-teal-700", // visually 'Assessed'
-  disposed:  "bg-gray-100 text-gray-600",
+  disposed:  "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300",
 };
 
 function Modal({ open, onClose, title, children }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white rounded-t-2xl">
-          <h3 className="text-base font-bold text-gray-800">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white dark:bg-gray-800 rounded-t-2xl z-10">
+          <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 text-xl leading-none">&times;</button>
         </div>
         <div className="p-6">{children}</div>
       </div>
@@ -40,13 +40,13 @@ function Modal({ open, onClose, title, children }) {
 function Field({ label, children }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
+      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">{label}</label>
       {children}
     </div>
   );
 }
 
-const inputCls = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
+const inputCls = "w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
 const selectCls = inputCls;
 
 export default function DonorDeviceConsole() {
@@ -71,6 +71,7 @@ export default function DonorDeviceConsole() {
 
   // Review device pending parts modal
   const [reviewGroup, setReviewGroup]   = useState(null);
+  const [partPrices, setPartPrices]     = useState({});
 
   // Add part modal
   const [addPartOpen, setAddPartOpen]   = useState(false);
@@ -117,36 +118,49 @@ export default function DonorDeviceConsole() {
 
   const handleApproveAll = async (group) => {
     // Open window immediately to bypass popup blockers
-    const printWin = window.open('', '_blank', 'width=300,height=300');
+    const printWin = window.open('', '_blank');
     
     try {
-      await Promise.all(group.map(p => api.patch(`/donors/parts/${p.id}/approve`)));
+      const responses = await Promise.all(group.map(p => 
+        api.patch(`/donors/parts/${p.id}/approve`, { estimated_value: parseFloat(partPrices[p.id]) || 0 })
+      ));
+      
+      const approvedParts = responses.map(r => r.data);
+      
       // Remove from pending list
       setPendingParts(prev => prev.filter(p => !group.find(gp => gp.id === p.id)));
       setReviewGroup(null);
+      setPartPrices({});
       
       const devId = group[0].donor_device_id;
       const dev = devices.find(d => d.id === devId) || { brand: "Unknown", model: "Device", id: devId, imei: "N/A" };
-      const partsSummary = group.map(p => `${p.part_name}(${p.condition.charAt(0).toUpperCase()})`).join(', ');
 
-      // Print label logic for the DEVICE
+      // Print label logic for EACH PART
+      const labelsHtml = approvedParts.map(p => `
+        <div class="label-page">
+          <div class="title">${dev.brand} ${dev.model}</div>
+          <div class="subtitle">${p.part_name}</div>
+          <img class="qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(p.sku)}" alt="QR Code" />
+          <div class="sku">${p.sku}</div>
+          <div class="price">Rs. ${p.estimated_value.toFixed(2)}</div>
+        </div>
+      `).join('');
+
       const labelContent = `
         <html>
           <head>
             <style>
-              body { margin: 0; padding: 10px; font-family: monospace; width: 50mm; text-align: center; }
-              .title { font-size: 14px; font-weight: bold; margin-bottom: 5px; }
-              .id { font-size: 10px; margin-bottom: 5px; word-break: break-all; }
-              .parts { font-size: 10px; border: 1px dashed #666; padding: 4px; margin-top: 5px; text-align: left; }
+              body { margin: 0; padding: 0; font-family: monospace; text-align: center; }
+              .label-page { padding: 10px; page-break-after: always; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; }
+              .title { font-size: 14px; font-weight: bold; margin-bottom: 2px; }
+              .subtitle { font-size: 12px; margin-bottom: 5px; }
+              .sku { font-size: 12px; margin-top: 5px; font-weight: bold; }
+              .price { font-size: 14px; font-weight: bold; margin-top: 2px; }
               .qr-code { margin: 5px auto; width: 80px; height: 80px; display: block; }
             </style>
           </head>
           <body>
-            <div class="title">${dev.brand} ${dev.model}</div>
-            <img class="qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(dev.id)}" alt="QR Code" />
-            <div class="id">ID: ${dev.id.substring(0,8).toUpperCase()}</div>
-            <div class="id">IMEI: ${dev.imei || 'N/A'}</div>
-            <div class="parts"><b>Contains:</b><br/>${partsSummary}</div>
+            ${labelsHtml}
           </body>
         </html>
       `;
@@ -157,7 +171,6 @@ export default function DonorDeviceConsole() {
       // Wait for image to load, then print from parent context
       setTimeout(() => {
         printWin.focus();
-        printWin.onafterprint = () => printWin.close();
         printWin.print();
       }, 500);
       
@@ -255,7 +268,7 @@ export default function DonorDeviceConsole() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-800">Donor Device Console</h2>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Donor Device Console</h2>
           <p className="text-xs text-gray-400 mt-0.5">Manage unclaimed, purchased, and donated devices for parts harvest</p>
         </div>
         <button
@@ -267,11 +280,11 @@ export default function DonorDeviceConsole() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-6">
+      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
         <button
           onClick={() => setActiveTab("devices")}
           className={`py-2 px-4 text-sm font-semibold border-b-2 transition-colors ${
-            activeTab === "devices" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"
+            activeTab === "devices" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200"
           }`}
         >
           Donor Devices
@@ -279,7 +292,7 @@ export default function DonorDeviceConsole() {
         <button
           onClick={() => setActiveTab("reviews")}
           className={`py-2 px-4 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === "reviews" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"
+            activeTab === "reviews" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200"
           }`}
         >
           Pending Reviews
@@ -298,17 +311,17 @@ export default function DonorDeviceConsole() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by brand, model, IMEI…"
-              className="w-full max-w-sm border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full max-w-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {/* Device Table */}
-          <div className="bg-white rounded-xl shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
         {loading ? (
           <div className="py-16 text-center text-gray-400 text-sm animate-pulse">Loading devices…</div>
         ) : filtered.length === 0 ? (
-          <div className="py-16 text-center border-2 border-dashed border-gray-100 rounded-xl m-4">
-            <p className="text-gray-500 font-medium text-sm">No donor devices registered</p>
+          <div className="py-16 text-center border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl m-4">
+            <p className="text-gray-500 dark:text-gray-400 font-medium text-sm">No donor devices registered</p>
             <p className="text-gray-400 text-xs mt-1">Register unclaimed or donated devices to extract salvageable parts</p>
             <button
               onClick={() => setAddOpen(true)}
@@ -321,37 +334,30 @@ export default function DonorDeviceConsole() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100">
+                <tr className="border-b border-gray-100 dark:border-gray-800">
                   {["Brand / Model", "IMEI", "Source", "Condition", "Status", "Technician", "Registered"].map((h) => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                 {filtered.map((d) => {
-                  const daysSinceAdded = (new Date() - new Date(d.added_date)) / (1000 * 60 * 60 * 24);
-                  const isCoolingOff = d.source === "unclaimed_job" && daysSinceAdded < 5;
-                  
                   return (
                   <tr 
                     key={d.id} 
-                    className={`transition-colors ${isCoolingOff ? 'bg-gray-50 opacity-75' : 'hover:bg-blue-50 cursor-pointer'}`}
+                    className="transition-colors hover:bg-blue-50 cursor-pointer"
                     onClick={(e) => {
                       if (e.target.tagName !== 'SELECT' && e.target.tagName !== 'OPTION') {
-                        if (isCoolingOff) {
-                          alert(`This device is locked. Available in ${Math.ceil(5 - daysSinceAdded)} days.`);
-                        } else {
                           openViewDevice(d);
-                        }
                       }
                     }}
                   >
-                    <td className="px-4 py-3 font-medium text-gray-800">
+                    <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">
                       {d.brand} {d.model}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 font-mono text-xs">{d.imei || "—"}</td>
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 font-mono text-xs">{d.imei || "—"}</td>
                     <td className="px-4 py-3">
-                      <span className="text-xs text-gray-600">
+                      <span className="text-xs text-gray-600 dark:text-gray-300">
                         {SOURCE_LABEL[d.source] ?? d.source}
                         {d.source === "other" && d.source_description && <span className="block text-[10px] text-gray-400 truncate max-w-[120px]" title={d.source_description}>{d.source_description}</span>}
                       </span>
@@ -365,14 +371,9 @@ export default function DonorDeviceConsole() {
                       <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${STATUS_BADGE[d.status] ?? ""}`}>
                         {d.status === "stripped" ? "assessed" : d.status}
                       </span>
-                      {isCoolingOff && (
-                        <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700">
-                          Cooling Off
-                        </span>
-                      )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-xs text-gray-500 font-medium">
+                      <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                         {d.assigned_technician_id 
                           ? technicians.find(t => t.id === d.assigned_technician_id)?.name || "—" 
                           : "-- Unassigned --"}
@@ -391,36 +392,41 @@ export default function DonorDeviceConsole() {
       </div>
       </>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <div className="mb-4">
-            <h3 className="font-semibold text-gray-800">Pending Part Reviews</h3>
-            <p className="text-xs text-gray-500">Parts submitted by technicians waiting for admin approval and labeling.</p>
+            <h3 className="font-semibold text-gray-800 dark:text-gray-100">Pending Part Reviews</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Parts submitted by technicians waiting for admin approval and labeling.</p>
           </div>
           {pendingLoading ? (
             <div className="py-12 text-center text-gray-400 text-sm animate-pulse">Loading pending parts…</div>
           ) : pendingGroups.length === 0 ? (
-            <div className="py-12 text-center border-2 border-dashed border-gray-100 rounded-xl">
-              <p className="text-gray-500 font-medium text-sm">No pending parts</p>
+            <div className="py-12 text-center border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl">
+              <p className="text-gray-500 dark:text-gray-400 font-medium text-sm">No pending parts</p>
               <p className="text-gray-400 text-xs mt-1">All extracted parts have been approved.</p>
             </div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="border-b border-gray-100">
+              <thead className="border-b border-gray-100 dark:border-gray-800">
                 <tr>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase">Device</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase">IMEI</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase">Pending Parts</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                 {pendingGroups.map(group => {
                   const devId = group[0].donor_device_id;
                   const dev = devices.find(d => d.id === devId) || { brand: "Unknown", model: "Device", imei: "" };
                   
                   return (
-                  <tr key={devId} className="hover:bg-blue-50 cursor-pointer transition-colors" onClick={() => setReviewGroup(group)}>
-                    <td className="px-4 py-3 font-semibold text-gray-800">{dev.brand} {dev.model}</td>
-                    <td className="px-4 py-3 text-xs text-gray-500 font-mono">
+                  <tr key={devId} className="hover:bg-blue-50 cursor-pointer transition-colors" onClick={() => {
+                      const initialPrices = {};
+                      group.forEach(p => initialPrices[p.id] = "");
+                      setPartPrices(initialPrices);
+                      setReviewGroup(group);
+                  }}>
+                    <td className="px-4 py-3 font-semibold text-gray-800 dark:text-gray-100">{dev.brand} {dev.model}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 font-mono">
                       {dev.imei || "—"}
                     </td>
                     <td className="px-4 py-3">
@@ -488,14 +494,16 @@ export default function DonorDeviceConsole() {
           <Field label="Assign Technician (optional)">
             <select value={addForm.assigned_technician_id} onChange={(e) => setAddForm({ ...addForm, assigned_technician_id: e.target.value })} className={selectCls}>
               <option value="">-- Unassigned --</option>
-              {technicians.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
+              {technicians.filter(t => t.is_active || t.id === addForm.assigned_technician_id).map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} {t.specializations ? `(${t.specializations})` : ""}
+                </option>
               ))}
             </select>
           </Field>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setAddOpen(false)}
-              className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
+              className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">
               Cancel
             </button>
             <button type="submit" disabled={addSaving}
@@ -511,7 +519,7 @@ export default function DonorDeviceConsole() {
         {viewDevice && (
           <div className="space-y-4">
             {/* Device info */}
-            <div className="bg-gray-50 rounded-lg p-3 grid grid-cols-2 gap-2 text-xs">
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 grid grid-cols-2 gap-2 text-xs">
               <div><span className="text-gray-400">Condition:</span> <span className="font-semibold capitalize ml-1">{viewDevice.condition}</span></div>
               <div><span className="text-gray-400">Status:</span> <span className="font-semibold capitalize ml-1">{viewDevice.status === "stripped" ? "assessed" : viewDevice.status}</span></div>
               <div>
@@ -522,9 +530,9 @@ export default function DonorDeviceConsole() {
                 </span>
               </div>
               <div><span className="text-gray-400">IMEI:</span> <span className="font-mono ml-1">{viewDevice.imei || "—"}</span></div>
-              <div className="col-span-2 flex items-center justify-between border-t border-gray-200 pt-2 mt-1">
+              <div className="col-span-2 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-2 mt-1">
                 <span className="text-gray-400">Assigned Technician:</span>
-                <span className="font-semibold text-gray-800">
+                <span className="font-semibold text-gray-800 dark:text-gray-100">
                   {viewDevice.assigned_technician_id
                     ? technicians.find(t => t.id === viewDevice.assigned_technician_id)?.name || "—"
                     : "-- Unassigned --"}
@@ -535,21 +543,21 @@ export default function DonorDeviceConsole() {
             {/* Parts */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-semibold text-gray-700">Extracted Parts ({parts.length})</h4>
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Extracted Parts ({parts.length})</h4>
               </div>
 
               {partsLoading ? (
                 <p className="text-xs text-gray-400 text-center py-4 animate-pulse">Loading parts…</p>
               ) : parts.length === 0 ? (
-                <div className="border-2 border-dashed border-gray-100 rounded-lg py-6 text-center">
+                <div className="border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-lg py-6 text-center">
                   <p className="text-xs text-gray-400">No parts extracted yet</p>
                 </div>
               ) : (
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {parts.map((p) => (
-                    <div key={p.id} className="flex items-start justify-between border border-gray-100 rounded-lg p-3 text-xs">
+                    <div key={p.id} className="flex items-start justify-between border border-gray-100 dark:border-gray-800 rounded-lg p-3 text-xs">
                       <div>
-                        <p className="font-semibold text-gray-800">{p.part_name}</p>
+                        <p className="font-semibold text-gray-800 dark:text-gray-100">{p.part_name}</p>
                         {p.compatible_brands?.length > 0 && (
                           <p className="text-gray-400 mt-0.5">Brands: {p.compatible_brands.join(", ")}</p>
                         )}
@@ -566,7 +574,7 @@ export default function DonorDeviceConsole() {
                             Awaiting Approval
                           </span>
                         ) : (
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${p.is_available ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${p.is_available ? "bg-green-100 text-green-700" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"}`}>
                             {p.is_available ? "Available" : "Used"}
                           </span>
                         )}
@@ -592,19 +600,35 @@ export default function DonorDeviceConsole() {
               <h4 className="font-semibold text-amber-800">{dev.brand} {dev.model}</h4>
               <p className="text-xs text-amber-700 mt-1">IMEI: <span className="font-mono">{dev.imei || "—"}</span></p>
               <p className="text-xs text-amber-600 mt-2">
-                A technician has marked the following parts as usable. Approving will print a single label for the device body.
+                A technician has marked the following parts as usable. Enter the estimated selling price for each part. Approving will print a QR label for each part.
               </p>
             </div>
             
             <div>
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">Pending Parts ({reviewGroup.length})</h4>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Pending Parts ({reviewGroup.length})</h4>
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                 {reviewGroup.map(p => (
-                  <div key={p.id} className="flex justify-between border border-gray-100 rounded-lg p-3 text-xs bg-white">
-                    <span className="font-medium text-gray-800">{p.part_name}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${CONDITION_BADGE[p.condition] ?? ""}`}>
-                      {p.condition}
-                    </span>
+                  <div key={p.id} className="flex items-center gap-3 border border-gray-100 dark:border-gray-800 rounded-lg p-3 text-xs bg-white dark:bg-gray-800">
+                    <div className="flex-1">
+                      <span className="font-medium text-gray-800 dark:text-gray-100">{p.part_name}</span>
+                      <div className="mt-1">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${CONDITION_BADGE[p.condition] ?? ""}`}>
+                          {p.condition}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500 font-medium text-[10px]">Rs.</span>
+                      <input 
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Price"
+                        value={partPrices[p.id] !== undefined ? partPrices[p.id] : ""}
+                        onChange={(e) => setPartPrices(prev => ({...prev, [p.id]: e.target.value}))}
+                        className="w-24 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
