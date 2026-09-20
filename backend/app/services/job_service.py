@@ -277,7 +277,8 @@ def clear_admin_alert(job_id: UUID, db: Session) -> dict:
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    job.admin_alert = None
+    if job.admin_alert and not job.admin_alert.startswith("[READ] "):
+        job.admin_alert = f"[READ] {job.admin_alert}"
     db.commit()
     db.refresh(job)
     

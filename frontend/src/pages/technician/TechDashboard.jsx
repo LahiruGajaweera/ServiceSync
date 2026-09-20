@@ -101,8 +101,9 @@ export default function TechDashboard() {
   const myJobs    = jobs.filter((j) => j.technician_id === user?.id);
   const activeQueue = myJobs.filter(j => {
     if (!["pending", "in_progress"].includes(j.status)) return false;
-    if (queueFilter === "customer") return j.job_type !== "refurbish";
-    if (queueFilter === "refurbish") return j.job_type === "refurbish";
+    const isRefurb = j.admin_alert?.includes("Approved for Refurbishment");
+    if (queueFilter === "customer") return !isRefurb;
+    if (queueFilter === "refurbish") return isRefurb;
     return true;
   });
   const inProgressJobs = myJobs.filter(j => j.status === "in_progress");
@@ -204,7 +205,7 @@ export default function TechDashboard() {
         <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">My Dashboard</h2>
         <button
           onClick={() => { setShowPartsLookup(true); setLookupBrand(""); setLookupModel(""); }}
-          className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl glass-button shadow-lg shadow-blue-500/30"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold shadow-sm transition-colors"
         >
           Quick Parts Lookup
         </button>
