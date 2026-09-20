@@ -10,8 +10,6 @@ import LogoutConfirmModal from "../components/LogoutConfirmModal";
 const NAV = [
   { to: "/tech",      label: "My Dashboard", exact: true },
   { to: "/tech/workspace", label: "Active Workspace" },
-  { to: "/tech/jobs", label: "Customer Repairs" },
-  { to: "/tech/refurbish", label: "Store Refurbishments" },
   { to: "/tech/donors", label: "Donor Devices" },
 ];
 

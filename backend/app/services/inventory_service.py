@@ -146,7 +146,7 @@ def create_item(data: InventoryItemCreate, db: Session) -> dict:
     qty = payload.pop("quantity", None)
     unit_cost = payload.pop("unit_cost", None)
     unit_price = payload.pop("unit_price", None)
-    supplier = payload.get("supplier")
+    supplier = payload.pop("supplier", None)
     warranty_days = payload.pop("warranty_days", None)
     serial_numbers = payload.pop("serial_numbers", None)
 

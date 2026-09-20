@@ -1,5 +1,5 @@
 import secrets
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 from uuid import UUID
 
 from fastapi import HTTPException, BackgroundTasks
@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, aliased
 from app.models.customer import Customer
 from app.models.job import Job, JobStatusHistory, JobImage
 from app.models.user import User
+from app.models.invoice import Invoice
 from app.schemas.job import AssignTechnicianRequest, JobCreate, JobStatusUpdate, TimerToggleRequest, AutoResumeRequest
 
 
@@ -21,7 +22,13 @@ def _generate_job_id(db: Session) -> str:
     raise RuntimeError("Could not generate a unique Job ID — retry the request")
 
 
-def _job_dict(job: Job, customer_name=None, customer_phone=None, technician_name=None, images=None) -> dict:
+def _job_dict(job: Job, customer_name=None, customer_phone=None, technician_name=None, images=None, warranty_days=None) -> dict:
+    is_warranty_valid = None
+    warranty_valid_until = None
+    if job.completed_date and warranty_days:
+        warranty_valid_until = (job.completed_date + timedelta(days=warranty_days)).date()
+        is_warranty_valid = warranty_valid_until >= datetime.now(timezone.utc).date()
+
     return {
         "id": job.id,
         "job_id": job.job_id,
@@ -30,6 +37,7 @@ def _job_dict(job: Job, customer_name=None, customer_phone=None, technician_name
         "customer_phone": customer_phone,
         "technician_id": job.technician_id,
         "technician_name": technician_name,
+        "job_type": job.job_type,
         "device_brand": job.device_brand,
         "device_model": job.device_model,
         "device_imei": job.device_imei,
@@ -41,6 +49,8 @@ def _job_dict(job: Job, customer_name=None, customer_phone=None, technician_name
         "investigated": job.investigated,
         "received_date": job.received_date,
         "completed_date": job.completed_date,
+        "is_warranty_valid": is_warranty_valid,
+        "warranty_valid_until": warranty_valid_until,
         "notes": job.notes,
         "revert_requested_to": job.revert_requested_to,
         "revert_reason": job.revert_reason,
@@ -49,8 +59,8 @@ def _job_dict(job: Job, customer_name=None, customer_phone=None, technician_name
         "physical_condition": job.physical_condition,
         "images": images or [],
         "created_at": job.created_at,
-        "created_at": job.created_at,
         "rework_of_job_id": job.rework_of_job_id,
+        "rework_reason": job.rework_reason,
         "active_repair_start_time": job.active_repair_start_time,
         "total_diagnostic_seconds": job.total_diagnostic_seconds,
         "total_active_repair_seconds": job.total_active_repair_seconds,
@@ -73,9 +83,11 @@ def _query_jobs(db: Session, status: str | None = None, technician_id: UUID | No
             Customer.name.label("customer_name"),
             Customer.phone_number.label("customer_phone"),
             TechAlias.name.label("technician_name"),
+            Invoice.warranty_days.label("warranty_days"),
         )
         .join(Customer, Job.customer_id == Customer.id)
         .outerjoin(TechAlias, Job.technician_id == TechAlias.id)
+        .outerjoin(Invoice, Job.id == Invoice.job_id)
     )
 
     if status:
@@ -177,6 +189,8 @@ def create_job(data: JobCreate, created_by: User, db: Session, background_tasks:
         customer_id=data.customer_id,
         technician_id=data.technician_id,
         rework_of_job_id=data.rework_of_job_id,
+        job_type=data.job_type,
+        rework_reason=data.rework_reason,
         device_brand=data.device_brand,
         device_model=data.device_model,
         device_imei=data.device_imei,
@@ -216,7 +230,7 @@ def list_jobs(db: Session, status: str | None = None, technician_id: UUID | None
     if not rows:
         return []
         
-    job_ids = [job.id for job, _, _, _ in rows]
+    job_ids = [job.id for job, *_ in rows]
     all_images = db.query(JobImage).filter(JobImage.job_id.in_(job_ids)).all()
     images_by_job = {}
     for img in all_images:
@@ -226,7 +240,7 @@ def list_jobs(db: Session, status: str | None = None, technician_id: UUID | None
             "created_at": img.created_at
         })
         
-    return [_job_dict(job, cname, cphone, tname, images_by_job.get(job.id, [])) for job, cname, cphone, tname in rows]
+    return [_job_dict(job, cname, cphone, tname, images_by_job.get(job.id, []), warranty_days) for job, cname, cphone, tname, warranty_days in rows]
 
 
 def get_all_identified_faults(db: Session) -> list[str]:
@@ -242,20 +256,22 @@ def get_job(job_id: UUID, db: Session) -> dict:
             Customer.name.label("customer_name"),
             Customer.phone_number.label("customer_phone"),
             TechAlias.name.label("technician_name"),
+            Invoice.warranty_days.label("warranty_days"),
         )
         .join(Customer, Job.customer_id == Customer.id)
         .outerjoin(TechAlias, Job.technician_id == TechAlias.id)
+        .outerjoin(Invoice, Job.id == Invoice.job_id)
         .filter(Job.id == job_id)
         .first()
     )
     if not row:
         raise HTTPException(404, "Job not found")
-    job, cname, cphone, tname = row
+    job, cname, cphone, tname, warranty_days = row
     
     images = db.query(JobImage).filter(JobImage.job_id == job_id).all()
     images_list = [{"id": img.id, "file_path": img.file_path, "created_at": img.created_at} for img in images]
     
-    return _job_dict(job, cname, cphone, tname, images_list)
+    return _job_dict(job, cname, cphone, tname, images_list, warranty_days)
 
 def clear_admin_alert(job_id: UUID, db: Session) -> dict:
     job = db.query(Job).filter(Job.id == job_id).first()
@@ -272,22 +288,34 @@ def clear_admin_alert(job_id: UUID, db: Session) -> dict:
 
 def get_job_by_public_id(public_id: str, db: Session) -> dict | None:
     row = (
-        db.query(Job)
+        db.query(Job, Invoice.warranty_days.label("warranty_days"))
+        .outerjoin(Invoice, Job.id == Invoice.job_id)
         .filter(Job.job_id == public_id.upper())
         .first()
     )
     if not row:
         return None
+    job, warranty_days = row
+        
+    is_warranty_valid = None
+    warranty_valid_until = None
+    if job.completed_date and warranty_days:
+        warranty_valid_until = (job.completed_date + timedelta(days=warranty_days)).date()
+        is_warranty_valid = warranty_valid_until >= datetime.now(timezone.utc).date()
+
     return {
-        "job_id": row.job_id,
-        "device_brand": row.device_brand,
-        "device_model": row.device_model,
-        "fault_category": row.fault_category,
-        "status": row.status,
-        "estimated_completion_date": row.estimated_completion_date,
-        "estimated_cost": row.estimated_cost,
-        "received_date": row.received_date,
-        "completed_date": row.completed_date,
+        "job_id": job.job_id,
+        "job_type": job.job_type,
+        "device_brand": job.device_brand,
+        "device_model": job.device_model,
+        "fault_category": job.fault_category,
+        "status": job.status,
+        "estimated_completion_date": job.estimated_completion_date,
+        "estimated_cost": job.estimated_cost,
+        "received_date": job.received_date,
+        "completed_date": job.completed_date,
+        "is_warranty_valid": is_warranty_valid,
+        "warranty_valid_until": warranty_valid_until,
     }
 
 

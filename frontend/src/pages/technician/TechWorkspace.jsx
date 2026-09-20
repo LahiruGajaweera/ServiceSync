@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import JobStatusBadge from "../../components/JobStatusBadge";
+import CopyJobIdButton from "../../components/CopyJobIdButton";
 import SmartPartsPanel from "../../components/SmartPartsPanel";
 import ConfirmModal from "../../components/ConfirmModal";
 import InlineLogPart from "./InlineLogPart";
@@ -435,9 +436,15 @@ function WorkspaceJobPanel({ job, onRefresh }) {
           {/* Job Info */}
           <div className="flex justify-between items-start">
             <div>
-              <p className="font-medium text-gray-800 dark:text-gray-100 text-lg">{job.device_brand} {job.device_model}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">{job.fault_category?.replace(/_/g, " ")}</p>
-              {job.fault_description && <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{job.fault_description}</p>}
+              <div className="flex items-center gap-3">
+                <p className="font-medium text-gray-800 dark:text-gray-100 text-lg">{job.device_brand} {job.device_model}</p>
+                <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm group">
+                  <span className="font-mono text-[10px] font-bold text-blue-600 dark:text-blue-400 leading-none">{job.job_id}</span>
+                  <CopyJobIdButton jobId={job.job_id} />
+                </div>
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 capitalize mt-1.5">{job.fault_category?.replace(/_/g, " ")}</p>
+              {job.fault_description && <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5">{job.fault_description}</p>}
             </div>
             <div className="text-right flex flex-col items-end gap-2">
               <JobStatusBadge status={job.status} />

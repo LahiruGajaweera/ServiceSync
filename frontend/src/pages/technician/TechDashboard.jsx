@@ -6,6 +6,7 @@ import JobStatusBadge from "../../components/JobStatusBadge";
 import ScanField from "../../components/ScanField";
 import TechJobDetailModal from "./TechJobDetailModal";
 import TechJobDetailBody from "./TechJobDetailBody";
+import CopyJobIdButton from "../../components/CopyJobIdButton";
 import BrandSelect from "../../components/BrandSelect";
 import ModelSelect from "../../components/ModelSelect";
 import SmartPartsPanel from "../../components/SmartPartsPanel";
@@ -54,6 +55,7 @@ export default function TechDashboard() {
   // Job Details Modal and Inline Expansion
   const [detailJob, setDetailJob] = useState(null);
   const [expandedJobId, setExpandedJobId] = useState(null);
+  const [queueFilter, setQueueFilter] = useState("all");
 
   const [now, setNow]               = useState(new Date());
 
@@ -97,7 +99,12 @@ export default function TechDashboard() {
   useEffect(() => { fetchMyJobs(); }, []);
 
   const myJobs    = jobs.filter((j) => j.technician_id === user?.id);
-  const activeQueue = myJobs.filter(j => ["pending", "in_progress"].includes(j.status));
+  const activeQueue = myJobs.filter(j => {
+    if (!["pending", "in_progress"].includes(j.status)) return false;
+    if (queueFilter === "customer") return j.job_type !== "refurbish";
+    if (queueFilter === "refurbish") return j.job_type === "refurbish";
+    return true;
+  });
   const inProgressJobs = myJobs.filter(j => j.status === "in_progress");
   const unclaimed = jobs.filter((j) => !j.technician_id);
 
@@ -264,8 +271,14 @@ export default function TechDashboard() {
 
       <div className="glass-panel rounded-2xl p-7 mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-700 dark:text-gray-200">My Job Queue</h3>
-          <Link to="/tech/jobs" className="text-xs text-blue-600 hover:underline">View all →</Link>
+          <div className="flex items-center gap-4">
+            <h3 className="font-semibold text-gray-700 dark:text-gray-200">My Job Queue</h3>
+            <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+              <button onClick={() => setQueueFilter("all")} className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${queueFilter === "all" ? "bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}>All</button>
+              <button onClick={() => setQueueFilter("customer")} className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${queueFilter === "customer" ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}>Customer Repairs</button>
+              <button onClick={() => setQueueFilter("refurbish")} className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${queueFilter === "refurbish" ? "bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}>Store Refurbishments</button>
+            </div>
+          </div>
         </div>
 
         {loading ? (
@@ -285,7 +298,7 @@ export default function TechDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-              {activeQueue.slice(0, 8).map((job) => (
+              {activeQueue.map((job) => (
                 <React.Fragment key={job.id}>
                   <tr 
                     className={`hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 cursor-pointer transition-colors ${expandedJobId === job.id ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
@@ -297,7 +310,12 @@ export default function TechDashboard() {
                       }
                     }}
                   >
-                    <td className="py-2.5 font-mono text-xs text-blue-600 font-semibold pl-2">{job.job_id}</td>
+                    <td className="py-2.5 font-mono text-xs text-blue-600 font-semibold pl-2">
+                      <div className="flex items-center gap-1.5 group">
+                        <span>{job.job_id}</span>
+                        <CopyJobIdButton jobId={job.job_id} />
+                      </div>
+                    </td>
                     <td className="py-2.5 text-gray-700 dark:text-gray-200">{job.device_brand} {job.device_model}</td>
                     <td className="py-2.5 text-gray-500 dark:text-gray-400 capitalize text-xs">{job.fault_category?.replace(/_/g, " ")}</td>
                     <td className="py-2.5"><JobStatusBadge status={job.status} /></td>

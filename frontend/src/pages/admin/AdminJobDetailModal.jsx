@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../../services/api";
 import JobStatusBadge from "../../components/JobStatusBadge";
 import QRCode from "qrcode";
+import CopyJobIdButton from "../../components/CopyJobIdButton";
 
 function Modal({ open, onClose, title, children }) {
   if (!open) return null;
@@ -46,7 +47,7 @@ const HISTORY_STYLES = {
   },
 };
 
-export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
+export default function AdminJobDetailModal({ open, jobId, onClose, onDone, onOpenRework }) {
   const [job, setJob]           = useState(null);
   const [parts, setParts]       = useState([]);
   const [history, setHistory]   = useState([]);
@@ -595,7 +596,10 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-4 flex items-center justify-between z-10">
           <div>
             <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">Job Detail & Management</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Job ID: {job?.job_id || "Loading..."}</p>
+            <div className="flex items-center gap-2 mt-0.5 group">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Job ID: <span className="font-mono text-gray-800 dark:text-gray-200">{job?.job_id || "Loading..."}</span></p>
+              {job?.job_id && <CopyJobIdButton jobId={job.job_id} />}
+            </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 text-3xl leading-none">&times;</button>
         </div>
@@ -641,8 +645,8 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
         </div>
       )}
 
-      {/* Warranty Rework Banner if this job is a warranty claim */}
-      {job.rework_of_job_id && (
+      {/* Warranty / Paid Rework Banner */}
+      {job.rework_of_job_id && job.job_type === "warranty" && (
         <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-xl p-4 mb-6 flex items-center justify-between">
           <div>
             <h3 className="text-purple-900 dark:text-purple-200 font-bold text-sm">
@@ -651,9 +655,35 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
             <p className="text-purple-700 dark:text-purple-300 text-xs mt-0.5">
               This repair is a free warranty claim linked to an original repair job.
             </p>
+            {job.rework_reason && (
+              <p className="text-purple-800 dark:text-purple-200 text-xs mt-1.5 font-medium italic">
+                Reason: {job.rework_reason}
+              </p>
+            )}
           </div>
           <span className="text-xs bg-purple-200 dark:bg-purple-900 text-purple-800 dark:text-purple-200 font-mono font-bold px-3 py-1 rounded-lg">
             Free Warranty
+          </span>
+        </div>
+      )}
+
+      {job.rework_of_job_id && job.job_type === "rework" && (
+        <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-6 flex items-center justify-between">
+          <div>
+            <h3 className="text-amber-900 dark:text-amber-200 font-bold text-sm">
+              Paid Rework Job
+            </h3>
+            <p className="text-amber-700 dark:text-amber-300 text-xs mt-0.5">
+              This is a continuation of a previous job, but parts/labor must be billed.
+            </p>
+            {job.rework_reason && (
+              <p className="text-amber-800 dark:text-amber-200 text-xs mt-1.5 font-medium italic">
+                Reason: {job.rework_reason}
+              </p>
+            )}
+          </div>
+          <span className="text-xs bg-amber-200 dark:bg-amber-900 text-amber-800 dark:text-amber-200 font-mono font-bold px-3 py-1 rounded-lg">
+            Paid Rework
           </span>
         </div>
       )}
@@ -666,8 +696,8 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
                 <div className="flex items-center gap-3">
                   <p className="text-3xl font-bold font-mono text-gray-900 dark:text-white tracking-tight">{job.job_id}</p>
                   {job.rework_of_job_id && (
-                    <span className="bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-full border border-purple-200">
-                      Warranty Rework
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full border ${job.job_type === 'rework' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-purple-100 text-purple-700 border-purple-200'}`}>
+                      {job.job_type === 'rework' ? 'Paid Rework' : 'Warranty Claim'}
                     </span>
                   )}
                 </div>
@@ -677,11 +707,12 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone }) {
                 {(job.status === "completed" || job.status === "delivered") && (
                   <button
                     type="button"
-                    onClick={openWarrantyModal}
-                    className="bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white text-sm font-semibold px-4 py-1.5 rounded-full shadow-sm transition-colors"
-                    title="Create a free Warranty Claim / Rework Job for this customer"
+                    onClick={() => onOpenRework && onOpenRework(job.job_id)}
+                    disabled={job.is_warranty_valid === false}
+                    className={`${job.is_warranty_valid === false ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed" : "bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white"} text-sm font-semibold px-4 py-1.5 rounded-full shadow-sm transition-colors`}
+                    title={job.is_warranty_valid === false ? "Warranty has expired" : "Create a free Warranty Claim / Rework Job for this customer"}
                   >
-                    Claim Warranty
+                    {job.is_warranty_valid === false ? "Warranty Expired" : "Claim Warranty"}
                   </button>
                 )}
               </div>
