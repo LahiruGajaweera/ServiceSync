@@ -48,7 +48,7 @@ export default function TechnicianLayout() {
       {/* Sidebar */}
       <aside className="w-60 shrink-0 bg-white/60 dark:bg-gray-900/50 backdrop-blur-xl border-r border-white/30 dark:border-gray-800/50 flex flex-col shadow-2xl z-20">
         <div className="px-5 py-5 border-b border-gray-200 dark:border-gray-700">
-          <p className="text-lg font-extrabold text-green-600 tracking-tight">ServiceSync</p>
+          <p className="text-lg font-extrabold text-blue-600 tracking-tight">ServiceSync</p>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Technician Panel</p>
         </div>
 
@@ -59,8 +59,8 @@ export default function TechnicianLayout() {
                 to={item.to}
                 className={`flex items-center mx-3 my-1 px-4 py-2.5 text-sm rounded-xl transition-all duration-300 ${
                   isActive(item) && (!item.exact || location.pathname === item.to)
-                    ? "bg-gradient-to-r from-green-600 to-green-500 text-white font-semibold shadow-md shadow-green-500/20"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-green-50 hover:text-green-700 dark:hover:bg-gray-800/50 dark:hover:text-green-400"
+                    ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold shadow-md shadow-blue-500/20"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-gray-800/50 dark:hover:text-blue-400"
                 }`}
               >
                 {item.label}
@@ -75,7 +75,7 @@ export default function TechnicianLayout() {
                         to={`/tech/workspace?job=${job.id}`}
                         className={`block pl-9 pr-5 py-2 text-xs transition-colors border-l-2 ${
                           isSelected
-                            ? "border-green-400 text-green-700 font-bold dark:text-green-400 bg-green-50/50 dark:bg-green-900/10"
+                            ? "border-blue-400 text-blue-700 font-bold dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10"
                             : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                         }`}
                       >
@@ -99,7 +99,7 @@ export default function TechnicianLayout() {
           <div className="flex items-center gap-4">
             <DateTimeDisplay />
             <div className="hidden sm:block border-l border-gray-200 dark:border-gray-700 pl-4">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Welcome, <span className="font-bold text-green-600 dark:text-green-400">{user?.name}</span></p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Welcome, <span className="font-bold text-blue-600 dark:text-blue-400">{user?.name}</span></p>
             </div>
           </div>
           <div className="flex items-center gap-2">

@@ -11,23 +11,27 @@ from app.models.job import Job
 
 router = APIRouter(prefix="/admin-tasks", tags=["Admin Tasks"])
 
+from app.models.customer import Customer
 
 @router.get("/")
 def list_pending_tasks(db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
     tasks = (
-        db.query(AdminCallTask, Job)
+        db.query(AdminCallTask, Job, Customer)
         .join(Job, AdminCallTask.job_id == Job.id)
+        .join(Customer, Job.customer_id == Customer.id)
         .filter(AdminCallTask.is_completed == False)
         .order_by(AdminCallTask.created_at.asc())
         .all()
     )
     result = []
-    for task, job in tasks:
+    for task, job, customer in tasks:
         result.append({
             "id": task.id,
             "job_id": task.job_id,
             "job_public_id": job.job_id,
             "customer_id": job.customer_id,
+            "customer_name": customer.name,
+            "customer_phone": customer.phone_number,
             "device": f"{job.device_brand} {job.device_model}",
             "message": task.message,
             "created_at": task.created_at
