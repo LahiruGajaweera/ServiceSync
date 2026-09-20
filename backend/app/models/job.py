@@ -12,6 +12,11 @@ class Job(Base):
     job_id = Column(String(20), unique=True, nullable=False, index=True)
     customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False)
     technician_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    job_type = Column(
+        Enum("new", "rework", "warranty", name="job_type"),
+        nullable=False,
+        default="new",
+    )
     device_brand = Column(String(100), nullable=False)
     device_model = Column(String(100), nullable=False)
     total_away_seconds = Column(Integer, nullable=False, default=0)
@@ -42,6 +47,7 @@ class Job(Base):
     completed_date = Column(DateTime(timezone=True), nullable=True)
     pickup_date = Column(DateTime(timezone=True), nullable=True)
     notes = Column(Text, nullable=True)
+    rework_reason = Column(Text, nullable=True)
     physical_condition = Column(String(255), nullable=True)
     revert_requested_to = Column(String(30), nullable=True)
     revert_reason = Column(Text, nullable=True)

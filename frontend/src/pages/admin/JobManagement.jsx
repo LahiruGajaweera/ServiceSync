@@ -6,9 +6,11 @@ import { isValidPhoneNumber } from "../../utils/validation";
 import JobStatusBadge from "../../components/JobStatusBadge";
 import PhoneInput from "../../components/PhoneInput";
 import BrandSelect from "../../components/BrandSelect";
+import CopyJobIdButton from "../../components/CopyJobIdButton";
 import ModelSelect from "../../components/ModelSelect";
 import AdminJobDetailModal from "./AdminJobDetailModal";
 import SmartPartsPanel from "../../components/SmartPartsPanel";
+import CreateReworkModal from "../../components/CreateReworkModal";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -536,6 +538,8 @@ export default function JobManagement() {
   const [invoiceJob, setInvoiceJob] = useState(null);
   const [revertJob, setRevertJob]   = useState(null);
   const [detailJobId, setDetailJobId] = useState(null);
+  const [showReworkModal, setShowReworkModal] = useState(false);
+  const [initialReworkJobId, setInitialReworkJobId] = useState("");
 
   // Customer search state
   const [custSearch, setCustSearch] = useState("");
@@ -729,6 +733,12 @@ export default function JobManagement() {
             >
               + Register Job
             </button>
+            <button
+              onClick={() => setShowReworkModal(true)}
+              className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition-colors ml-2"
+            >
+              + Rework / Warranty
+            </button>
           </div>
         </div>
       </div>
@@ -782,14 +792,19 @@ export default function JobManagement() {
                         }
                       }}>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 group">
                         <span className="font-mono font-semibold text-blue-600">{job.job_id}</span>
+                        <CopyJobIdButton jobId={job.job_id} />
                         {job.rework_of_job_id && (
                           <span
-                            className="bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800"
-                            title="Free Warranty Claim Job"
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                              job.job_type === 'rework'
+                                ? "bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                                : "bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+                            }`}
+                            title={job.job_type === 'rework' ? "Paid Rework Job" : "Free Warranty Claim Job"}
                           >
-                            Warranty Claim
+                            {job.job_type === 'rework' ? 'Paid Rework' : 'Warranty Claim'}
                           </span>
                         )}
                       </div>
@@ -1080,12 +1095,24 @@ export default function JobManagement() {
         jobId={detailJobId}
         onClose={() => setDetailJobId(null)}
         onDone={() => fetchJobs(statusFilter)}
+        onOpenRework={(id) => {
+          setDetailJobId(null);
+          setInitialReworkJobId(id);
+          setShowReworkModal(true);
+        }}
       />
 
       {/* Invoice / Receipt with QR */}
       {invoiceJob && (
         <InvoiceReceipt job={invoiceJob} onClose={() => setInvoiceJob(null)} />
       )}
+
+      <CreateReworkModal 
+        isOpen={showReworkModal} 
+        onClose={() => setShowReworkModal(false)}
+        onSuccess={() => fetchJobs(statusFilter)}
+        initialJobId={initialReworkJobId}
+      />
     </div>
   );
 }

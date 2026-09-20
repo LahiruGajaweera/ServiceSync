@@ -90,6 +90,10 @@ def _run_migrations() -> None:
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_biometrics_tested BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_wifi_tested BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qc_charging_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        
+        # Job Type and Rework
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS job_type job_type NOT NULL DEFAULT 'new'",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS rework_reason TEXT",
     ]
     
     with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
@@ -107,6 +111,10 @@ def _run_migrations() -> None:
             pass
         try:
             conn.execute(text("ALTER TYPE job_status ADD VALUE IF NOT EXISTS 'rejected'"))
+        except Exception:
+            pass
+        try:
+            conn.execute(text("CREATE TYPE job_type AS ENUM ('new', 'rework', 'warranty')"))
         except Exception:
             pass
 

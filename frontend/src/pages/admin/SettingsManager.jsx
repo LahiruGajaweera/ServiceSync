@@ -367,8 +367,6 @@ export default function SettingsManager() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(() => {
                   const defaultCategories = [
-                    { key: "Display & Touch", desc: "Display & Touchscreen replacements" },
-                    { key: "Battery Replacement", desc: "New battery installations" },
                     { key: "Charging Port", desc: "Charging port & sub-board repairs" },
                     { key: "Motherboard IC", desc: "Chip-level motherboard & micro-soldering" },
                     { key: "Software / Unlocking", desc: "Flashing, OS & unlocking services" },

@@ -3,6 +3,7 @@ import api from "../../services/api";
 import JobStatusBadge from "../../components/JobStatusBadge";
 import SmartPartsPanel from "../../components/SmartPartsPanel";
 import ConfirmModal from "../../components/ConfirmModal";
+import CopyJobIdButton from "../../components/CopyJobIdButton";
 import InlineLogPart from "./InlineLogPart";
 
 const STATUS_OPTIONS = [
@@ -197,7 +198,7 @@ export default function TechJobDetailBody({ job, onClose, onDone, partRefreshTri
   return (
     <div className="w-full flex flex-col bg-white dark:bg-gray-800 rounded-b-xl">
       <div className="p-6 space-y-6">
-          {job.rework_of_job_id && (
+          {job.rework_of_job_id && job.job_type === "warranty" && (
             <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-xl p-3.5 flex items-center justify-between">
               <div>
                 <h4 className="text-purple-900 dark:text-purple-200 font-bold text-xs">
@@ -206,9 +207,35 @@ export default function TechJobDetailBody({ job, onClose, onDone, partRefreshTri
                 <p className="text-purple-700 dark:text-purple-300 text-[11px] mt-0.5">
                   This is a free guarantee repair for a previous job.
                 </p>
+                {job.rework_reason && (
+                  <p className="text-purple-800 dark:text-purple-200 text-[11px] mt-1.5 font-medium italic">
+                    Reason: {job.rework_reason}
+                  </p>
+                )}
               </div>
               <span className="text-[10px] bg-purple-200 dark:bg-purple-900 text-purple-800 dark:text-purple-200 font-bold px-2 py-0.5 rounded">
                 Free Warranty
+              </span>
+            </div>
+          )}
+
+          {job.rework_of_job_id && job.job_type === "rework" && (
+            <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl p-3.5 flex items-center justify-between">
+              <div>
+                <h4 className="text-amber-900 dark:text-amber-200 font-bold text-xs">
+                  Paid Rework
+                </h4>
+                <p className="text-amber-700 dark:text-amber-300 text-[11px] mt-0.5">
+                  This is a continuation of a previous job, but parts/labor must be billed.
+                </p>
+                {job.rework_reason && (
+                  <p className="text-amber-800 dark:text-amber-200 text-[11px] mt-1.5 font-medium italic">
+                    Reason: {job.rework_reason}
+                  </p>
+                )}
+              </div>
+              <span className="text-[10px] bg-amber-200 dark:bg-amber-900 text-amber-800 dark:text-amber-200 font-bold px-2 py-0.5 rounded">
+                Paid Rework
               </span>
             </div>
           )}
@@ -216,9 +243,15 @@ export default function TechJobDetailBody({ job, onClose, onDone, partRefreshTri
           {/* Job Info */}
           <div className="flex justify-between items-start">
             <div>
-              <p className="font-medium text-gray-800 dark:text-gray-100">{job.device_brand} {job.device_model}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{job.fault_category?.replace(/_/g, " ")}</p>
-              {job.fault_description && <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">{job.fault_description}</p>}
+              <div className="flex items-center gap-3">
+                <p className="font-medium text-gray-800 dark:text-gray-100">{job.device_brand} {job.device_model}</p>
+                <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm group">
+                  <span className="font-mono text-[10px] font-bold text-blue-600 dark:text-blue-400 leading-none">{job.job_id}</span>
+                  <CopyJobIdButton jobId={job.job_id} />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 capitalize mt-1.5">{job.fault_category?.replace(/_/g, " ")}</p>
+              {job.fault_description && <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">{job.fault_description}</p>}
             </div>
             <div className="text-right">
               <JobStatusBadge status={job.status} />

@@ -151,7 +151,7 @@ export default function PredictiveAnalytics() {
         
         setFaultTrends(faultsRes.data);
         if (invRes.data) {
-          setCriticalInventory(invRes.data.filter(i => i.status === "critical"));
+          setCriticalInventory(invRes.data.filter(i => i.restock_recommended > 0));
         }
         if (techRes.data) {
           setTechScores(techRes.data);
@@ -353,6 +353,63 @@ export default function PredictiveAnalytics() {
 
 
       </div>
+
+      {/* ── Smart Inventory Forecast Section ── */}
+      <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 w-full border border-gray-100 dark:border-gray-700">
+        <div className="mb-6">
+          <h3 className="font-bold text-gray-800 dark:text-gray-100 text-lg uppercase tracking-wide flex items-center gap-2">
+            <span className="text-amber-500">📦</span> Smart Parts Ordering Forecast
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-2xl">
+            Based on the fault predictions above, the AI has calculated exactly which parts you need to order to meet expected demand.
+          </p>
+        </div>
+        
+        {loading ? (
+          <div className="py-10 text-center text-gray-400 animate-pulse">Calculating Inventory Requirements...</div>
+        ) : criticalInventory.length === 0 ? (
+          <div className="py-10 text-center text-gray-400">
+            <p className="text-2xl mb-2">🎉</p>
+            <p className="font-medium text-gray-800 dark:text-gray-200">Stock Levels Optimal</p>
+            <p className="text-sm mt-1">You have enough parts in stock to meet the predicted demand for next week.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-gray-500 uppercase bg-gray-50 dark:bg-gray-700/50 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Part Name</th>
+                  <th className="px-4 py-3 font-semibold text-center">Current Stock</th>
+                  <th className="px-4 py-3 font-semibold text-center">Predicted Demand</th>
+                  <th className="px-4 py-3 font-semibold text-center bg-amber-50/50 dark:bg-amber-900/10 text-amber-800 dark:text-amber-200">Order Quantity</th>
+                  <th className="px-4 py-3 font-semibold text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {criticalInventory.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{item.part_name}</td>
+                    <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-300 font-mono">{item.current_stock}</td>
+                    <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-300 font-mono">{item.predicted_demand}</td>
+                    <td className="px-4 py-3 text-center font-bold text-amber-600 dark:text-amber-400 font-mono bg-amber-50/30 dark:bg-amber-900/10">
+                      +{item.restock_recommended}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`px-2 py-1 text-[10px] uppercase font-bold rounded-full ${
+                        item.status === 'critical' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800' :
+                        'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+                      }`}>
+                        {item.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
     </div>
   );
 }

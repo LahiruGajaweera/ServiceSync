@@ -16,11 +16,15 @@ JOB_STATUSES = Literal[
     "failed", "rejected"
 ]
 
+JOB_TYPES = Literal["new", "rework", "warranty"]
+
 
 class JobCreate(BaseModel):
     customer_id: UUID
     technician_id: UUID | None = None
     rework_of_job_id: UUID | None = None
+    job_type: JOB_TYPES = "new"
+    rework_reason: str | None = None
     device_brand: str
     device_model: str
     device_imei: str | None = None
@@ -93,6 +97,9 @@ class JobListItem(BaseModel):
     customer_phone: str | None = None
     technician_id: UUID | None = None
     technician_name: str | None = None
+    job_type: str | None = None
+    is_warranty_valid: bool | None = None
+    warranty_valid_until: date | None = None
     device_brand: str
     device_model: str
     device_imei: str | None = None
@@ -136,6 +143,8 @@ class JobListItem(BaseModel):
     resolution_notes: str | None = None
     images: list[JobImageResponse] = []
     created_at: datetime | None = None
+    is_warranty_valid: bool | None = None
+    warranty_valid_until: date | None = None
 
 
 class PublicJobResponse(BaseModel):
@@ -146,8 +155,11 @@ class PublicJobResponse(BaseModel):
     status: str
     estimated_completion_date: date | None = None
     estimated_cost: Decimal | None = None
+    job_type: str | None = None
     received_date: datetime | None = None
     completed_date: datetime | None = None
+    is_warranty_valid: bool | None = None
+    warranty_valid_until: date | None = None
 
 
 class CompatibleInventoryPart(BaseModel):
