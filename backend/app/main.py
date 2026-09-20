@@ -70,6 +70,8 @@ def _run_migrations() -> None:
         # Invoices features
         "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS discount_amount NUMERIC(10, 2) NOT NULL DEFAULT 0",
         "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(255)",
+        "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS warranty_days INTEGER",
+        "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP WITH TIME ZONE",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS admin_alert TEXT",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS physical_condition VARCHAR(255)",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS salvage_delayed_until TIMESTAMP WITH TIME ZONE",
@@ -315,7 +317,7 @@ app.add_middleware(
 )
 
 from app.routers import analytics, auth, customers, donors, inventory, invoices, jobs, notifications, salvage, scraper, users, chatbot  # noqa: E402
-from app.routers import admin, brands, models, part_specs, suppliers, admin_tasks, settings, payments  # noqa: E402
+from app.routers import admin, brands, models, part_specs, suppliers, admin_tasks, settings as settings_router, payments  # noqa: E402
 
 app.include_router(auth.router)
 app.include_router(admin.router)
@@ -335,7 +337,7 @@ app.include_router(models.router)
 app.include_router(part_specs.router)
 app.include_router(chatbot.router)
 app.include_router(admin_tasks.router)
-app.include_router(settings.router)
+app.include_router(settings_router.router)
 app.include_router(payments.router)
 
 
