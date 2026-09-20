@@ -999,13 +999,7 @@ export default function JobManagement() {
                   className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   placeholder="Describe the issue in more detail…" />
               </div>
-              <div className="col-span-2">
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Rework of Job ID (optional)</label>
-                <input name="rework_of_job_id" value={form.rework_of_job_id} onChange={handleChange}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-amber-50 dark:bg-amber-900/10"
-                  placeholder="Paste UUID of original job if this is a rework" />
-                <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">If this device was returned for the same fault, linking the original job will correctly penalize the original technician.</p>
-              </div>
+
               <div className="col-span-2">
                 <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Physical Condition</label>
                 <textarea name="physical_condition" value={form.physical_condition} onChange={handleChange} rows={2}
