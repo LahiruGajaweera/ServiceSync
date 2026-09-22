@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, Fragment } from "react";
 import api from "../../services/api";
 import BrandSelect from "../../components/BrandSelect";
 import ModelSelect from "../../components/ModelSelect";
@@ -18,7 +18,7 @@ const SOURCE_LABEL = {
 
 const STATUS_BADGE = {
   available: "bg-blue-100 text-blue-700",
-  stripped:  "bg-teal-100 text-teal-700", // visually 'Assessed'
+  stripped:  "bg-teal-100 text-teal-700", // visually 'Completed'
   disposed:  "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300",
 };
 
@@ -54,14 +54,14 @@ export default function DonorDeviceConsole() {
   const [technicians, setTechnicians]   = useState([]);
   const [loading, setLoading]           = useState(true);
   const [search, setSearch]             = useState("");
-  const [activeTab, setActiveTab]       = useState("devices"); // "devices" | "reviews"
+  const [activeTab, setActiveTab]       = useState("devices"); // "devices" | "reviews" | "refurbish"
 
   const [pendingParts, setPendingParts] = useState([]);
   const [pendingLoading, setPendingLoading] = useState(false);
 
   // Add device modal
   const [addOpen, setAddOpen]           = useState(false);
-  const [addForm, setAddForm]           = useState({ brand: "", model: "", imei: "", condition: "good", source: "purchased", source_job_id: "", source_description: "", assigned_technician_id: "" });
+  const [addForm, setAddForm]           = useState({ brand: "", model: "", imei: "", condition: "good", source: "purchased", purchase_price: "", purpose: "parts", source_job_id: "", source_description: "", assigned_technician_id: "" });
   const [addSaving, setAddSaving]       = useState(false);
 
   // View device + parts modal
@@ -77,6 +77,42 @@ export default function DonorDeviceConsole() {
   const [addPartOpen, setAddPartOpen]   = useState(false);
   const [partForm, setPartForm]         = useState({ part_name: "", compatible_brands: "", compatible_models: "", condition: "good" });
   const [partSaving, setPartSaving]     = useState(false);
+
+  // Refurbish Approvals
+  const refurbishPending = devices.filter(d => d.refurbish_status === "pending_approval");
+  const [refurbishApproveDevice, setRefurbishApproveDevice] = useState(null);
+  const [refurbishApproveForm, setRefurbishApproveForm] = useState({ selling_price: "" });
+  const [refurbishApproving, setRefurbishApproving] = useState(false);
+  const [refurbishedParts, setRefurbishedParts] = useState([]);
+  const [refurbishedPartsLoading, setRefurbishedPartsLoading] = useState(false);
+
+  const fetchRefurbishedParts = async (deviceId) => {
+    setRefurbishedPartsLoading(true);
+    try {
+      const res = await api.get(`/donors/${deviceId}/refurbished-parts`);
+      setRefurbishedParts(res.data);
+    } catch {
+      // ignore
+    } finally {
+      setRefurbishedPartsLoading(false);
+    }
+  };
+
+  const handleApproveRefurbish = async (e) => {
+    e.preventDefault();
+    setRefurbishApproving(true);
+    try {
+      await api.post(`/donors/${refurbishApproveDevice.id}/refurbish-approve`, {
+        selling_price: parseFloat(refurbishApproveForm.selling_price)
+      });
+      setRefurbishApproveDevice(null);
+      await fetchDevices();
+    } catch (err) {
+      alert(err.response?.data?.detail || "Failed to approve refurbish");
+    } finally {
+      setRefurbishApproving(false);
+    }
+  };
 
   const fetchDevices = async () => {
     try {
@@ -190,13 +226,15 @@ export default function DonorDeviceConsole() {
         imei:          addForm.imei.trim() || null,
         condition:     addForm.condition,
         source:        addForm.source,
+        purpose:       addForm.purpose,
+        purchase_price: addForm.source === "purchased" && addForm.purchase_price ? parseFloat(addForm.purchase_price) : null,
         source_job_id: addForm.source_job_id.trim() || null,
         source_description: addForm.source === "other" ? (addForm.source_description?.trim() || null) : null,
         assigned_technician_id: addForm.assigned_technician_id || null,
       };
       const res = await api.post("/donors/", payload);
       setAddOpen(false);
-      setAddForm({ brand: "", model: "", imei: "", condition: "good", source: "purchased", source_job_id: "", source_description: "", assigned_technician_id: "" });
+      setAddForm({ brand: "", model: "", imei: "", condition: "good", source: "purchased", purchase_price: "", purpose: "parts", source_job_id: "", source_description: "", assigned_technician_id: "" });
       setDevices(prev => [res.data, ...prev]);
     } catch (err) {
       alert(err.response?.data?.detail || "Failed to register device");
@@ -300,6 +338,17 @@ export default function DonorDeviceConsole() {
             <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{pendingParts.length}</span>
           )}
         </button>
+        <button
+          onClick={() => setActiveTab("refurbish")}
+          className={`py-2 px-4 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === "refurbish" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200"
+          }`}
+        >
+          Refurbish Approvals
+          {refurbishPending.length > 0 && (
+            <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{refurbishPending.length}</span>
+          )}
+        </button>
       </div>
 
       {activeTab === "devices" ? (
@@ -342,13 +391,19 @@ export default function DonorDeviceConsole() {
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                 {filtered.map((d) => {
+                  const isExpanded = viewDevice?.id === d.id;
+
                   return (
+                  <Fragment key={d.id}>
                   <tr 
-                    key={d.id} 
-                    className="transition-colors hover:bg-blue-50 cursor-pointer"
+                    className={`${isExpanded ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-blue-50 dark:hover:bg-gray-700'} transition-colors cursor-pointer`}
                     onClick={(e) => {
                       if (e.target.tagName !== 'SELECT' && e.target.tagName !== 'OPTION') {
-                          openViewDevice(d);
+                          if (isExpanded) {
+                            setViewDevice(null);
+                          } else {
+                            openViewDevice(d);
+                          }
                       }
                     }}
                   >
@@ -369,7 +424,7 @@ export default function DonorDeviceConsole() {
                     </td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${STATUS_BADGE[d.status] ?? ""}`}>
-                        {d.status === "stripped" ? "assessed" : d.status}
+                        {d.status === "stripped" ? "completed" : d.status}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -383,15 +438,68 @@ export default function DonorDeviceConsole() {
                       {new Date(d.added_date).toLocaleDateString()}
                     </td>
                   </tr>
-                  );
-                })}
+
+                  {isExpanded && (
+                    <tr>
+                      <td colSpan="7" className="p-0 border-b border-gray-100 dark:border-gray-800">
+                        <div className="bg-gray-50/50 dark:bg-gray-800/30 p-6 shadow-inner">
+                          <div className="space-y-4 max-w-2xl mx-auto">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Extracted Parts ({parts.length})</h4>
+                            </div>
+
+                            {partsLoading ? (
+                              <p className="text-xs text-gray-400 text-center py-4 animate-pulse">Loading parts…</p>
+                            ) : parts.length === 0 ? (
+                              <div className="border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-lg py-6 text-center">
+                                <p className="text-xs text-gray-400">No parts extracted yet</p>
+                              </div>
+                            ) : (
+                              <div className="space-y-2 pr-2">
+                                {parts.map((p) => (
+                                  <div key={p.id} className="flex items-start justify-between border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg p-3 text-xs shadow-sm">
+                                    <div>
+                                      <p className="font-semibold text-gray-800 dark:text-gray-100">{p.part_name}</p>
+                                      {p.compatible_brands?.length > 0 && (
+                                        <p className="text-gray-400 mt-0.5">Brands: {p.compatible_brands.join(", ")}</p>
+                                      )}
+                                      {p.compatible_models?.length > 0 && (
+                                        <p className="text-gray-400">Models: {p.compatible_models.join(", ")}</p>
+                                      )}
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1 ml-4">
+                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${CONDITION_BADGE[p.condition] ?? ""}`}>
+                                        {p.condition}
+                                      </span>
+                                      {p.approval_status === "pending" ? (
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700">
+                                          Awaiting Approval
+                                        </span>
+                                      ) : (
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${p.is_available ? "bg-green-100 text-green-700" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"}`}>
+                                          {p.is_available ? "Available" : "Used"}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
+                );
+              })}
               </tbody>
             </table>
           </div>
         )}
       </div>
       </>
-      ) : (
+      ) : activeTab === "reviews" ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <div className="mb-4">
             <h3 className="font-semibold text-gray-800 dark:text-gray-100">Pending Part Reviews</h3>
@@ -441,7 +549,46 @@ export default function DonorDeviceConsole() {
             </table>
           )}
         </div>
-      )}
+      ) : activeTab === "refurbish" ? (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+          <div className="mb-4">
+            <h3 className="font-semibold text-gray-800 dark:text-gray-100">Refurbish Approvals</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Refurbished devices pending selling price setup and inventory addition.</p>
+          </div>
+          {refurbishPending.length === 0 ? (
+            <div className="py-12 text-center border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl">
+              <p className="text-gray-500 dark:text-gray-400 font-medium text-sm">No pending approvals</p>
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="border-b border-gray-100 dark:border-gray-800">
+                <tr>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase">Device</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase">IMEI</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase">Technician</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase">Date Submitted</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                {refurbishPending.map(dev => (
+                  <tr key={dev.id} className="hover:bg-blue-50 cursor-pointer transition-colors" onClick={() => {
+                    setRefurbishApproveForm({ selling_price: "" });
+                    setRefurbishApproveDevice(dev);
+                    fetchRefurbishedParts(dev.id);
+                  }}>
+                    <td className="px-4 py-3 font-semibold text-gray-800 dark:text-gray-100">{dev.brand} {dev.model}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 font-mono">{dev.imei || "—"}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-300">
+                      {technicians.find(t => t.id === dev.assigned_technician_id)?.name || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-400">{new Date(dev.added_date).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ) : null}
 
       {/* ── Add Device Modal ─────────────────────────────── */}
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Register Donor Device">
@@ -491,16 +638,30 @@ export default function DonorDeviceConsole() {
                 className={inputCls} placeholder="e.g. Scrapped from old inventory" />
             </Field>
           )}
-          <Field label="Assign Technician (optional)">
-            <select value={addForm.assigned_technician_id} onChange={(e) => setAddForm({ ...addForm, assigned_technician_id: e.target.value })} className={selectCls}>
-              <option value="">-- Unassigned --</option>
-              {technicians.filter(t => t.is_active || t.id === addForm.assigned_technician_id).map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} {t.specializations ? `(${t.specializations})` : ""}
-                </option>
-              ))}
-            </select>
-          </Field>
+          {addForm.source === "purchased" && (
+            <Field label="Purchase Price">
+              <input type="number" min="0" step="0.01" value={addForm.purchase_price || ""} onChange={(e) => setAddForm({ ...addForm, purchase_price: e.target.value })}
+                className={inputCls} placeholder="e.g. 5000.00" />
+            </Field>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Purpose *">
+              <select value={addForm.purpose} onChange={(e) => setAddForm({ ...addForm, purpose: e.target.value })} className={selectCls}>
+                <option value="parts">For Parts</option>
+                <option value="refurbish">To Refurbish</option>
+              </select>
+            </Field>
+            <Field label="Assign Technician (optional)">
+              <select value={addForm.assigned_technician_id} onChange={(e) => setAddForm({ ...addForm, assigned_technician_id: e.target.value })} className={selectCls}>
+                <option value="">-- Unassigned --</option>
+                {technicians.filter(t => t.is_active || t.id === addForm.assigned_technician_id).map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} {t.specializations ? `(${t.specializations})` : ""}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setAddOpen(false)}
               className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">
@@ -515,78 +676,7 @@ export default function DonorDeviceConsole() {
       </Modal>
 
       {/* ── View Device + Parts Modal ─────────────────────── */}
-      <Modal open={!!viewDevice} onClose={() => { setViewDevice(null); setAddPartOpen(false); }} title={viewDevice ? `${viewDevice.brand} ${viewDevice.model}` : ""}>
-        {viewDevice && (
-          <div className="space-y-4">
-            {/* Device info */}
-            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 grid grid-cols-2 gap-2 text-xs">
-              <div><span className="text-gray-400">Condition:</span> <span className="font-semibold capitalize ml-1">{viewDevice.condition}</span></div>
-              <div><span className="text-gray-400">Status:</span> <span className="font-semibold capitalize ml-1">{viewDevice.status === "stripped" ? "assessed" : viewDevice.status}</span></div>
-              <div>
-                <span className="text-gray-400">Source:</span>
-                <span className="font-semibold ml-1">
-                  {SOURCE_LABEL[viewDevice.source]}
-                  {viewDevice.source === "other" && viewDevice.source_description ? ` (${viewDevice.source_description})` : ""}
-                </span>
-              </div>
-              <div><span className="text-gray-400">IMEI:</span> <span className="font-mono ml-1">{viewDevice.imei || "—"}</span></div>
-              <div className="col-span-2 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-2 mt-1">
-                <span className="text-gray-400">Assigned Technician:</span>
-                <span className="font-semibold text-gray-800 dark:text-gray-100">
-                  {viewDevice.assigned_technician_id
-                    ? technicians.find(t => t.id === viewDevice.assigned_technician_id)?.name || "—"
-                    : "-- Unassigned --"}
-                </span>
-              </div>
-            </div>
 
-            {/* Parts */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Extracted Parts ({parts.length})</h4>
-              </div>
-
-              {partsLoading ? (
-                <p className="text-xs text-gray-400 text-center py-4 animate-pulse">Loading parts…</p>
-              ) : parts.length === 0 ? (
-                <div className="border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-lg py-6 text-center">
-                  <p className="text-xs text-gray-400">No parts extracted yet</p>
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {parts.map((p) => (
-                    <div key={p.id} className="flex items-start justify-between border border-gray-100 dark:border-gray-800 rounded-lg p-3 text-xs">
-                      <div>
-                        <p className="font-semibold text-gray-800 dark:text-gray-100">{p.part_name}</p>
-                        {p.compatible_brands?.length > 0 && (
-                          <p className="text-gray-400 mt-0.5">Brands: {p.compatible_brands.join(", ")}</p>
-                        )}
-                        {p.compatible_models?.length > 0 && (
-                          <p className="text-gray-400">Models: {p.compatible_models.join(", ")}</p>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-1 ml-4">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${CONDITION_BADGE[p.condition] ?? ""}`}>
-                          {p.condition}
-                        </span>
-                        {p.approval_status === "pending" ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700">
-                            Awaiting Approval
-                          </span>
-                        ) : (
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${p.is_available ? "bg-green-100 text-green-700" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"}`}>
-                            {p.is_available ? "Available" : "Used"}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </Modal>
 
       {/* ── Review Device Parts Modal ─────────────────────── */}
       <Modal open={!!reviewGroup} onClose={() => setReviewGroup(null)} title="Review Extraction">
@@ -646,6 +736,99 @@ export default function DonorDeviceConsole() {
           );
         })()}
       </Modal>
+
+      {/* ── Refurbish Approve Modal ───────────────────────── */}
+      <Modal open={!!refurbishApproveDevice} onClose={() => setRefurbishApproveDevice(null)} title="Approve Refurbished Device">
+        {refurbishApproveDevice && (() => {
+          const baseCost = Number(refurbishApproveDevice.purchase_price || 0);
+          const partsCost = refurbishedParts.reduce((sum, p) => sum + (Number(p.unit_cost) * Number(p.quantity)), 0);
+          const totalCost = baseCost + partsCost;
+
+          return (
+          <form onSubmit={handleApproveRefurbish} className="space-y-4">
+            <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg mb-4">
+              <h4 className="font-semibold text-blue-800 dark:text-blue-300">
+                {refurbishApproveDevice.brand} {refurbishApproveDevice.model}
+              </h4>
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                Technician Notes: {refurbishApproveDevice.parts_used_notes || "None"}
+              </p>
+            </div>
+            
+            <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <h5 className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2">QC Checklist Results</h5>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {['mic', 'camera', 'touch', 'biometrics', 'wifi', 'charging'].map(qc => {
+                  const passed = refurbishApproveDevice[`qc_${qc}_tested`];
+                  return (
+                    <div key={qc} className="flex items-center space-x-1">
+                      {passed ? (
+                        <span className="text-green-500 font-bold">✓</span>
+                      ) : (
+                        <span className="text-red-500 font-bold">✗</span>
+                      )}
+                      <span className="capitalize">{qc}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Cost Breakdown */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-2">
+              <h5 className="text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700 pb-2 mb-2">Cost Breakdown</h5>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Device Purchase Price:</span>
+                <span className="font-medium">Rs. {baseCost.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Parts Cost ({refurbishedParts.length} items):</span>
+                <span className="font-medium">Rs. {partsCost.toFixed(2)}</span>
+              </div>
+              {refurbishedPartsLoading && <p className="text-xs text-gray-400">Loading parts...</p>}
+              {refurbishedParts.length > 0 && (
+                <div className="pl-4 py-2 space-y-1">
+                  {refurbishedParts.map(p => (
+                    <div key={p.id} className="flex justify-between text-xs text-gray-400">
+                      <span>- {p.inventory_item_name} (x{p.quantity})</span>
+                      <span>Rs. {(Number(p.unit_cost) * Number(p.quantity)).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex justify-between text-sm font-bold text-gray-800 dark:text-gray-100 border-t border-gray-100 dark:border-gray-700 pt-2 mt-2">
+                <span>Total Refurbishment Cost:</span>
+                <span>Rs. {totalCost.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <Field label="Final Selling Price (Rs.)">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                className={inputCls}
+                value={refurbishApproveForm.selling_price}
+                onChange={e => setRefurbishApproveForm({...refurbishApproveForm, selling_price: e.target.value})}
+                placeholder="0.00"
+              />
+            </Field>
+
+            <div className="flex justify-end pt-4 border-t border-gray-100 dark:border-gray-700">
+              <button
+                type="submit"
+                disabled={refurbishApproving}
+                className="bg-green-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-green-700 disabled:bg-green-400"
+              >
+                {refurbishApproving ? "Approving..." : "Approve & Add to Inventory"}
+              </button>
+            </div>
+          </form>
+          );
+        })()}
+      </Modal>
+
     </div>
   );
 }

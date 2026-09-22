@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.models.job import Job
 from app.models.notification import SalvageAssessment
 from app.models.user import User
+from app.models.donor import DonorPart
 from app.schemas.salvage import SalvageCreate, SalvageStatusUpdate, NotesUpdate, SalvageActualsUpdate
 
 
@@ -56,6 +57,36 @@ def get_similar_past_assessments(brand: str, model: str, db: Session) -> str:
         
     examples_str += "--- END HISTORICAL DATA ---\n\nPlease consider these past actuals when making your estimate.\n\n"
     return examples_str
+
+
+def get_db_salvage_value(device_model: str, db: Session) -> dict:
+    """Calculate salvage value strictly from the database for a given model."""
+    compatible_parts = db.query(DonorPart).filter(DonorPart.compatible_models.contains([device_model])).all()
+    
+    total_db_salvage = 0.0
+    db_breakdown = []
+    
+    if compatible_parts:
+        part_mins = {}
+        for p in compatible_parts:
+            if p.estimated_value:
+                val = float(p.estimated_value)
+                if p.part_name not in part_mins or val < part_mins[p.part_name]:
+                    part_mins[p.part_name] = val
+                
+        if part_mins:
+            total_db_salvage = sum(part_mins.values())
+            for name, min_val in part_mins.items():
+                db_breakdown.append({
+                    "part": name,
+                    "condition": "Good (Min DB Value)",
+                    "value": min_val
+                })
+                
+    return {
+        "salvage_value": total_db_salvage,
+        "parts_breakdown": db_breakdown
+    }
 
 
 async def _run_auto_assessment(assessment_id: UUID, brand: str, model: str):
@@ -165,8 +196,27 @@ def get_live_ai_estimate(job_id: UUID, market_price: float, db: Session) -> dict
         except Exception as e:
             print(f"Gemini AI Live Estimate Failed: {e}")
 
-    # Final calculations (fallback or post-AI)
-    result["refurbish_value"] = float(market_price) - result["refurbish_cost_estimate"]
+    # --- Salvage Value Lookup ---
+    # Query database for historical prices of compatible donor parts
+    db_salvage = get_db_salvage_value(job.device_model, db)
+    if db_salvage["salvage_value"] > 0:
+        result["salvage_value"] = db_salvage["salvage_value"]
+        result["parts_breakdown"] = db_salvage["parts_breakdown"]
+
+    # --- Refurbish Profit Margin Logic ---
+    base_cost = result["refurbish_cost_estimate"]
+    
+    if base_cost < 5000:
+        margin = 0.40
+    elif base_cost < 10000:
+        margin = 0.50
+    elif base_cost < 30000:
+        margin = 0.60
+    else:
+        margin = 0.75
+        
+    effective_cost = base_cost + (base_cost * margin)
+    result["refurbish_value"] = float(market_price) - effective_cost
     
     # Force recommendation based strictly on mathematical profitability
     # (LLMs often fail at math comparisons, so we do it explicitly in code)
@@ -299,9 +349,12 @@ def create_assessment(data: SalvageCreate, assessed_by_user: User, background_ta
     # If no manual recommendation, run auto-assessment
     if not data.recommendation:
         background_tasks.add_task(_run_auto_assessment, assessment.id, job.device_brand, job.device_model)
+    else:
+        # Auto-approve when a recommendation is manually submitted
+        from app.schemas.salvage import SalvageStatusUpdate
+        update_status(assessment.id, SalvageStatusUpdate(status="approved"), db)
         
     return assessment
-
 
 def list_assessments(db: Session) -> list[dict]:
     rows = (
@@ -360,27 +413,27 @@ def update_status(assessment_id: UUID, data: SalvageStatusUpdate, db: Session) -
                 
                 assigned_tech_id = tech.id if tech else None
 
-                if a.recommendation == "salvage_for_parts":
-                    from app.models.donor import DonorDevice
-                    # Ensure donor device doesn't already exist
-                    donor_exists = db.query(DonorDevice).filter(DonorDevice.source_job_id == job.id).first()
-                    if not donor_exists:
-                        new_donor = DonorDevice(
-                            brand=job.device_brand,
-                            model=job.device_model,
-                            imei=job.device_imei,
-                            condition="poor",
-                            source="unclaimed_job",
-                            source_job_id=job.id,
-                            status="available",
-                            assigned_technician_id=assigned_tech_id
-                        )
-                        db.add(new_donor)
-                elif a.recommendation == "refurbish":
-                    job.status = "pending"
-                    job.technician_id = assigned_tech_id
-                    job.admin_alert = "Approved for Refurbishment (Store Owned). Please complete repairs for resale."
-
+                from app.models.donor import DonorDevice
+                
+                # Ensure donor device doesn't already exist
+                donor_exists = db.query(DonorDevice).filter(DonorDevice.source_job_id == job.id).first()
+                if not donor_exists:
+                    new_donor = DonorDevice(
+                        brand=job.device_brand,
+                        model=job.device_model,
+                        imei=job.device_imei,
+                        condition="poor",
+                        source="unclaimed_job",
+                        source_job_id=job.id,
+                        status="available",
+                        assigned_technician_id=assigned_tech_id,
+                        purpose="parts" if a.recommendation == "salvage_for_parts" else "refurbish"
+                    )
+                    db.add(new_donor)
+                    
+                # Mark original job as closed since it's now owned by the store as a DonorDevice
+                job.status = "closed"
+                job.admin_alert = f"Converted to store-owned device for {a.recommendation.replace('_', ' ')}"
         a.status = data.status
         db.commit()
         db.refresh(a)

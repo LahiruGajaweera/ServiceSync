@@ -107,10 +107,10 @@ export default function TechDashboard() {
     return true;
   });
   const inProgressJobs = myJobs.filter(j => j.status === "in_progress");
-  const unclaimed = jobs.filter((j) => !j.technician_id);
+  const unclaimed = jobs.filter((j) => !j.technician_id && j.status === "pending");
 
-  const myDonors = donors.filter((d) => d.assigned_technician_id === user?.id);
-  const unclaimedDonors = donors.filter((d) => !d.assigned_technician_id && d.status === "available");
+  const myDonors = donors.filter((d) => d.assigned_technician_id === user?.id && d.refurbish_status !== "pending_approval" && d.refurbish_status !== "approved");
+  const unclaimedDonors = donors.filter((d) => !d.assigned_technician_id && d.status === "available" && d.refurbish_status !== "pending_approval" && d.refurbish_status !== "approved");
 
   const handleClaim = async (job) => {
     setClaimingId(job.id);

@@ -73,6 +73,7 @@ export default function PredictiveAnalytics() {
   const [faultTrends, setFaultTrends] = useState([]);
   const [deviceTrends, setDeviceTrends] = useState([]);
   const [criticalInventory, setCriticalInventory] = useState([]);
+  const [hasInventoryData, setHasInventoryData] = useState(false);
   const [techScores, setTechScores] = useState([]);
   const [selectedBrand, setSelectedBrand] = useState("");
   const [selectedDevice, setSelectedDevice] = useState("");
@@ -151,6 +152,7 @@ export default function PredictiveAnalytics() {
         
         setFaultTrends(faultsRes.data);
         if (invRes.data) {
+          setHasInventoryData(invRes.data.length > 0);
           setCriticalInventory(invRes.data.filter(i => i.restock_recommended > 0));
         }
         if (techRes.data) {
@@ -367,6 +369,12 @@ export default function PredictiveAnalytics() {
         
         {loading ? (
           <div className="py-10 text-center text-gray-400 animate-pulse">Calculating Inventory Requirements...</div>
+        ) : !hasInventoryData ? (
+          <div className="py-10 text-center text-gray-400">
+            <p className="text-2xl mb-2">📊</p>
+            <p className="font-medium text-gray-800 dark:text-gray-200">Insufficient Data</p>
+            <p className="text-sm mt-1">Not enough parts usage history to generate a forecast.</p>
+          </div>
         ) : criticalInventory.length === 0 ? (
           <div className="py-10 text-center text-gray-400">
             <p className="text-2xl mb-2">🎉</p>

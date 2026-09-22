@@ -349,6 +349,8 @@ export default function InventoryManager() {
   const [lowStock, setLowStock]     = useState([]);
   const categories = Array.from(new Set(items.map((item) => item.category).filter(Boolean))).sort();
   const [loading, setLoading]       = useState(true);
+  const [refurbishedDevices, setRefurbishedDevices] = useState([]);
+  const [refurbishedLoading, setRefurbishedLoading] = useState(false);
   const [technicians, setTechnicians] = useState([]);
   const [inventoryForecast, setInventoryForecast] = useState([]);
   const [search, setSearch]         = useState("");
@@ -415,6 +417,18 @@ export default function InventoryManager() {
     }
   };
 
+  const fetchRefurbishedDevices = async () => {
+    setRefurbishedLoading(true);
+    try {
+      const { data } = await api.get("/donors/");
+      setRefurbishedDevices(data.filter(d => d.refurbish_status === "approved"));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRefurbishedLoading(false);
+    }
+  };
+
   const fetchAll = async () => {
     setLoading(true);
     try {
@@ -446,7 +460,7 @@ export default function InventoryManager() {
   };
 
   const processedItems = useMemo(() => {
-    let result = [...items];
+    let result = [...items].filter(item => item.category !== "Refurbished Devices");
     
     // Search
     if (search.trim()) {
@@ -490,6 +504,8 @@ export default function InventoryManager() {
       fetchGlobalLogs();
     } else if (activeTab === "salvage") {
       fetchSalvagedParts();
+    } else if (activeTab === "refurbished") {
+      fetchRefurbishedDevices();
     }
   }, [activeTab]);
 
@@ -828,6 +844,16 @@ export default function InventoryManager() {
           }`}
         >
           Adjustment Logs
+        </button>
+        <button
+          onClick={() => setActiveTab("refurbished")}
+          className={`px-6 py-3 font-semibold text-sm transition-colors border-b-2 ${
+            activeTab === "refurbished"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200 hover:border-gray-300 dark:border-gray-600"
+          }`}
+        >
+          Refurbished Devices
         </button>
       </div>
 
@@ -1389,6 +1415,7 @@ export default function InventoryManager() {
                 <tr>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">SKU</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Part Name</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Compatible Models</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Condition</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Selling Price</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Extracted Date</th>
@@ -1399,6 +1426,7 @@ export default function InventoryManager() {
                   <tr key={part.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 transition-colors">
                     <td className="px-4 py-3 font-mono text-xs text-gray-500 dark:text-gray-400 font-bold">{part.sku || "—"}</td>
                     <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">{part.part_name}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-xs">{part.compatible_models && part.compatible_models.length > 0 ? part.compatible_models.join(", ") : "—"}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${
                         part.condition === "good" ? "bg-green-100 text-green-700" :
@@ -1421,7 +1449,7 @@ export default function InventoryManager() {
             </table>
           )}
         </div>
-      ) : (
+      ) : activeTab === "logs" ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
           {globalLogsLoading ? (
             <div className="py-20 text-center text-gray-400 text-sm">Loading logs…</div>
@@ -1465,7 +1493,74 @@ export default function InventoryManager() {
             </table>
           )}
         </div>
-      )}
+      ) : activeTab === "refurbished" ? (
+        <div className="space-y-4">
+          {refurbishedLoading ? (
+            <div className="py-20 text-center text-gray-400 text-sm">Loading refurbished devices…</div>
+          ) : refurbishedDevices.length === 0 ? (
+            <div className="py-20 text-center border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl mx-4 my-4 bg-white dark:bg-gray-800">
+              <p className="font-medium text-gray-500 dark:text-gray-400">No refurbished devices available</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {refurbishedDevices.map(device => (
+                <div key={device.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+                  <div className="p-5 flex-1">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">{device.brand} {device.model}</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">IMEI: {device.imei || "N/A"}</p>
+                      </div>
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-bold uppercase">Ready</span>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        device.condition === 'good' ? 'bg-green-100 text-green-700' : 
+                        device.condition === 'fair' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        Condition: {device.condition}
+                      </span>
+                      <span className="px-2.5 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs font-semibold">
+                        Source: {device.source.replace("_", " ")}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 mb-4 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                      <div>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider">Purchase Price</p>
+                        <p className="font-semibold text-gray-800 dark:text-gray-200">LKR {Number(device.purchase_price || 0).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider">Selling Price</p>
+                        <p className="font-bold text-blue-600 dark:text-blue-400">LKR {Number(device.selling_price || 0).toLocaleString()}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">QC Checklist</p>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { label: "Mic", passed: device.qc_mic_tested },
+                          { label: "Camera", passed: device.qc_camera_tested },
+                          { label: "Touch", passed: device.qc_touch_tested },
+                          { label: "Biometrics", passed: device.qc_biometrics_tested },
+                          { label: "Wi-Fi", passed: device.qc_wifi_tested },
+                          { label: "Charging", passed: device.qc_charging_tested },
+                        ].map(qc => (
+                          <span key={qc.label} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold border ${qc.passed ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-400 border-gray-200 line-through'}`}>
+                            {qc.passed ? '✓' : '✗'} {qc.label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {/* Add Part Modal */}
       <Modal open={showAddModal} onClose={() => setShowAdd(false)} title="Add Inventory Part" size="lg">

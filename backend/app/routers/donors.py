@@ -1,22 +1,28 @@
 from uuid import UUID
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.core.deps import require_any_staff
+from app.core.deps import require_any_staff, require_technician
 from app.schemas.donor import (
     DonorDeviceCreate,
     DonorDeviceResponse,
     DonorPartCreate,
     DonorPartResponse,
     DonorPartApprove,
+    DonorDeviceRefurbishSubmit,
+    DonorDeviceRefurbishApprove,
+    RefurbishedPartCreate,
+    RefurbishedPartResponse,
 )
 from app.services import donor_service
 from app.models.user import User
-from app.core.deps import require_any_staff, require_technician
 
 router = APIRouter(prefix="/donors", tags=["Donor Devices"])
+
+class AssignTechnicianRequest(BaseModel):
+    technician_id: UUID | None
 
 
 @router.post("/", response_model=DonorDeviceResponse, status_code=201)
@@ -53,10 +59,6 @@ def claim_donor_device(
 ):
     return donor_service.claim_donor_device(device_id, current_user, db)
 
-
-from pydantic import BaseModel
-class AssignTechnicianRequest(BaseModel):
-    technician_id: UUID | None
 
 @router.patch("/{device_id}/assign", response_model=DonorDeviceResponse)
 def assign_donor_device(
@@ -120,3 +122,53 @@ def list_parts(
     _=Depends(require_any_staff),
 ):
     return donor_service.list_parts_for_device(device_id, db)
+
+
+@router.post("/{device_id}/refurbish-submit", response_model=DonorDeviceResponse)
+def submit_refurbish(
+    device_id: UUID,
+    data: DonorDeviceRefurbishSubmit,
+    db: Session = Depends(get_db),
+    _=Depends(require_technician)
+):
+    return donor_service.submit_refurbish(device_id, data, db)
+
+
+@router.post("/{device_id}/refurbish-approve", response_model=DonorDeviceResponse)
+def approve_refurbish(
+    device_id: UUID,
+    data: DonorDeviceRefurbishApprove,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_staff)
+):
+    return donor_service.approve_refurbish(device_id, data, current_user, db)
+
+
+@router.post("/{device_id}/refurbished-parts", response_model=RefurbishedPartResponse, status_code=201)
+def log_refurbished_part(
+    device_id: UUID,
+    data: RefurbishedPartCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_technician)
+):
+    return donor_service.log_refurbished_part(device_id, data, current_user, db)
+
+
+@router.get("/{device_id}/refurbished-parts", response_model=list[RefurbishedPartResponse])
+def list_refurbished_parts(
+    device_id: UUID,
+    db: Session = Depends(get_db),
+    _=Depends(require_any_staff)
+):
+    return donor_service.list_refurbished_parts(device_id, db)
+
+
+@router.delete("/{device_id}/refurbished-parts/{part_id}", status_code=204)
+def remove_refurbished_part(
+    device_id: UUID,
+    part_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_technician)
+):
+    donor_service.remove_refurbished_part(device_id, part_id, current_user, db)
+    return None

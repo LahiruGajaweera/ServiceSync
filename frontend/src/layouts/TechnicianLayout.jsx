@@ -11,6 +11,7 @@ const NAV = [
   { to: "/tech",      label: "My Dashboard", exact: true },
   { to: "/tech/workspace", label: "Active Workspace" },
   { to: "/tech/donors", label: "Donor Devices" },
+  { to: "/tech/salvage", label: "Salvage Devices" },
 ];
 
 export default function TechnicianLayout() {

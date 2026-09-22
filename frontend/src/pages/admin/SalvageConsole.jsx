@@ -5,7 +5,7 @@ function Modal({ open, onClose, title, children }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg max-h-[95vh] overflow-y-auto hide-scrollbar">
         <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white dark:bg-gray-800 z-10">
           <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">{title}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 text-xl leading-none">&times;</button>
@@ -104,7 +104,7 @@ function ScraperPanel({ brand, model, onSelectPrice }) {
               {result.avg_price != null && (
                 <button
                   type="button"
-                  onClick={() => onSelectPrice(result.avg_price)}
+                  onClick={() => { onSelectPrice(result.avg_price); setShowDetails(false); }}
                   className="text-xs bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg font-semibold"
                 >
                   Use {result.listings?.length > 1 ? "Average " : ""}Price (LKR {Number(result.avg_price).toLocaleString()})
@@ -125,7 +125,7 @@ function ScraperPanel({ brand, model, onSelectPrice }) {
                       {result.listings?.length > 1 && (
                         <button
                           type="button"
-                          onClick={() => onSelectPrice(l.price)}
+                          onClick={() => { onSelectPrice(l.price); setShowDetails(false); }}
                           className="text-xs text-blue-600 hover:text-blue-800 font-medium"
                         >
                           Use
@@ -158,7 +158,7 @@ export default function SalvageConsole() {
   const [showCreate, setShowCreate]   = useState(false);
   const [formError, setFormError]     = useState("");
   const [saving, setSaving]           = useState(false);
-  const [generatingEstimate, setGeneratingEstimate] = useState(false);
+
   const [form, setForm]               = useState(EMPTY_FORM);
   const [partsBreakdown, setPartsBreakdown] = useState([]);
   const [showParts, setShowParts]     = useState(false);
@@ -187,6 +187,9 @@ export default function SalvageConsole() {
       ]);
       setAssessments(assRes.data);
       setPendingUnclaimed(pendingRes.data);
+    } catch (error) {
+      console.error("Failed to fetch assessments:", error);
+      // Suppress unhandled promise rejection
     } finally {
       if (!isBackground) setLoading(false);
     }
@@ -223,8 +226,10 @@ export default function SalvageConsole() {
     try {
       const { data } = await api.get(`/jobs/${job.id}/parts`);
       let partsTotal = 0;
-      if (data.inventory_parts) partsTotal += data.inventory_parts.reduce((s, p) => s + (p.unit_price * p.quantity), 0);
-      if (data.donor_parts) partsTotal += data.donor_parts.reduce((s, p) => s + (p.unit_price * p.quantity), 0);
+      // data is an array of parts
+      if (Array.isArray(data)) {
+        partsTotal = data.reduce((s, p) => s + (Number(p.unit_cost || 0) * Number(p.quantity || 0)), 0);
+      }
       
       const labor = job.labor_cost ? Number(job.labor_cost) : 0;
       cost = partsTotal + labor;
@@ -232,14 +237,50 @@ export default function SalvageConsole() {
        console.error("Could not fetch parts", e);
        cost = job.estimated_cost ? Number(job.estimated_cost) : 0; // Fallback only on network error
     }
+
+    let salvageVal = "0.00";
+    try {
+      const { data: salvageData } = await api.get(`/salvage/db-value/${job.device_model}`);
+      salvageVal = String(salvageData.salvage_value);
+      setPartsBreakdown(salvageData.parts_breakdown || []);
+      if (salvageData.parts_breakdown?.length > 0) setShowParts(true);
+    } catch (e) {
+      console.error("Could not fetch DB salvage value", e);
+    }
     
-    setForm((f) => ({
+    setForm((f) => calculateForm({
       ...f,
       refurbish_cost_estimate: String(cost),
+      salvage_value: salvageVal,
     }));
   };
 
-  const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const calculateForm = (f) => {
+    const market = parseFloat(f.scraped_market_price) || 0;
+    const baseCost = parseFloat(f.refurbish_cost_estimate) || 0;
+    
+    let margin = 0;
+    if (baseCost > 0) {
+      if (baseCost < 5000) margin = 0.40;
+      else if (baseCost < 10000) margin = 0.50;
+      else if (baseCost < 30000) margin = 0.60;
+      else margin = 0.75;
+    }
+    
+    const effectiveCost = baseCost + (baseCost * margin);
+    f.refurbish_value = String(market > 0 || baseCost > 0 ? (market - effectiveCost).toFixed(2) : "");
+    return f;
+  };
+
+  const handleChange = (e) => {
+    setForm((f) => {
+      const newForm = { ...f, [e.target.name]: e.target.value };
+      if (e.target.name === 'scraped_market_price' || e.target.name === 'refurbish_cost_estimate') {
+        return calculateForm(newForm);
+      }
+      return newForm;
+    });
+  };
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -269,32 +310,7 @@ export default function SalvageConsole() {
     }
   };
 
-  const handleGenerateEstimate = async () => {
-    if (!selectedJob) { setFormError("Please select a job first"); return; }
-    setFormError("");
-    setGeneratingEstimate(true);
-    try {
-      const res = await api.post("/salvage/estimate", {
-        job_id: selectedJob.id,
-        scraped_market_price: form.scraped_market_price ? parseFloat(form.scraped_market_price) : null
-      });
-      setForm((f) => ({
-        ...f,
-        refurbish_cost_estimate: String(res.data.refurbish_cost_estimate),
-        salvage_value: String(res.data.salvage_value),
-        refurbish_value: String(res.data.refurbish_value),
-        recommendation: res.data.recommendation
-      }));
-      // Store parts breakdown
-      setPartsBreakdown(res.data.parts_breakdown || []);
-      if (res.data.parts_breakdown?.length > 0) setShowParts(true);
-    } catch (err) {
-      const detail = err.response?.data?.detail;
-      setFormError(Array.isArray(detail) ? detail[0].msg : (detail || "Failed to generate AI estimate"));
-    } finally {
-      setGeneratingEstimate(false);
-    }
-  };
+
 
   const handleReassess = async (id) => {
     try {
@@ -357,20 +373,26 @@ export default function SalvageConsole() {
   };
 
   const handleAssessPending = async (p) => {
-    const [brand, ...modelArr] = p.device.split(" ");
-    const fakeJob = {
-      id: p.job_id,
-      job_id: p.job_public_id,
-      customer_name: "Unclaimed",
-      device_brand: brand,
-      device_model: modelArr.join(" "),
-      estimated_cost: 0,
-      labor_cost: 0
-    };
     setShowCreate(true);
     setFormError("");
     setForm(EMPTY_FORM);
-    await selectJob(fakeJob);
+    try {
+      const { data: fullJob } = await api.get(`/jobs/${p.job_id}`);
+      await selectJob(fullJob);
+    } catch (e) {
+      console.error("Failed to fetch full job", e);
+      const [brand, ...modelArr] = p.device.split(" ");
+      const fakeJob = {
+        id: p.job_id,
+        job_id: p.job_public_id,
+        customer_name: "Unclaimed",
+        device_brand: brand,
+        device_model: modelArr.join(" "),
+        estimated_cost: 0,
+        labor_cost: 0
+      };
+      await selectJob(fakeJob);
+    }
   };
 
   const handleSnoozeClick = (p) => {
@@ -521,7 +543,7 @@ export default function SalvageConsole() {
           <table className="w-full text-sm min-w-[900px]">
             <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
               <tr>
-                {["Job ID", "Device", "Market Price", "Refurbish Value", "Salvage Value", "Recommendation", "Status", "Profit/Loss", "Actions"].map((h) => (
+                {["Job ID", "Device", "Market Price", "Refurbish Value", "Salvage Value", "Recommendation", "Status", "Profit/Loss"].map((h) => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -568,34 +590,7 @@ export default function SalvageConsole() {
                       <span className="text-xs text-gray-400">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
-                    {a.status === "pending" ? (
-                      <span className="text-xs text-gray-500 dark:text-gray-400 italic">Processing...</span>
-                    ) : a.status === "assessed" ? (
-                      <div className="flex flex-col items-start gap-2">
-                        <button
-                          onClick={() => handleStatusUpdate(a.id, "approved")}
-                          className="text-green-600 hover:text-green-800 text-xs font-medium"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleStatusUpdate(a.id, "rejected")}
-                          className="text-red-600 hover:text-red-800 text-xs font-medium"
-                        >
-                          Reject
-                        </button>
-                        <button
-                          onClick={() => handleReassess(a.id)}
-                          className="text-blue-600 hover:text-blue-800 text-xs font-medium whitespace-nowrap"
-                        >
-                          Re-assess
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-gray-500 dark:text-gray-400 italic">No actions</span>
-                    )}
-                  </td>
+
                 </tr>
               ))}
             </tbody>
@@ -647,19 +642,9 @@ export default function SalvageConsole() {
           <ScraperPanel
             brand={selectedJob?.device_brand}
             model={selectedJob?.device_model}
-            onSelectPrice={(price) => setForm((f) => ({ ...f, scraped_market_price: String(price) }))}
+            onSelectPrice={(price) => setForm((f) => calculateForm({ ...f, scraped_market_price: String(price) }))}
           />
           
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={handleGenerateEstimate}
-              disabled={generatingEstimate || !selectedJob}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-3 rounded-xl text-sm font-bold shadow-md hover:shadow-lg disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-            >
-              {generatingEstimate ? "✨ Generating Estimate..." : "✨ Generate AI Estimate"}
-            </button>
-          </div>
 
           <div className="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100 dark:border-gray-800 dark:border-gray-700">
             <div>
@@ -689,27 +674,6 @@ export default function SalvageConsole() {
               <input name="salvage_value" type="number" min="0" step="0.01" value={form.salvage_value} onChange={handleChange}
                 className="w-full border border-purple-200 dark:border-purple-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-800 font-medium text-purple-900 dark:text-purple-100"
                 placeholder="0.00" />
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {form.recommendation && (
-              <div className={`p-3 rounded-xl border ${form.recommendation === 'refurbish' ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50 text-green-800 dark:text-green-300' : 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800/50 text-purple-800 dark:text-purple-300'}`}>
-                <p className="text-sm font-bold flex items-center gap-2">
-                  ✨ AI Recommends: {form.recommendation === 'refurbish' ? 'Refurbish (Repair and Resell)' : 'Salvage for Parts (Strip and Stock)'}
-                </p>
-                <p className="text-xs opacity-80 mt-0.5">Based on the calculated profitability of parts vs resale value.</p>
-              </div>
-            )}
-            
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Recommendation *</label>
-              <select name="recommendation" value={form.recommendation} onChange={handleChange} required
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium">
-                <option value="" disabled>Select Recommendation</option>
-                <option value="refurbish">Refurbish — repair and resell</option>
-                <option value="salvage_for_parts">Salvage for Parts — strip and stock</option>
-              </select>
             </div>
           </div>
 
@@ -755,6 +719,18 @@ export default function SalvageConsole() {
               )}
             </div>
           )}
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Recommendation *</label>
+              <select name="recommendation" value={form.recommendation} onChange={handleChange} required
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium">
+                <option value="" disabled>Select Recommendation</option>
+                <option value="refurbish">Refurbish — repair and resell</option>
+                <option value="salvage_for_parts">Salvage for Parts — strip and stock</option>
+              </select>
+            </div>
+          </div>
 
           {/* Notes */}
           <div>

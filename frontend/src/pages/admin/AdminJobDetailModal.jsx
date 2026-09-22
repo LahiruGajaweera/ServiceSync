@@ -967,7 +967,7 @@ export default function AdminJobDetailModal({ open, jobId, onClose, onDone, onOp
                     placeholder="Reason for change..." />
                 </div>
                 <button type="submit" disabled={savingStatus || !newStatus}
-                  className="w-full bg-gray-900 dark:bg-gray-700 hover:bg-black dark:hover:bg-gray-600 disabled:bg-gray-400 text-white py-2.5 px-4 rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center justify-center gap-2">
+                  className="w-full bg-green-600 dark:bg-green-600 hover:bg-green-700 dark:hover:bg-green-500 disabled:bg-gray-400 text-white py-2.5 px-4 rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center justify-center gap-2">
                   {savingStatus ? "Updating…" : "Update Status"}
                 </button>
               </form>

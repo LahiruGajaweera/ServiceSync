@@ -427,6 +427,132 @@ def _filter_listings(listings: list[dict], query: str) -> list[dict]:
     return filtered_3
 
 
+async def _scrape_google_custom_search(client: httpx.AsyncClient, brand: str, model: str) -> list[dict]:
+    import os
+    api_key = os.getenv("GOOGLE_API_KEY")
+    cx = os.getenv("GOOGLE_CX")
+    if not api_key or not cx:
+        return []
+        
+    query = f"{brand} {model} price in Sri Lanka".strip()
+    url = "https://customsearch.googleapis.com/customsearch/v1"
+    params = {
+        "key": api_key,
+        "cx": cx,
+        "q": query,
+        "num": 10,
+        "gl": "lk"
+    }
+    
+    try:
+        resp = await client.get(url, params=params)
+        resp.raise_for_status()
+        data = resp.json()
+        
+        items = data.get("items", [])
+        listings = []
+        for item in items:
+            title = item.get("title", "")
+            snippet = item.get("snippet", "")
+            link = item.get("link", "")
+            
+            text_to_search = f"{title} {snippet}"
+            
+            matches = re.findall(r'(?:rs\.?|lkr)\s*([\d,]+(?:\.\d{2})?)', text_to_search, re.IGNORECASE)
+            
+            price = None
+            if matches:
+                for match in matches:
+                    p = _parse_price(match)
+                    if p and p > 1000:
+                        price = p
+                        break
+            
+            if not price:
+                matches2 = re.findall(r'\b(\d{2,3},\d{3})\b', text_to_search)
+                if matches2:
+                    p = _parse_price(matches2[0])
+                    if p and p > 1000:
+                        price = p
+                        
+            if price:
+                listings.append({
+                    "title": title,
+                    "price": price,
+                    "url": link,
+                    "source": "Google Custom Search"
+                })
+                
+        return listings
+    except Exception as e:
+        print(f"Google Custom Search failed: {e}")
+        return []
+
+async def _scrape_serpapi(client: httpx.AsyncClient, brand: str, model: str) -> list[dict]:
+    import os
+    api_key = os.getenv("SERPAPI_KEY")
+    if not api_key:
+        return []
+        
+    query = f"used {brand} {model} price Sri Lanka".strip()
+    url = "https://serpapi.com/search.json"
+    params = {
+        "engine": "google",
+        "q": query,
+        "api_key": api_key,
+        "location": "Sri Lanka",
+        "google_domain": "google.lk",
+        "gl": "lk",
+        "hl": "en",
+        "device": "desktop",
+        "num": 10
+    }
+    
+    try:
+        resp = await client.get(url, params=params)
+        resp.raise_for_status()
+        data = resp.json()
+        
+        items = data.get("organic_results", [])
+        listings = []
+        for item in items:
+            title = item.get("title", "")
+            snippet = item.get("snippet", "")
+            link = item.get("link", "")
+            
+            text_to_search = f"{title} {snippet}"
+            
+            import re
+            matches = re.findall(r'(?:rs\.?|lkr)\s*([\d,]+(?:\.\d{2})?)', text_to_search, re.IGNORECASE)
+            
+            price = None
+            if matches:
+                for match in matches:
+                    p = _parse_price(match)
+                    if p and p > 1000:
+                        price = p
+                        break
+            
+            if not price:
+                matches2 = re.findall(r'\b(\d{2,3},\d{3})\b', text_to_search)
+                if matches2:
+                    p = _parse_price(matches2[0])
+                    if p and p > 1000:
+                        price = p
+                        
+            if price:
+                listings.append({
+                    "title": title,
+                    "price": price,
+                    "url": link,
+                    "source": "SerpApi (Google)"
+                })
+                
+        return listings
+    except Exception as e:
+        print(f"SerpApi Search failed: {e}")
+        return []
+
 async def scrape_market_price(brand: str, model: str) -> dict:
     """
     Search multiple sites for the given device and return:
@@ -434,27 +560,32 @@ async def scrape_market_price(brand: str, model: str) -> dict:
       - min_price, max_price, avg_price (LKR, floats)
     """
     query = f"{brand} {model}".strip()
+    listings = []
     
     async with httpx.AsyncClient(headers=_HEADERS, timeout=15, follow_redirects=True) as client:
-        results = await asyncio.gather(
-            _scrape_ikman(client, brand, model),
-            _scrape_patpat(client, brand, model),
-            _scrape_fb_marketplace(client, brand, model),
-            # Brand new retail sites commented out to ensure secondhand pricing
-            # _scrape_dialcom(client, brand, model),
-            # _scrape_cellmart(client, brand, model),
-            # _scrape_lifemobile(client, brand, model),
-            # _scrape_geniusmobile(client, brand, model),
-            # _scrape_idealz(client, brand, model),
-            # _scrape_greenware(client, brand, model),
-            # _scrape_daraz(client, brand, model),
-            return_exceptions=True
-        )
+        # Step 1: Try Google Custom Search
+        google_results = await _scrape_google_custom_search(client, brand, model)
+        if google_results:
+            listings.extend(google_results)
+            
+        # Step 2: Try SerpApi if Google Custom Search fails or gives insufficient results
+        if len(listings) < 3:
+            serp_results = await _scrape_serpapi(client, brand, model)
+            if serp_results:
+                listings.extend(serp_results)
+            
+        # Step 3: Fallback to basic scrapers if both APIs fail
+        if len(listings) < 3:
+            results = await asyncio.gather(
+                _scrape_ikman(client, brand, model),
+                _scrape_patpat(client, brand, model),
+                _scrape_fb_marketplace(client, brand, model),
+                return_exceptions=True
+            )
 
-    listings = []
-    for res in results:
-        if isinstance(res, list):
-            listings.extend(res)
+            for res in results:
+                if isinstance(res, list):
+                    listings.extend(res)
 
     # Apply AI-based Filtering first
     listings = await _ai_filter_listings(listings, query)

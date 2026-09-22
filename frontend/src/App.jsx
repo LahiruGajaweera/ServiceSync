@@ -28,6 +28,7 @@ import SettingsManager     from "./pages/admin/SettingsManager";
 import TechDashboard from "./pages/technician/TechDashboard";
 import TechWorkspace from "./pages/technician/TechWorkspace";
 import TechDonorDevices from "./pages/technician/TechDonorDevices";
+import TechSalvageDevices from "./pages/technician/TechSalvageDevices";
 
 // Shared pages
 import ProfilePage from "./pages/ProfilePage";
@@ -81,6 +82,7 @@ export default function App() {
             <Route index      element={<TechDashboard />} />
             <Route path="workspace" element={<TechWorkspace />} />
             <Route path="donors" element={<TechDonorDevices />} />
+            <Route path="salvage" element={<TechSalvageDevices />} />
             <Route path="profile" element={<ProfilePage />} />
           </Route>
 

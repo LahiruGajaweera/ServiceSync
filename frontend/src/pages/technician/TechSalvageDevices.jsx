@@ -49,7 +49,7 @@ function Field({ label, children }) {
 const inputCls = "w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
 const selectCls = inputCls;
 
-export default function TechDonorDevices() {
+export default function TechSalvageDevices() {
   const { user } = useAuth();
   const [donors, setDonors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -137,7 +137,7 @@ export default function TechDonorDevices() {
     (d.status === "available" || d.status === "stripped") && 
     d.refurbish_status !== "pending_approval" && 
     d.refurbish_status !== "approved" &&
-    d.source !== "unclaimed_job" &&
+    d.source === "unclaimed_job" &&
     (d.purpose || "parts") === activeTab
   );
   
@@ -146,7 +146,7 @@ export default function TechDonorDevices() {
     d.status === "available" && 
     d.refurbish_status !== "pending_approval" && 
     d.refurbish_status !== "approved" &&
-    d.source !== "unclaimed_job" &&
+    d.source === "unclaimed_job" &&
     (d.purpose || "parts") === activeTab
   );
 
@@ -157,7 +157,7 @@ export default function TechDonorDevices() {
       setSelectedDonor(null);
       await fetchDonors();
     } catch (err) {
-      alert(err.response?.data?.detail || "Failed to claim donor device");
+      alert(err.response?.data?.detail || "Failed to claim salvage device");
     } finally {
       setClaimingId(null);
     }
@@ -283,7 +283,7 @@ export default function TechDonorDevices() {
 
   return (
     <div className="p-8">
-      <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">Donor Devices</h2>
+      <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">Salvage Devices</h2>
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
@@ -305,13 +305,13 @@ export default function TechDonorDevices() {
         </button>
       </div>
 
-      {/* Unclaimed Donor Devices */}
+      {/* Unclaimed Salvage Devices */}
       {!loading && unclaimedDonors.length > 0 && (
         <div className="bg-gradient-to-br from-green-50 to-white border border-green-200 rounded-xl shadow-sm p-5 mb-8">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-green-800 flex items-center gap-2 text-sm">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              Available Donor Devices — tap to view &amp; claim
+              Available Salvage Devices — tap to view &amp; claim
             </h3>
             <span className="text-xs text-green-600">{unclaimedDonors.length} unclaimed</span>
           </div>
@@ -331,18 +331,18 @@ export default function TechDonorDevices() {
         </div>
       )}
 
-      {/* My Donor Devices Queue */}
+      {/* My Salvage Devices Queue */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-700 dark:text-gray-200">My Claimed Donor Devices</h3>
+          <h3 className="font-semibold text-gray-700 dark:text-gray-200">My Claimed Salvage Devices</h3>
         </div>
 
         {loading ? (
           <div className="py-12 text-center text-gray-400 text-sm">Loading…</div>
         ) : myDonors.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-gray-400 border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl">
-            <p className="font-medium text-gray-500 dark:text-gray-400">No donor devices claimed yet</p>
-            <p className="text-sm mt-1">Claim an available donor device above to strip parts</p>
+            <p className="font-medium text-gray-500 dark:text-gray-400">No salvage devices claimed yet</p>
+            <p className="text-sm mt-1">Claim an available salvage device above to strip parts</p>
           </div>
         ) : (
           <table className="w-full text-sm">
@@ -622,8 +622,8 @@ export default function TechDonorDevices() {
         )}
       </div>
 
-      {/* Unclaimed donor device details + claim */}
-      <Modal open={!!selectedDonor} onClose={() => setSelectedDonor(null)} title="Claim Donor Device">
+      {/* Unclaimed salvage device details + claim */}
+      <Modal open={!!selectedDonor} onClose={() => setSelectedDonor(null)} title="Claim Salvage Device">
         {selectedDonor && (
           <div className="space-y-4">
             <div className="flex items-center gap-2">

@@ -96,6 +96,17 @@ def _run_migrations() -> None:
         # Job Type and Rework
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS job_type job_type NOT NULL DEFAULT 'new'",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS rework_reason TEXT",
+        "ALTER TABLE donor_devices ADD COLUMN IF NOT EXISTS purpose VARCHAR(50) NOT NULL DEFAULT 'parts'",
+        "ALTER TABLE donor_devices ADD COLUMN IF NOT EXISTS purchase_price NUMERIC(10, 2)",
+        "ALTER TABLE donor_devices ADD COLUMN IF NOT EXISTS refurbish_status VARCHAR(50)",
+        "ALTER TABLE donor_devices ADD COLUMN IF NOT EXISTS parts_used_notes TEXT",
+        "ALTER TABLE donor_devices ADD COLUMN IF NOT EXISTS selling_price NUMERIC(10, 2)",
+        "ALTER TABLE donor_devices ADD COLUMN IF NOT EXISTS qc_mic_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE donor_devices ADD COLUMN IF NOT EXISTS qc_camera_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE donor_devices ADD COLUMN IF NOT EXISTS qc_touch_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE donor_devices ADD COLUMN IF NOT EXISTS qc_biometrics_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE donor_devices ADD COLUMN IF NOT EXISTS qc_wifi_tested BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE donor_devices ADD COLUMN IF NOT EXISTS qc_charging_tested BOOLEAN NOT NULL DEFAULT FALSE",
     ]
     
     with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:

@@ -17,8 +17,19 @@ from app.schemas.salvage import (
     SalvageActualsUpdate
 )
 from app.services import salvage_service
+from app.models.donor import DonorPart
+from app.core.database import get_db
 
 router = APIRouter(prefix="/salvage", tags=["Salvage"])
+
+@router.get("/db-value/{device_model}", response_model=dict)
+def get_db_salvage(
+    device_model: str,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    """Get the estimated salvage value strictly from historical donor parts."""
+    return salvage_service.get_db_salvage_value(device_model, db)
 
 @router.post("/estimate", response_model=LiveEstimateResponse)
 def get_live_estimate(
